@@ -1,20 +1,17 @@
 package de.ddb.labs.ddbid.service;
 
-import java.util.Comparator;
 import java.util.List;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
-
 import de.ddb.labs.ddbid.model.DdbId;
-import de.ddb.labs.ddbid.model.DdbIdComparators;
+import de.ddb.labs.ddbid.model.Doc;
+import de.ddb.labs.ddbid.model.Doc.Status;
 import de.ddb.labs.ddbid.model.paging.Column;
 import de.ddb.labs.ddbid.model.paging.Order;
 import de.ddb.labs.ddbid.model.paging.Page;
 import de.ddb.labs.ddbid.model.paging.PagingRequest;
-
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
@@ -24,116 +21,97 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @Service
 public class DdbIdService {
 
-    private static final Comparator<DdbId> EMPTY_COMPARATOR = (e1, e2) -> 0;
-
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
     public Page<DdbId> getDdbIds(PagingRequest pagingRequest) {
 
-        final int totalCount = jdbcTemplate.queryForObject("SELECT count(*) FROM main.\"data\"", Integer.class);
-
-        final StringBuilder order = new StringBuilder("ORDER BY ");
-        for (Order o : pagingRequest.getOrder()) {
-            List<Column> columns = pagingRequest.getColumns();
-            final String columnName = columns.get(o.getColumn()).getData();
-            order.append(columnName);
-            order.append(" ");
-            order.append(o.getDir().toString());
-            order.append(", ");
+        String status = null;
+        final List<String> s = Arrays.stream(Status.values()).map(Enum::name).collect(Collectors.toList());
+        if (s.contains(pagingRequest.getStatus())) {
+            status = pagingRequest.getStatus();
+            log.info("Paging status is {}", status);
         }
-        order.setLength(order.length() - 2);
-        order.append(' ');
+
+        int totalCount;
+        if (status != null) {
+            totalCount = jdbcTemplate.queryForObject("SELECT count(*) FROM main.\"data\" WHERE status='" + status + "'", Integer.class);
+        } else {
+            totalCount = jdbcTemplate.queryForObject("SELECT count(*) FROM main.\"data\"", Integer.class);
+        }
 
         final StringBuilder query = new StringBuilder("SELECT * FROM main.\"data\" ");
+
+        // WHERE (Search)
+        final List<String> whereValues = new ArrayList<>();
+        if (!pagingRequest.getSearch().getValue().isEmpty()) {
+            final StringBuilder where = new StringBuilder("WHERE (");
+            for (String field : Doc.getHeader()) {
+                if (!field.equals("status")) {
+                    where.append(field);
+                    where.append(" ILIKE ? OR ");
+                    whereValues.add("%" + pagingRequest.getSearch().getValue() + "%");
+                }
+            }
+            where.setLength(where.length() - 3); // remove last 'OR '
+            where.append(") "); // close )
+            if (status != null) {
+                where.append("AND status=? ");
+                whereValues.add(status);
+            }
+            query.append(where.toString());
+        } else {
+            query.append("WHERE status=? ");
+            whereValues.add(status);
+        }
+
+        final String filteredCountQuery = query.toString().replaceFirst("\\*", "count(*)");
+        final int filteredCount = totalCount = jdbcTemplate.queryForObject(filteredCountQuery, Integer.class, whereValues.toArray());
+
+        // ORDER BY
         if (!pagingRequest.getOrder().isEmpty()) {
+            final StringBuilder order = new StringBuilder("ORDER BY ");
+            for (Order o : pagingRequest.getOrder()) {
+                List<Column> columns = pagingRequest.getColumns();
+                final String columnName = columns.get(o.getColumn()).getData();
+                if (!Doc.getHeader().contains(columnName)) {
+                    continue; // prevent sql injection
+                }
+                order.append(columnName);
+                order.append(" ");
+                order.append(o.getDir().toString());
+                order.append(", ");
+            }
+            order.setLength(order.length() - 2); // remove ', '
+            order.append(' '); //add ' '
             query.append(order.toString());
         }
 
-        List<DdbId> ddbIds;
+        // LIMIT and OFFSET (Paging)
+        final List<String> limitValues = new ArrayList<>();
         if (pagingRequest.getLength() > 0) {
             query.append("LIMIT ? OFFSET ?");
-            ddbIds = jdbcTemplate.query(query.toString(),
-                    new BeanPropertyRowMapper(DdbId.class),
-                    new Object[]{
-                        pagingRequest.getLength(), // LIMIT
-                        pagingRequest.getStart() // OFFSET
-                    });
-        } else {
+            limitValues.add(Integer.toString(pagingRequest.getLength())); // LIMIT
+            limitValues.add(Integer.toString(pagingRequest.getStart())); // OFFSET
+        }
+
+        //collect values
+        final List<String> values = new ArrayList<>();
+        values.addAll(whereValues);
+        values.addAll(limitValues);
+
+        List<DdbId> ddbIds;
+        if (values.isEmpty()) {
             ddbIds = jdbcTemplate.query(query.toString(), new BeanPropertyRowMapper(DdbId.class));
+        } else {
+            ddbIds = jdbcTemplate.query(query.toString(), new BeanPropertyRowMapper(DdbId.class), values.toArray());
         }
 
         final Page<DdbId> page = new Page<>(ddbIds);
-        page.setRecordsFiltered(totalCount);
+        page.setRecordsFiltered(filteredCount);
         page.setRecordsTotal(totalCount);
         page.setDraw(pagingRequest.getDraw());
 
         return page;
-    }
-
-    private Page<DdbId> getPage(List<DdbId> ddbIds, PagingRequest pagingRequest) {
-        List<DdbId> filtered = ddbIds.stream()
-                .sorted(sortDdbIds(pagingRequest))
-                .filter(filterDdbIds(pagingRequest))
-                .skip(pagingRequest.getStart())
-                .limit(pagingRequest.getLength())
-                .collect(Collectors.toList());
-
-        long count = ddbIds.stream()
-                .filter(filterDdbIds(pagingRequest))
-                .count();
-
-        Page<DdbId> page = new Page<>(filtered);
-        page.setRecordsFiltered((int) count);
-        page.setRecordsTotal((int) count);
-        page.setDraw(pagingRequest.getDraw());
-
-        return page;
-    }
-
-    private Predicate<DdbId> filterDdbIds(PagingRequest pagingRequest) {
-        if (pagingRequest.getSearch() == null || !StringUtils.hasText(pagingRequest.getSearch().getValue())) {
-            return ddbId -> true;
-        }
-
-        String value = pagingRequest.getSearch()
-                .getValue();
-
-        return ddbId -> ddbId.getLabel()
-                .toLowerCase()
-                .contains(value)
-                || ddbId.getId()
-                        .toLowerCase()
-                        .contains(value)
-                || ddbId.getProvider_id()
-                        .toLowerCase()
-                        .contains(value);
-    }
-
-    private Comparator<DdbId> sortDdbIds(PagingRequest pagingRequest) {
-        if (pagingRequest.getOrder() == null) {
-            return EMPTY_COMPARATOR;
-        }
-
-        try {
-            Order order = pagingRequest.getOrder()
-                    .get(0);
-
-            int columnIndex = order.getColumn();
-            Column column = pagingRequest.getColumns()
-                    .get(columnIndex);
-
-            Comparator<DdbId> comparator = DdbIdComparators.getComparator(column.getData(), order.getDir());
-            if (comparator == null) {
-                return EMPTY_COMPARATOR;
-            }
-
-            return comparator;
-
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-        }
-
-        return EMPTY_COMPARATOR;
     }
 }

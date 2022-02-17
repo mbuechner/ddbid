@@ -17,5 +17,7 @@ public class PagingRequest {
     private List<Order> order;
     private List<Column> columns;
     private Search search;
+    private String timestamp;
+    private String status;
 
 }

@@ -12,7 +12,7 @@ import de.ddb.labs.ddbid.model.paging.PagingRequest;
 import de.ddb.labs.ddbid.service.DdbIdService;
 
 @RestController
-@RequestMapping("ddbid")
+@RequestMapping("item")
 public class DdbIdRestController {
 
     private final DdbIdService ddbIdService;

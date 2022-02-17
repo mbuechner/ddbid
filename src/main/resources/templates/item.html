@@ -20,20 +20,29 @@
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <!--        <div class="collapse navbar-collapse" id="navbarResponsive">
-                            <ul class="navbar-nav ml-auto">
-                                <li class="nav-item active">
-                                    <a class="nav-link" href="#">Start
-                                        <span class="sr-only">(current)</span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>-->
+                <div class="collapse navbar-collapse" id="navbarResponsive">
+                    <ul class="navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/index">Start</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/item">Items
+                                <span class="sr-only">(current)</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Person</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Organization</a>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </nav>
         <div class="container-fluid">
             <div class="row">
-                <div class="col-lg-12 mt-3 mb-3">
+                <div class="col-lg-12 mt-3 mb-5">
                     <div class="table-responsive">
                         <table id="ddbid" class="table table-hover table-sm">
                             <thead>
@@ -60,28 +69,26 @@
             $('#ddbid').DataTable({
                 "processing": true,
                 "serverSide": true,
+                "paging": true,
+                "pagingType": "first_last_numbers",
+                "processing": true,
+                "lengthMenu": [ [25, 50, 100, 250, 500, -1], [25, 50, 100, 250, 500, "Alle"] ],
                 "language": {
                     url: "https://cdn.datatables.net/plug-ins/1.11.4/i18n/de_de.json"
                 },
-                "lengthMenu": [ [10, 50, 100, 250, 500, -1], [10, 50, 100, 250, 500, "Alle"] ],
-                "pageLength": 10,
                 "ajax": {
-                    "url": "/ddbid",
+                    "url": "/item",
                     "type": "POST",
                     "dataType": "json",
                     "contentType": "application/json",
                     "data": function (d) {
+                        d.status = $('#statusBtnNew').hasClass('active') ? 'NEW' : 'MISSING';
+                        d.timestamp = "myTimestamp";
                         return JSON.stringify(d);
                     }
                 },
                 fixedHeader: true,
-                "createdRow": function (row, data, dataIndex) {
-                    if (data['status'] === 'NEW') {
-                        $(row).addClass('text-success');
-                    } else if (data['status'] === 'MISSING') {
-                        $(row).addClass('text-danger');
-                    }
-                },
+                "autoWidth": false,
 //                searchPanes: {
 //                    columns: [ 2 ],
 //                    controls: false
@@ -91,41 +98,45 @@
                 buttons: [
                     {
                         extend: 'collection',
-                        text: 'Table control',
+                        autoClose: true,
+                        text: 'Timestamp',
                         buttons: [
                             {
-                                text: 'Toggle start date',
+                                text: '2022-02-15',
                                 action: function (e, dt, node, config) {
-                                    dt.column(-2).visible(!dt.column(-2).visible());
+
                                 }
                             },
                             {
-                                text: 'Toggle salary',
+                                text: '2022-02-14',
                                 action: function (e, dt, node, config) {
-                                    dt.column(-1).visible(!dt.column(-1).visible());
+
                                 }
-                            },
-                            {
-                                popoverTitle: 'Visibility control',
-                                extend: 'colvis',
-                                collectionLayout: 'two-column'
                             }
                         ]
                     },
                     {
                         extend: 'collection',
+                        autoClose: true,
                         text: 'Status',
                         buttons: [
                             {
                                 text: 'MISSING',
+                                className: 'active',
+                                attr: {id: 'statusBtnMissing'},
                                 action: function (e, dt, node, config) {
-
+                                    $('#statusBtnMissing').addClass('active');
+                                    $('#statusBtnNew').removeClass('active');
+                                    $('#ddbid').DataTable().ajax.reload();
                                 }
                             },
                             {
                                 text: 'NEW',
+                                attr: {id: 'statusBtnNew'},
                                 action: function (e, dt, node, config) {
-
+                                    $('#statusBtnNew').addClass('active');
+                                    $('#statusBtnMissing').removeClass('active');
+                                    $('#ddbid').DataTable().ajax.reload();
                                 }
                             }
                         ]
@@ -135,13 +146,38 @@
                 ],
                 "columns": [
                     {"data": "timestamp"},
-                    {"data": "id"},
+                    {
+                        "data": "id",
+                        "render": function (data, type, row, meta) {
+                            if (type === 'display') {
+                                data = '<a href="https://www.deutsche-digitale-bibliothek.de/item/' + data + '" target="_blank">' + data + '</a>';
+                            }
+                            return data;
+                        }
+                    },
                     {"data": "status"},
                     {"data": "dataset_id"},
                     {"data": "label"},
-                    {"data": "provider_id"},
+                    {
+                        "data": "provider_id",
+                        "render": function (data, type, row, meta) {
+                            if (type === 'display') {
+                                data = data.replace(/([A-Z0-9]{32})/g, function (a, b) {
+                                    return '<a href="https://www.deutsche-digitale-bibliothek.de/organization/' + b + '" target="_blank">' + b + '</a>';
+                                });
+                            }
+                            return data;
+                        }
+                    },
                     {"data": "supplier_id"}
-                ]
+                ],
+                "createdRow": function (row, data, dataIndex) {
+                    if (data['status'] === 'NEW') {
+                        $(row).addClass('text-success');
+                    } else if (data['status'] === 'MISSING') {
+                        $(row).addClass('text-danger');
+                    }
+                }
             });
         </script>
     </body>
