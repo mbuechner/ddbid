@@ -8,6 +8,7 @@ import javax.annotation.PreDestroy;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -19,10 +20,13 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @Slf4j
 public class Application {
 
+    @Value("${ddbid.database}")
+    private String database;
+
     private HikariDataSource dataSource;
 
     private final static String CREATE_SCHEMA = "CREATE SCHEMA IF NOT EXISTS main;";
-    
+
     private final static String CREATE_DB = "CREATE TABLE IF NOT EXISTS main.\"data\" (\n"
             + "\"timestamp\" TIMESTAMP NOT NULL,\n"
             + "id VARCHAR(32) NOT NULL,\n"
@@ -52,11 +56,11 @@ public class Application {
 
     @PreDestroy
     public void destroy() {
-        log.info("Callback triggered - @PreDestroy.");
+        log.info("Destroy callback triggered: Closing database...");
         try {
             dataSource.close();
         } catch (Exception e) {
-            log.error("Could not cloase connection to database. {}", e.getMessage());
+            log.error("Could not close connection to database. {}", e.getMessage());
         }
     }
 
@@ -70,7 +74,7 @@ public class Application {
         config.setDriverClassName("org.duckdb.DuckDBDriver");
         config.setMaximumPoolSize(10);
         //config.setMaxLifetime(3);
-        config.setJdbcUrl("jdbc:duckdb:ddbid_duckdb_DO_NOT_DELETE_ITS_IMPORTANT.db");
+        config.setJdbcUrl("jdbc:duckdb:" + database);
         dataSource = new HikariDataSource(config);
         return dataSource;
     }

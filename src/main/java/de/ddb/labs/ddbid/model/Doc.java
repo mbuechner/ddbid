@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import lombok.Data;
+import lombok.Getter;
 
 /**
  *
@@ -19,7 +20,14 @@ import lombok.Data;
 public class Doc {
 
     public enum Status {
-        NONE, NEW, MISSING;
+        NEW("NEW"), MISSING("MISSING");
+
+        @Getter
+        private final String status;
+
+        private Status(String status) {
+            this.status = status;
+        }
     }
 
     @JsonIgnore
