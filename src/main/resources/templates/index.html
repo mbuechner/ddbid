@@ -1,0 +1,157 @@
+<!DOCTYPE HTML>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+        <meta name="description" content="" />
+        <meta name="author" content="" />
+        <title>DDBid</title>
+        <link th:rel="stylesheet" th:href="@{webjars/bootstrap/4.0.0-2/css/bootstrap.min.css} "/>
+        <link href="https://cdn.datatables.net/1.11.4/css/jquery.dataTables.min.css" rel="stylesheet" />
+        <link href="https://cdn.datatables.net/rowgroup/1.1.4/css/rowGroup.dataTables.min.css" rel="stylesheet" />
+    </head>
+    <body>
+
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="/">DDBid</a>
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive"
+                        aria-controls="navbarResponsive"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <!--        <div class="collapse navbar-collapse" id="navbarResponsive">
+                            <ul class="navbar-nav ml-auto">
+                                <li class="nav-item active">
+                                    <a class="nav-link" href="#">Start
+                                        <span class="sr-only">(current)</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>-->
+            </div>
+        </nav>
+
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-lg-12 mt-6 mb-6">
+                    <h3>Datatable using list of Objects in data parameter</h3>
+                    <table id="example" class="table table-bordered table-responsive" style="width: 100%">
+                        <thead>
+                            <tr>
+                                <!--
+                                <th>Timestamp</th>
+                                <th>ID</th>
+                                <th>Status</th>
+                                <th>Dataset ID</th>
+                                <th>Label</th>
+                                <th>Provider ID</th>
+                                <th>Supplier ID</th>
+                                -->
+                                <th>Name</th>
+                                <th>Position</th>
+                                <th>Office</th>
+                                <th>Start date</th>
+                                <th>Salary</th>
+                            </tr>
+                        </thead>
+                        <tfoot>
+                            <tr>
+                                <th>Name</th>
+                                <th>Position</th>
+                                <th>Office</th>
+                                <th>Start date</th>
+                                <th>Salary</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+
+            <div class="row">
+                <div class="col-lg-12 mt-6 mb-6">
+                    <h3>Datatable using list of Arrays in data parameter</h3>
+                    <table id="exampleArray" class="table table-bordered table-responsive" style="width: 100%">
+                        <thead>
+                            <tr>
+                                <th style="width:20%">Name</th>
+                                <th style="width:20%">Position</th>
+                                <th style="width:20%">Office</th>
+                                <th style="width:20%">Start date</th>
+                                <th style="width:20%">Salary</th>
+                            </tr>
+                        </thead>
+                        <tfoot>
+                            <tr>
+                                <th>Name</th>
+                                <th>Position</th>
+                                <th>Office</th>
+                                <th>Start date</th>
+                                <th>Salary</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+
+        <script th:src="@{/webjars/jquery/jquery.min.js}"></script>
+        <script th:src="@{/webjars/popper.js/umd/popper.min.js}"></script>
+        <script th:src="@{/webjars/bootstrap/js/bootstrap.min.js}"></script>
+        <script src="https://cdn.datatables.net/1.11.4/js/jquery.dataTables.min.js" crossorigin="anonymous"></script>
+        <script src="https://cdn.datatables.net/rowgroup/1.1.4/js/dataTables.rowGroup.min.js" crossorigin="anonymous"></script>
+
+
+        <script>
+            $('#example').DataTable({
+                "processing": true,
+                "serverSide": true,
+                "language": {
+                    url: "https://cdn.datatables.net/plug-ins/1.11.4/i18n/de_de.json"
+                },
+                "lengthMenu": [ [50, 100, 250, 500, -1], [50, 100, 250, 500, "Alle"] ],
+                "pageLength": 100,
+                "ajax": {
+                    "url": "/employees",
+                    "type": "POST",
+                    "dataType": "json",
+                    "contentType": "application/json",
+                    "data": function (d) {
+                        return JSON.stringify(d);
+                    }
+                },
+                "columns": [
+                    {"data": "name", "width": "20%"},
+                    {"data": "position", "width": "20%"},
+                    {"data": "office", "width": "20%"},
+                    {"data": "start_date", "width": "20%"},
+                    {"data": "salary", "width": "20%"}
+                ]
+            });
+
+            $('#exampleArray').DataTable({
+                "processing": true,
+                "serverSide": true,
+                "language": {
+                    url: "https://cdn.datatables.net/plug-ins/1.11.4/i18n/de_de.json"
+                },
+                "lengthMenu": [ [50, 100, 250, 500, -1], [50, 100, 250, 500, "Alle"] ],
+                "pageLength": 100,
+                "ajax": {
+                    "url": "/employees/array",
+                    "type": "POST",
+                    "dataType": "json",
+                    "contentType": "application/json",
+                    "data": function (d) {
+                        return JSON.stringify(d);
+                    }
+                }
+            });
+        </script>
+
+    </body>
+</html>

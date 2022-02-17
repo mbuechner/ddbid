@@ -1,0 +1,148 @@
+<!DOCTYPE HTML>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+        <meta name="description" content="" />
+        <meta name="author" content="" />
+        <title>DDBid</title>
+        <link th:rel="stylesheet" th:href="@{webjars/bootstrap/4.0.0-2/css/bootstrap.min.css} "/>
+        <link th:rel="stylesheet" th:href="@{assets/datatable/datatables.css}"/>
+    </head>
+    <body>
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="/">DDBid</a>
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive"
+                        aria-controls="navbarResponsive"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <!--        <div class="collapse navbar-collapse" id="navbarResponsive">
+                            <ul class="navbar-nav ml-auto">
+                                <li class="nav-item active">
+                                    <a class="nav-link" href="#">Start
+                                        <span class="sr-only">(current)</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>-->
+            </div>
+        </nav>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-lg-12 mt-3 mb-3">
+                    <div class="table-responsive">
+                        <table id="ddbid" class="table table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>ID</th>
+                                    <th>Status</th>
+                                    <th>Dataset ID</th>
+                                    <th>Label</th>
+                                    <th>Provider ID</th>
+                                    <th>Supplier ID</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script th:src="@{/webjars/jquery/jquery.min.js}"></script>
+        <script th:src="@{/webjars/popper.js/umd/popper.min.js}"></script>
+        <script th:src="@{/webjars/bootstrap/js/bootstrap.min.js}"></script>
+        <script th:src="@{assets/datatable/datatables.js}"></script>
+        <script>
+            $('#ddbid').DataTable({
+                "processing": true,
+                "serverSide": true,
+                "language": {
+                    url: "https://cdn.datatables.net/plug-ins/1.11.4/i18n/de_de.json"
+                },
+                "lengthMenu": [ [10, 50, 100, 250, 500, -1], [10, 50, 100, 250, 500, "Alle"] ],
+                "pageLength": 10,
+                "ajax": {
+                    "url": "/ddbid",
+                    "type": "POST",
+                    "dataType": "json",
+                    "contentType": "application/json",
+                    "data": function (d) {
+                        return JSON.stringify(d);
+                    }
+                },
+                fixedHeader: true,
+                "createdRow": function (row, data, dataIndex) {
+                    if (data['status'] === 'NEW') {
+                        $(row).addClass('text-success');
+                    } else if (data['status'] === 'MISSING') {
+                        $(row).addClass('text-danger');
+                    }
+                },
+//                searchPanes: {
+//                    columns: [ 2 ],
+//                    controls: false
+//                },
+//                dom: 'Plfrtip',
+                dom: 'Bfrtip',
+                buttons: [
+                    {
+                        extend: 'collection',
+                        text: 'Table control',
+                        buttons: [
+                            {
+                                text: 'Toggle start date',
+                                action: function (e, dt, node, config) {
+                                    dt.column(-2).visible(!dt.column(-2).visible());
+                                }
+                            },
+                            {
+                                text: 'Toggle salary',
+                                action: function (e, dt, node, config) {
+                                    dt.column(-1).visible(!dt.column(-1).visible());
+                                }
+                            },
+                            {
+                                popoverTitle: 'Visibility control',
+                                extend: 'colvis',
+                                collectionLayout: 'two-column'
+                            }
+                        ]
+                    },
+                    {
+                        extend: 'collection',
+                        text: 'Status',
+                        buttons: [
+                            {
+                                text: 'MISSING',
+                                action: function (e, dt, node, config) {
+
+                                }
+                            },
+                            {
+                                text: 'NEW',
+                                action: function (e, dt, node, config) {
+
+                                }
+                            }
+                        ]
+                    },
+                    'pageLength', 'copy', 'csv', 'excel'
+
+                ],
+                "columns": [
+                    {"data": "timestamp"},
+                    {"data": "id"},
+                    {"data": "status"},
+                    {"data": "dataset_id"},
+                    {"data": "label"},
+                    {"data": "provider_id"},
+                    {"data": "supplier_id"}
+                ]
+            });
+        </script>
+    </body>
+</html>
