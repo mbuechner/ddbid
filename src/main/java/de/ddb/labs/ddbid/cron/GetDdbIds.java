@@ -39,6 +39,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
@@ -91,7 +95,7 @@ public class GetDdbIds {
     @Scheduled(cron = "${ddbid.cron}")
     public void run() {
 
-        currentTime = Timestamp.from(Instant.now());
+        currentTime = Timestamp.from(LocalDateTime.now().toInstant(ZoneOffset.UTC));
         // get filename of last dump
         try {
             final File lastDumpInDataPath = lastDumpInDataPath();
@@ -176,9 +180,7 @@ public class GetDdbIds {
         errorOccured = false;
 
         try (
-                final OutputStream os = Files.newOutputStream(Path.of(outputFileName), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
-                final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8);
-                final BufferedWriter bw = new BufferedWriter(ow);) {
+                final OutputStream os = Files.newOutputStream(Path.of(outputFileName), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow);) {
 
             outputWriter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader());
             outputWriter.printRecord(Doc.getHeader());
@@ -198,7 +200,7 @@ public class GetDdbIds {
 
                 log.info("Execute request with cursor \"{}\"...", nextCursorMark);
 
-                try (Response response = httpClient.newCall(request).execute()) {
+                try ( Response response = httpClient.newCall(request).execute()) {
                     if (!response.isSuccessful()) {
                         errorOccured = true;
                         log.warn("API respose code {} for {}", response.code(), response.toString());
@@ -285,15 +287,7 @@ public class GetDdbIds {
         };
 
         try (
-                final InputStream fileStreamA = new FileInputStream(fileA);
-                final GZIPInputStream gzipA = new GZIPInputStream(fileStreamA);
-                final Reader readerA = csVSerializer.createReader(gzipA);
-                final InputStream fileStreamB = new FileInputStream(fileB);
-                final GZIPInputStream gzipB = new GZIPInputStream(fileStreamB);
-                final Reader readerB = csVSerializer.createReader(gzipB);
-                final OutputStream fileOutputStream = new FileOutputStream(tmpFile, false);
-                final GZIPOutputStream gzOutStream = new GZIPOutputStream(fileOutputStream);
-                final Writer writerAb = csVSerializer.createWriter(gzOutStream);) {
+                final InputStream fileStreamA = new FileInputStream(fileA); final GZIPInputStream gzipA = new GZIPInputStream(fileStreamA); final Reader readerA = csVSerializer.createReader(gzipA); final InputStream fileStreamB = new FileInputStream(fileB); final GZIPInputStream gzipB = new GZIPInputStream(fileStreamB); final Reader readerB = csVSerializer.createReader(gzipB); final OutputStream fileOutputStream = new FileOutputStream(tmpFile, false); final GZIPOutputStream gzOutStream = new GZIPOutputStream(fileOutputStream); final Writer writerAb = csVSerializer.createWriter(gzOutStream);) {
 
             // Sorter
             //        .serializer(csVSerializer)
@@ -307,14 +301,8 @@ public class GetDdbIds {
 
         int lineCount = 0;
         try (
-                final InputStream fileStream = new FileInputStream(tmpFile);
-                final InputStream gzipStream = new GZIPInputStream(fileStream);
-                final InputStreamReader decoder = new InputStreamReader(gzipStream, Charset.defaultCharset());
-                //
-                final OutputStream os = Files.newOutputStream(Path.of(output.getAbsolutePath()), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
-                final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8);
-                final BufferedWriter bw = new BufferedWriter(ow);
-                final CSVPrinter csvPrinter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader());) {
+                final InputStream fileStream = new FileInputStream(tmpFile); final InputStream gzipStream = new GZIPInputStream(fileStream); final InputStreamReader decoder = new InputStreamReader(gzipStream, Charset.defaultCharset()); //
+                 final OutputStream os = Files.newOutputStream(Path.of(output.getAbsolutePath()), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow); final CSVPrinter csvPrinter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader());) {
 
             csvPrinter.printRecord(Doc.getHeader());
 

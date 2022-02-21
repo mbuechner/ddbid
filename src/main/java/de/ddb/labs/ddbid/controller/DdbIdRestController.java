@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RestController;
 import de.ddb.labs.ddbid.model.paging.Page;
 import de.ddb.labs.ddbid.model.paging.PagingRequest;
 import de.ddb.labs.ddbid.service.DdbIdService;
+import java.sql.Timestamp;
+import java.util.Map;
 
 @RestController
 @RequestMapping("item")
@@ -25,5 +27,11 @@ public class DdbIdRestController {
     @PostMapping
     public Page<DdbId> list(@RequestBody PagingRequest pagingRequest) {
         return ddbIdService.getDdbIds(pagingRequest);
+    }
+    
+    @PostMapping
+    @RequestMapping("timestamp")
+    public Map<Timestamp, String> timestamps() {
+        return ddbIdService.getTimestamps();
     }
 }

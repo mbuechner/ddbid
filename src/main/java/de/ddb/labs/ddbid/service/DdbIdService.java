@@ -9,8 +9,12 @@ import de.ddb.labs.ddbid.model.paging.Column;
 import de.ddb.labs.ddbid.model.paging.Order;
 import de.ddb.labs.ddbid.model.paging.Page;
 import de.ddb.labs.ddbid.model.paging.PagingRequest;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,26 +24,27 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @Slf4j
 @Service
 public class DdbIdService {
-
+    
     @Autowired
     private JdbcTemplate jdbcTemplate;
-
+    
+    private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
+    
     public Page<DdbId> getDdbIds(PagingRequest pagingRequest) {
-
+        
         String status = null;
         final List<String> s = Arrays.stream(Status.values()).map(Enum::name).collect(Collectors.toList());
         if (s.contains(pagingRequest.getStatus())) {
             status = pagingRequest.getStatus();
-            log.info("Paging status is {}", status);
         }
-
+        
         int totalCount;
         if (status != null) {
             totalCount = jdbcTemplate.queryForObject("SELECT count(*) FROM main.\"data\" WHERE status='" + status + "'", Integer.class);
         } else {
             totalCount = jdbcTemplate.queryForObject("SELECT count(*) FROM main.\"data\"", Integer.class);
         }
-
+        
         final StringBuilder query = new StringBuilder("SELECT * FROM main.\"data\" ");
 
         // WHERE (Search)
@@ -64,9 +69,9 @@ public class DdbIdService {
             query.append("WHERE status=? ");
             whereValues.add(status);
         }
-
+        
         final String filteredCountQuery = query.toString().replaceFirst("\\*", "count(*)");
-        final int filteredCount = totalCount = jdbcTemplate.queryForObject(filteredCountQuery, Integer.class, whereValues.toArray());
+        final int filteredCount = jdbcTemplate.queryForObject(filteredCountQuery, Integer.class, whereValues.toArray());
 
         // ORDER BY
         if (!pagingRequest.getOrder().isEmpty()) {
@@ -99,19 +104,28 @@ public class DdbIdService {
         final List<String> values = new ArrayList<>();
         values.addAll(whereValues);
         values.addAll(limitValues);
-
+        
         List<DdbId> ddbIds;
         if (values.isEmpty()) {
             ddbIds = jdbcTemplate.query(query.toString(), new BeanPropertyRowMapper(DdbId.class));
         } else {
             ddbIds = jdbcTemplate.query(query.toString(), new BeanPropertyRowMapper(DdbId.class), values.toArray());
         }
-
+        
         final Page<DdbId> page = new Page<>(ddbIds);
         page.setRecordsFiltered(filteredCount);
         page.setRecordsTotal(totalCount);
         page.setDraw(pagingRequest.getDraw());
-
+        
         return page;
+    }
+    
+    public Map<Timestamp, String> getTimestamps() {
+        final Timestamp[] ts = jdbcTemplate.queryForObject("SELECT DISTINCT \"timestamp\" FROM main.\"data\"", Timestamp[].class);
+        final Map<Timestamp, String> m = new HashMap<>();
+        for (Timestamp t : ts) {
+            m.put(t, sdf.format(t));
+        }
+        return m;
     }
 }

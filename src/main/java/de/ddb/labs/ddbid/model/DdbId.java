@@ -11,7 +11,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class DdbId {
 
-    @JsonFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm'Z'")
     private Timestamp timestamp;
     private String id;
     private String status;
