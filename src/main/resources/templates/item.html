@@ -3,12 +3,11 @@
     <head>
         <meta charset="utf-8" />
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no" />
         <meta name="description" content="" />
         <meta name="author" content="" />
         <title>DDBid</title>
         <link th:rel="stylesheet" th:href="@{webjars/bootswatch-lux/5.0.2/bootstrap.min.css} "/>
-        <link th:rel="stylesheet" th:href="@{assets/fontawesome/css/fontawesome.min.css} "/>
         <link th:rel="stylesheet" th:href="@{assets/datatables/datatables.css}"/>
     </head>
     <body>
@@ -16,7 +15,7 @@
         <div class="navbar navbar-expand-lg static-top navbar-dark bg-dark">
             <div class="container-fluid">
                 <a class="navbar-brand" href="/">
-                    <img alt="Logo" style="vertical-align:top;" src="data:image/png;base64,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" width="30" height="30"/> DDBid</a>
+                    <i class="fas fa-1x fa-life-ring fa-spin"></i> DDBid</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
@@ -31,7 +30,7 @@
                     </ul>
                     <ul class="navbar-nav ms-md-auto">
                         <li class="nav-item">
-                            <a target="_blank" rel="noopener" class="nav-link" href="https://github.com/mbuechner/ddbid"><i class="fa fa-github"></i> GitHub</a>
+                            <a target="_blank" rel="noopener" class="nav-link" href="https://github.com/mbuechner/ddbid"><i class="fab fa-github"></i> GitHub</a>
                         </li>
                     </ul>
                 </div>
@@ -55,6 +54,7 @@
 
         <script th:src="@{webjars/jquery/jquery.min.js}"></script>
         <script th:src="@{webjars/bootstrap/js/bootstrap.min.js}"></script>
+        <script th:src="@{webjars/font-awesome/5.15.4/js/all.min.js}"></script>
         <script th:src="@{assets/datatables/datatables.js}"></script>
         <script>
             $('#ddbid').DataTable({
@@ -86,6 +86,7 @@
 //                    controls: false
 //                },
                 buttons: [
+                    'pageLength',
                     {
                         extend: 'collection',
                         autoClose: true,
@@ -110,7 +111,6 @@
                         autoClose: true,
                         text: 'Status',
                         buttons: [
-                            'pageLength',
                             {
                                 text: 'MISSING',
                                 className: 'active',
@@ -133,7 +133,6 @@
                         ]
                     },
                     'copy', 'csv', 'excel'
-
                 ],
                 "columns": [
                     {"data": "timestamp"},
