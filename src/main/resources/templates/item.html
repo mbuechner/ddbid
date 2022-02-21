@@ -9,6 +9,15 @@
         <title>DDBid</title>
         <link th:rel="stylesheet" th:href="@{webjars/bootswatch-lux/5.0.2/bootstrap.min.css} "/>
         <link th:rel="stylesheet" th:href="@{assets/datatables/datatables.css}"/>
+        <style>
+            #btn-back-to-top {
+                position: fixed;
+                bottom: 18px;
+                left: 12px;
+                display: none;
+                z-index: 10000;
+            }
+        </style>
     </head>
     <body>
         <!-- Navigation -->
@@ -37,6 +46,10 @@
             </div>
         </div>
         <div class="container-fluid">
+            <!-- Back to top button -->
+            <button type="button" class="btn btn-primary btn-floating btn-sm" id="btn-back-to-top">
+                <a href="#"><i class="fas fa-arrow-up text-light"></i></a>
+            </button>
             <table id="ddbid" class="table table-hover table-sm">
                 <thead>
                     <tr>
@@ -95,7 +108,7 @@
                         extend: 'collection',
                         autoClose: true,
                         text: 'Timestamp',
-                        "dropup": true,
+//                        "dropup": true,
 //                        action: function (e, dt, node, config) {
 //                            console.log('My custom button!');
 //                            config.buttons().add(1, {
@@ -175,7 +188,7 @@
                             return data;
                         }
                     },
-                    {"data": "supplier_id", "className": "text-break", }
+                    {"data": "supplier_id", "className": "text-break" }
                 ],
                 "createdRow": function (row, data, dataIndex) {
                     if (data['status'] === 'NEW') {
@@ -186,9 +199,38 @@
                 }
             });
 
-            table.button().add("3-0", {
-                text: 'Hello'
-            });
+    table.button().add( "0-0-0", {
+    action: function ( e, dt, button, config ) {
+        dt.ajax.reload();
+    },
+    text: 'Reload table'
+} );
+
+            //Get the button
+            let mybutton = document.getElementById("btn-back-to-top");
+
+            // When the user scrolls down 20px from the top of the document, show the button
+            window.onscroll = function () {
+                scrollFunction();
+            };
+
+            function scrollFunction() {
+                if (
+                        document.body.scrollTop > 100 ||
+                        document.documentElement.scrollTop > 100
+                        ) {
+                    mybutton.style.display = "block";
+                } else {
+                    mybutton.style.display = "none";
+                }
+            }
+            // When the user clicks on the button, scroll to the top of the document
+            mybutton.addEventListener("click", backToTop);
+
+            function backToTop() {
+                document.body.scrollTop = 0;
+                document.documentElement.scrollTop = 0;
+            }
         </script>
     </body>
 </html>
