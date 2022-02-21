@@ -70,8 +70,7 @@
         <script th:src="@{webjars/font-awesome/5.15.4/js/all.min.js}"></script>
         <script th:src="@{assets/datatables/datatables.js}"></script>
         <script>
-            var counter = 1;
-            var table = $('#ddbid').DataTable({
+            $('#ddbid').DataTable({
                 "dom": 'B<"row"<"col-6"i><"col-6"f>><"pb-3 mb-5"rt><"footer fixed-bottom mt-auto py-3 bg-light"<"float-right"p>>',
                 "processing": true,
                 "serverSide": true,
@@ -101,6 +100,18 @@
 //                    columns: [ 2 ],
 //                    controls: false
 //                },
+                "fnDrawCallback": function (oSettings) {
+                    const json = '{"x1":"Datum 1","x2":"Datum 2","x3":"Datum 3","x4":"Datum 4","x5":"Datum 5"}';
+                    const obj = JSON.parse(json);
+                    for (const [key, value] of Object.entries(obj)) {
+                        $('#ddbid').DataTable().button().add("2-0", {
+                            action: function (e, dt, button, config) {
+                                $('#ddbid').DataTable().ajax.reload();
+                            },
+                            text: value
+                        });
+                    }
+                },
                 buttons: [
                     'pageLength',
                     'colvis',
@@ -119,18 +130,7 @@
 //                            });
 //                        },
                         buttons: [
-                            {
-                                text: '2022-02-15',
-                                action: function (e, dt, node, config) {
-
-                                }
-                            },
-                            {
-                                text: '2022-02-14',
-                                action: function (e, dt, node, config) {
-
-                                }
-                            }
+                            
                         ]
                     },
                     {
@@ -188,7 +188,7 @@
                             return data;
                         }
                     },
-                    {"data": "supplier_id", "className": "text-break" }
+                    {"data": "supplier_id", "className": "text-break"}
                 ],
                 "createdRow": function (row, data, dataIndex) {
                     if (data['status'] === 'NEW') {
@@ -198,13 +198,6 @@
                     }
                 }
             });
-
-    table.button().add( "0-0-0", {
-    action: function ( e, dt, button, config ) {
-        dt.ajax.reload();
-    },
-    text: 'Reload table'
-} );
 
             //Get the button
             let mybutton = document.getElementById("btn-back-to-top");
