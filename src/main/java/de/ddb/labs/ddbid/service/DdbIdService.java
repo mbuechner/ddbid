@@ -14,6 +14,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +30,7 @@ public class DdbIdService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
+    private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'", Locale.GERMANY);
 
     public Page<DdbId> getDdbIds(PagingRequest pagingRequest) {
 
@@ -121,12 +122,12 @@ public class DdbIdService {
         return page;
     }
 
-    public Map<Timestamp, String> getTimestamps() {
+    public Map<String, Timestamp> getTimestamps() {
         try {
-            final Timestamp[] ts = jdbcTemplate.queryForObject("SELECT DISTINCT \"timestamp\" FROM main.\"data\"", Timestamp[].class);
-            final Map<Timestamp, String> m = new HashMap<>();
+            final List<Timestamp> ts =  jdbcTemplate.queryForList("SELECT DISTINCT \"timestamp\" FROM main.\"data\"", Timestamp.class);
+            final Map<String, Timestamp> m = new HashMap<>();
             for (Timestamp t : ts) {
-                m.put(t, sdf.format(t));
+                m.put(sdf.format(t), t);
             }
             return m;
         } catch (EmptyResultDataAccessException e) {
