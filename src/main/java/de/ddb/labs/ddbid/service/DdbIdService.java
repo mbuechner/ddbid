@@ -34,6 +34,8 @@ public class DdbIdService {
 
     public Page<DdbId> getDdbIds(PagingRequest pagingRequest) {
 
+        log.debug("Request received: {}", pagingRequest.toString());
+
         String status = null;
         final List<String> s = Arrays.stream(Status.values()).map(Enum::name).collect(Collectors.toList());
         if (s.contains(pagingRequest.getStatus())) {
@@ -50,11 +52,11 @@ public class DdbIdService {
         final StringBuilder query = new StringBuilder("SELECT * FROM main.\"data\" ");
 
         // WHERE (Search)
-        final List<String> whereValues = new ArrayList<>();
+        final List<Object> whereValues = new ArrayList<>();
         if (!pagingRequest.getSearch().getValue().isEmpty()) {
             final StringBuilder where = new StringBuilder("WHERE (");
             for (String field : Doc.getHeader()) {
-                if (!field.equals("status")) {
+                if (!field.equals("status") || !field.equals("timestamp")) {
                     where.append(field);
                     where.append(" ILIKE ? OR ");
                     whereValues.add("%" + pagingRequest.getSearch().getValue() + "%");
@@ -66,10 +68,26 @@ public class DdbIdService {
                 where.append("AND status=? ");
                 whereValues.add(status);
             }
+            if (pagingRequest.getTimestamp() == null) {
+                where.append("AND timestamp=(SELECT MAX(timestamp) FROM main.\"data\") ");
+            } else {
+                where.append("AND timestamp=? ");
+                whereValues.add(new Timestamp(pagingRequest.getTimestamp()));
+            }
             query.append(where.toString());
         } else {
             query.append("WHERE status=? ");
             whereValues.add(status);
+            if (pagingRequest.getTimestamp() == null) {
+                query.append("AND timestamp=(SELECT MAX(timestamp) FROM main.\"data\") ");
+            } else {
+                query.append("AND timestamp=? ");
+                whereValues.add(new Timestamp(pagingRequest.getTimestamp()));
+            }
+        }
+
+        if (pagingRequest.getTimestamp() != null) {
+            log.debug("Timestamp: {}", new Timestamp(pagingRequest.getTimestamp()));
         }
 
         final String filteredCountQuery = query.toString().replaceFirst("\\*", "count(*)");
@@ -103,7 +121,7 @@ public class DdbIdService {
         }
 
         //collect values
-        final List<String> values = new ArrayList<>();
+        final List<Object> values = new ArrayList<>();
         values.addAll(whereValues);
         values.addAll(limitValues);
 
@@ -124,7 +142,7 @@ public class DdbIdService {
 
     public Map<String, Timestamp> getTimestamps() {
         try {
-            final List<Timestamp> ts =  jdbcTemplate.queryForList("SELECT DISTINCT \"timestamp\" FROM main.\"data\"", Timestamp.class);
+            final List<Timestamp> ts = jdbcTemplate.queryForList("SELECT DISTINCT \"timestamp\" FROM main.\"data\"", Timestamp.class);
             final Map<String, Timestamp> m = new HashMap<>();
             for (Timestamp t : ts) {
                 m.put(sdf.format(t), t);
