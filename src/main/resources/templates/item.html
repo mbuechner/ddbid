@@ -48,7 +48,7 @@
         <div class="container-fluid">
             <!-- Back to top button -->
             <button type="button" class="btn btn-primary btn-floating btn-sm" id="btn-back-to-top">
-                <a href="#"><i class="fas fa-arrow-up text-light"></i></a>
+                <a><i class="fas fa-arrow-up text-light"></i></a>
             </button>
             <table id="ddbid" class="table table-hover table-sm">
                 <thead>
@@ -70,170 +70,171 @@
         <script th:src="@{webjars/font-awesome/5.15.4/js/all.min.js}"></script>
         <script th:src="@{assets/datatables/datatables.js}"></script>
         <script>
-            $('#ddbid').DataTable({
-                "dom": 'B<"row"<"col-6"i><"col-6"f>><"pb-3 mb-5"rt><"footer fixed-bottom mt-auto py-3 bg-light"<"float-right"p>>',
-                "processing": true,
-                "serverSide": true,
-                "paging": true,
-                "colReorder": true,
-                "pagingType": "first_last_numbers",
-                "lengthMenu": [ [25, 50, 100, 250, 500, -1], [25, 50, 100, 250, 500, "All"] ],
-                "pageLength": 100,
-//                "language": {
-//                    url: "/assets/datatables/de-DE.json",
-//                    decimal: ","
-//                },
-                "ajax": {
-                    "url": "/item",
-                    "type": "POST",
-                    "dataType": "json",
-                    "contentType": "application/json",
-                    "data": function (d) {
-                        if ($('#statusBtnNew').hasClass('active')) {
-                            d.status = "NEW";
-                        } else if ($('#statusBtnAll').hasClass('active')) {
-                            d.status = "ALL";
-                        } else {
-                            d.status = "MISSING";
-                        }
-                        const entry = $('.timestampBtnEntry.active');
-                        if (entry.length > 0) {
-                            d.timestamp = entry.attr('data-id');
-                        } else {
-                            d.timestamp = null;
-                        }
-                        return JSON.stringify(d);
-                    }
-                },
-                "fixedHeader": true,
-                "autoWidth": true,
-                "fnInitComplete": function (oSettings) {
-                    $.getJSON("/item/timestamp", function (json) {
-                        for (const [key, value] of Object.entries(json)) {
-                            $('#ddbid').DataTable().button().add("2-0", {
-                                text: key,
-                                className: 'timestampBtnEntry',
-                                attr: {
-                                    "id": "timestampBtnEntry-" + value,
-                                    "data-id": value
-                                },
-                                action: function (e, dt, button, config) {
-                                    $('.timestampBtnEntry').removeClass('active');
-                                    button.addClass('active');
-                                    $('#ddbid').DataTable().ajax.reload();
-                                }
-                            });
-                        }
-                    });
-                },
-                buttons: [
-                    'pageLength',
-                    'colvis',
-                    {
-                        extend: 'collection',
-                        autoClose: true,
-                        text: 'Timestamp',
-                        attr: {id: 'timestampBtn'},
-                        className: 'timestampBtn',
-                        buttons: []
-                    },
-                    {
-                        extend: 'collection',
-                        autoClose: true,
-                        text: 'Status',
-                        buttons: [
-                            {
-                                text: 'MISSING',
-                                className: 'active',
-                                attr: {id: 'statusBtnMissing', className: 'statusBtn'},
-                                action: function (e, dt, button, config) {
-                                    $('.statusBtn').removeClass('active');
-                                    $('#statusBtnMissing').addClass('active');
-                                    $('#ddbid').DataTable().ajax.reload();
-                                }
-                            },
-                            {
-                                text: 'NEW',
-                                attr: {id: 'statusBtnNew', className: 'statusBtn'},
-                                action: function (e, dt, node, config) {
-                                    $('.statusBtn').removeClass('active');
-                                    $('#statusBtnNew').addClass('active');
-                                    $('#ddbid').DataTable().ajax.reload();
-                                }
-                            },
-                            {
-                                text: 'ALL',
-                                attr: {id: 'statusBtnAll', className: 'statusBtn'},
-                                action: function (e, dt, node, config) {
-                                    $('.statusBtn').removeClass('active');
-                                    $('#statusBtnAll').addClass('active');
-                                    $('#ddbid').DataTable().ajax.reload();
-                                }
+
+
+            $(document).ready(function () {
+                $('#ddbid').DataTable({
+                    "dom": 'B<"row"<"col-6"i><"col-6"f>><"pb-3 mb-5"rt><"footer fixed-bottom mt-auto py-3 bg-light"<"float-right"p>>',
+                    "processing": true,
+                    "serverSide": true,
+                    "paging": true,
+                    "colReorder": true,
+                    "pagingType": "first_last_numbers",
+                    "lengthMenu": [ [25, 50, 100, 250, 500, -1], [25, 50, 100, 250, 500, "All"] ],
+                    "pageLength": 100,
+                    // "language": {
+                    //  url: "/assets/datatables/de-DE.json",
+                    //  decimal: ","
+                    // },
+                    "ajax": {
+                        "url": "/item",
+                        "type": "POST",
+                        "dataType": "json",
+                        "contentType": "application/json",
+                        "data": function (d) {
+
+                            d.status = $('#statusBtn').data('id') ? $('#statusBtn').data('id') : "MISSING";
+                            const entry = $('.timestampBtnEntry.active');
+                            if (entry.length > 0) {
+                                d.timestamp = entry.data('id');
+                            } else {
+                                d.timestamp = null;
                             }
-                        ]
-                    },
-                    'copy', 'csv', 'excel'
-                ],
-                "columns": [
-                    {"data": "timestamp"},
-                    {
-                        "data": "id",
-                        "className": "text-break",
-                        "render": function (data, type, row, meta) {
-                            if (type === 'display') {
-                                data = '<a href="https://www.deutsche-digitale-bibliothek.de/item/' + data + '" target="_blank">' + data + '</a>';
-                            }
-                            return data;
+                            return JSON.stringify(d);
                         }
                     },
-                    {"data": "status", "className": "text-nowrap"},
-                    {"data": "dataset_id", "className": "text-break"},
-                    {"data": "label", "className": "text-wrap"},
-                    {
-                        "data": "provider_id",
-                        "className": "text-break",
-                        "render": function (data, type, row, meta) {
-                            if (type === 'display') {
-                                data = data.replace(/([A-Z0-9]{32})/g, function (a, b) {
-                                    return '<a href="https://www.deutsche-digitale-bibliothek.de/organization/' + b + '" target="_blank">' + b + '</a>';
+                    "fixedHeader": true,
+                    "autoWidth": true,
+                    "fnInitComplete": function (oSettings) {
+                        $.getJSON("/item/timestamp", function (json) {
+                            var count = 0;
+                            const oEntries = Object.entries(json)
+                            for (const [key, value] of oEntries) {
+                                $('#ddbid').DataTable().button().add("2-0", {
+                                    text: key,
+                                    className: (++count === oEntries.length) ? "timestampBtnEntry active" : "timestampBtnEntry",
+                                    attr: {
+                                        "id": "timestampBtnEntry-" + value,
+                                        "data-id": value
+                                    },
+                                    action: function (e, dt, button, config) {
+                                        $('.timestampBtnEntry').removeClass('active');
+                                        button.addClass('active');
+                                        $('#ddbid').DataTable().ajax.reload();
+                                    }
                                 });
                             }
-                            return data;
-                        }
+                        });
                     },
-                    {"data": "supplier_id", "className": "text-break"}
-                ],
-                "createdRow": function (row, data, dataIndex) {
-                    if (data['status'] === 'NEW') {
-                        $(row).addClass('text-success');
-                    } else if (data['status'] === 'MISSING') {
-                        $(row).addClass('text-danger');
+                    buttons: [
+                        'pageLength',
+                        'colvis',
+                        {
+                            extend: 'collection',
+                            autoClose: true,
+                            text: 'Timestamp',
+                            attr: {id: 'timestampBtn'},
+                            className: 'timestampBtn',
+                            buttons: []
+                        },
+                        {
+                            extend: 'collection',
+                            autoClose: true,
+                            text: 'Status',
+                            attr: {id: 'statusBtn'},
+                            buttons: [
+                                {
+                                    text: 'MISSING',
+                                    className: 'statusBtn active',
+                                    attr: {id: 'statusBtnMissing'},
+                                    action: function (e, dt, button, config) {
+                                        $('.statusBtn').removeClass('active');
+                                        $('#statusBtnMissing').addClass('active');
+                                        $('#statusBtn').data('id', 'MISSING');
+                                        $('#ddbid').DataTable().ajax.reload();
+                                    }
+                                },
+                                {
+                                    text: 'NEW',
+                                    className: 'statusBtn',
+                                    attr: {id: 'statusBtnNew'},
+                                    action: function (e, dt, node, config) {
+                                        $('.statusBtn').removeClass('active');
+                                        $('#statusBtnNew').addClass('active');
+                                        $('#statusBtn').data('id', 'NEW');
+                                        $('#ddbid').DataTable().ajax.reload();
+                                    }
+                                },
+                                {
+                                    text: 'ALL',
+                                    className: 'statusBtn',
+                                    attr: {id: 'statusBtnAll'},
+                                    action: function (e, dt, node, config) {
+                                        $('.statusBtn').removeClass('active');
+                                        $('#statusBtnAll').addClass('active');
+                                        $('#statusBtn').data('id', 'ALL');
+                                        $('#ddbid').DataTable().ajax.reload();
+                                    }
+                                }
+                            ]
+                        },
+                        'copy', 'csv', 'excel'
+                    ],
+                    "columns": [
+                        {"data": "timestamp"},
+                        {
+                            "data": "id",
+                            "className": "text-break",
+                            "render": function (data, type, row, meta) {
+                                if (type === 'display') {
+                                    data = '<a href="https://www.deutsche-digitale-bibliothek.de/item/' + data + '" target="_blank">' + data + '</a>';
+                                }
+                                return data;
+                            }
+                        },
+                        {"data": "status", "className": "text-nowrap"},
+                        {"data": "dataset_id", "className": "text-break"},
+                        {"data": "label", "className": "text-wrap"},
+                        {
+                            "data": "provider_id",
+                            "className": "text-break",
+                            "render": function (data, type, row, meta) {
+                                if (type === 'display') {
+                                    data = data.replace(/([A-Z0-9]{32})/g, function (a, b) {
+                                        return '<a href="https://www.deutsche-digitale-bibliothek.de/organization/' + b + '" target="_blank">' + b + '</a>';
+                                    });
+                                }
+                                return data;
+                            }
+                        },
+                        {"data": "supplier_id", "className": "text-break"}
+                    ],
+                    "createdRow": function (row, data, dataIndex) {
+                        if (data['status'] === 'NEW') {
+                            $(row).addClass('text-success');
+                        } else if (data['status'] === 'MISSING') {
+                            $(row).addClass('text-danger');
+                        }
                     }
-                }
+                });
+
+                $(function () {
+                    $(window).scroll(function () {
+                        if ($(this).scrollTop() > 100) {
+                            $('#btn-back-to-top').fadeIn();
+                        } else {
+                            $('#btn-back-to-top').fadeOut();
+                        }
+                    });
+
+                    $('#btn-back-to-top').click(function () {
+                        $('body,html').animate({
+                            scrollTop: 0
+                        }, 800);
+                        return false;
+                    });
+                });
             });
-
-            // When the user scrolls down 20px from the top of the document, show the button
-            window.onscroll = function () {
-                scrollFunction();
-            };
-
-            function scrollFunction() {
-                if (
-                        document.body.scrollTop > 100 ||
-                        document.documentElement.scrollTop > 100
-                        ) {
-                    $("#btn-back-to-top").style.display = "block";
-                } else {
-                    $("#btn-back-to-top").style.display = "none";
-                }
-            }
-            // When the user clicks on the button, scroll to the top of the document
-            $("#btn-back-to-top").addEventListener("click", backToTop);
-
-            function backToTop() {
-                document.body.scrollTop = 0;
-                document.documentElement.scrollTop = 0;
-            }
         </script>
     </body>
 </html>

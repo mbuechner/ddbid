@@ -5,9 +5,11 @@ import java.util.List;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 @Setter
 @Getter
+@ToString
 @NoArgsConstructor
 public class PagingRequest {
 
@@ -17,7 +19,7 @@ public class PagingRequest {
     private List<Order> order;
     private List<Column> columns;
     private Search search;
-    private String timestamp;
+    private Long timestamp;
     private String status;
 
 }
