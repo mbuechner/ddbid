@@ -28,10 +28,10 @@ public class DdbIdRestController {
     public Page<DdbId> list(@RequestBody PagingRequest pagingRequest) {
         return ddbIdService.getDdbIds(pagingRequest);
     }
-    
+
     @PostMapping
     @RequestMapping("timestamp")
-    public Map<Timestamp, String> timestamps() {
+    public Map<String, Timestamp> timestamps() {
         return ddbIdService.getTimestamps();
     }
 }

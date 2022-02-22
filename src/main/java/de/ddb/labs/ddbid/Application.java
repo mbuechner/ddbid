@@ -3,6 +3,7 @@ package de.ddb.labs.ddbid;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.PreDestroy;
 import javax.sql.DataSource;
@@ -93,6 +94,7 @@ public class Application {
     }
 
     public static void main(String[] args) {
+        TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
         SpringApplication.run(Application.class, args);
     }
 }
