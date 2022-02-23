@@ -14,7 +14,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -30,31 +29,57 @@ public class DdbIdService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'", Locale.GERMANY);
+    private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
     public Page<DdbId> getDdbIds(PagingRequest pagingRequest) {
 
         log.debug("Request received: {}", pagingRequest.toString());
 
         String status = null;
-        final List<String> s = Arrays.stream(Status.values()).map(Enum::name).collect(Collectors.toList());
-        if (s.contains(pagingRequest.getStatus())) {
-            status = pagingRequest.getStatus();
-        }
-
-        int totalCount;
-        if (status != null) {
-            totalCount = jdbcTemplate.queryForObject("SELECT count(*) FROM main.\"data\" WHERE status='" + status + "'", Integer.class);
+        if (pagingRequest.getStatus() == null) {
+            status = "MISSING";
         } else {
-            totalCount = jdbcTemplate.queryForObject("SELECT count(*) FROM main.\"data\"", Integer.class);
+            final List<String> s = Arrays.stream(Status.values()).map(Enum::name).collect(Collectors.toList());
+            if (s.contains(pagingRequest.getStatus()) || pagingRequest.getStatus().equals("ALL")) {
+                status = pagingRequest.getStatus();
+            }
         }
 
         final StringBuilder query = new StringBuilder("SELECT * FROM main.\"data\" ");
 
         // WHERE (Search)
         final List<Object> whereValues = new ArrayList<>();
+        final StringBuilder where = new StringBuilder("WHERE ");
+
+        // status (NEW, MISSING, ALL -> null)
+        if (status != null && !status.equals("ALL")) {
+            where.append("status=? AND ");
+            whereValues.add(status);
+        }
+
+        // timestamp (null -> show latest, -1 -> show all, value)
+        if (pagingRequest.getTimestamp() == null) {
+            where.append("timestamp=(SELECT MAX(timestamp) FROM main.\"data\") AND ");
+        } else if (pagingRequest.getTimestamp() == -1) {
+        } else {
+            where.append("timestamp=?::TIMESTAMP AND ");
+            whereValues.add(new Timestamp(pagingRequest.getTimestamp()));
+        }
+
+        // query for totalCount
+        String whereClause = where.toString();
+        // no where clauses? remove it
+        if (whereClause.endsWith("AND ")) {
+            whereClause = whereClause.substring(0, whereClause.length() - 4);
+        } else if (where.toString().endsWith("WHERE ")) {
+            whereClause = whereClause.substring(0, whereClause.length() - 6);
+        }
+        final int totalCount = jdbcTemplate.queryForObject("SELECT count(*) FROM main.\"data\" " + whereClause, Integer.class, whereValues.toArray());
+        // totalCount end
+
+        // with search
         if (!pagingRequest.getSearch().getValue().isEmpty()) {
-            final StringBuilder where = new StringBuilder("WHERE (");
+            where.append("(");
             for (String field : Doc.getHeader()) {
                 if (!field.equals("status") || !field.equals("timestamp")) {
                     where.append(field);
@@ -64,27 +89,16 @@ public class DdbIdService {
             }
             where.setLength(where.length() - 3); // remove last 'OR '
             where.append(") "); // close )
-            if (status != null) {
-                where.append("AND status=? ");
-                whereValues.add(status);
-            }
-            if (pagingRequest.getTimestamp() == null) {
-                where.append("AND timestamp=(SELECT MAX(timestamp) FROM main.\"data\") ");
-            } else {
-                where.append("AND timestamp=? ");
-                whereValues.add(new Timestamp(pagingRequest.getTimestamp()));
-            }
-            query.append(where.toString());
-        } else {
-            query.append("WHERE status=? ");
-            whereValues.add(status);
-            if (pagingRequest.getTimestamp() == null) {
-                query.append("AND timestamp=(SELECT MAX(timestamp) FROM main.\"data\") ");
-            } else {
-                query.append("AND timestamp=? ");
-                whereValues.add(new Timestamp(pagingRequest.getTimestamp()));
-            }
         }
+
+        // no where clauses? remove it
+        if (where.toString().endsWith("AND ")) {
+            where.setLength(where.length() - 4);
+        } else if (where.toString().endsWith("WHERE ")) {
+            where.setLength(where.length() - 6);
+        }
+
+        query.append(where.toString());
 
         if (pagingRequest.getTimestamp() != null) {
             log.debug("Timestamp: {}", new Timestamp(pagingRequest.getTimestamp()));
@@ -137,6 +151,7 @@ public class DdbIdService {
         page.setRecordsTotal(totalCount);
         page.setDraw(pagingRequest.getDraw());
 
+        log.debug("Sending page: {}", page.toString());
         return page;
     }
 
