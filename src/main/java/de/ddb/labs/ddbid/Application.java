@@ -26,6 +26,8 @@ public class Application {
 
     private HikariDataSource dataSource;
 
+    private final static String SET_TIMEZONE = "Set TimeZone='UTC';";
+    
     private final static String CREATE_SCHEMA = "CREATE SCHEMA IF NOT EXISTS main;";
 
     private final static String CREATE_DB = "CREATE TABLE IF NOT EXISTS main.\"data\" (\n"
@@ -46,6 +48,7 @@ public class Application {
     public JdbcTemplate jdbcTemplate(DataSource dataSource) {
         final JdbcTemplate duckdb = new JdbcTemplate();
         duckdb.setDataSource(dataSource);
+        duckdb.execute(SET_TIMEZONE);
         duckdb.execute(CREATE_SCHEMA);
         duckdb.execute(CREATE_DB);
         duckdb.execute(CREATE_SEARCH_INDEX_1);
