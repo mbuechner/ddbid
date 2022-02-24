@@ -1,4 +1,19 @@
-package de.ddb.labs.ddbid.cron;
+/* 
+ * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package de.ddb.labs.ddbid.cronjob;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,7 +67,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 @Slf4j
 @Service
-public class GetDdbIds {
+public class DdbIdCronJob {
 
     private final static int ENTITYCOUNT = 500000; // count of entities per query
     private final static int MAX_NO_OF_THREADS = 1; // max no. of writing theads
@@ -64,7 +79,7 @@ public class GetDdbIds {
     private final static String API_QUERY = "/search/index/search/select?q=*:*&wt=json&fl=id,label,provider_id,supplier_id,dataset_id&sort=id ASC&rows=" + ENTITYCOUNT;
 
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-    
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
@@ -87,10 +102,10 @@ public class GetDdbIds {
     private CSVPrinter outputWriter;
     private Timestamp currentTime;
 
-    public GetDdbIds() {
+    public DdbIdCronJob() {
         currentTime = Timestamp.from(LocalDateTime.now().toInstant(ZoneOffset.UTC));
     }
-    
+
     @Scheduled(cron = "${ddbid.cron}")
     public void run() {
 
@@ -107,7 +122,7 @@ public class GetDdbIds {
             final String fileABaseName = lastDumpInDataPath.getName().substring(0, lastDumpInDataPath.getName().indexOf('.'));
             final String fileBBaseName = newDumpinDataPath.getName().substring(0, newDumpinDataPath.getName().indexOf('.'));
 
-            final File outputFileNameAB = new File(dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.MISSING +  OUTPUT_FILENAME_EXT);
+            final File outputFileNameAB = new File(dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.MISSING + OUTPUT_FILENAME_EXT);
             final int diffCountAB = findDifferences(lastDumpInDataPath, newDumpinDataPath, outputFileNameAB, currentTime, Status.MISSING);
             if (diffCountAB > 0) {
                 jdbcTemplate.execute("COPY main.\"data\" FROM '" + outputFileNameAB + "' (AUTO_DETECT TRUE);");
@@ -179,9 +194,7 @@ public class GetDdbIds {
         errorOccured = false;
 
         try (
-                final OutputStream os = Files.newOutputStream(Path.of(outputFileName), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); 
-                final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); 
-                final BufferedWriter bw = new BufferedWriter(ow);) {
+                final OutputStream os = Files.newOutputStream(Path.of(outputFileName), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow);) {
 
             outputWriter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader());
             outputWriter.printRecord(Doc.getHeader());
@@ -221,7 +234,6 @@ public class GetDdbIds {
                     addInThread(doc.get("response").get("docs"));
 
                 }
-                break; // for test
             }
             // wait until finished
             while (cleanUpThreads() > 0);
@@ -288,15 +300,7 @@ public class GetDdbIds {
         };
 
         try (
-                final InputStream fileStreamA = new FileInputStream(fileA); 
-                final GZIPInputStream gzipA = new GZIPInputStream(fileStreamA); 
-                final Reader readerA = csVSerializer.createReader(gzipA); 
-                final InputStream fileStreamB = new FileInputStream(fileB);
-                final GZIPInputStream gzipB = new GZIPInputStream(fileStreamB); 
-                final Reader readerB = csVSerializer.createReader(gzipB);
-                final OutputStream fileOutputStream = new FileOutputStream(tmpFile, false);
-                final GZIPOutputStream gzOutStream = new GZIPOutputStream(fileOutputStream);
-                final Writer writerAb = csVSerializer.createWriter(gzOutStream);) {
+                final InputStream fileStreamA = new FileInputStream(fileA); final GZIPInputStream gzipA = new GZIPInputStream(fileStreamA); final Reader readerA = csVSerializer.createReader(gzipA); final InputStream fileStreamB = new FileInputStream(fileB); final GZIPInputStream gzipB = new GZIPInputStream(fileStreamB); final Reader readerB = csVSerializer.createReader(gzipB); final OutputStream fileOutputStream = new FileOutputStream(tmpFile, false); final GZIPOutputStream gzOutStream = new GZIPOutputStream(fileOutputStream); final Writer writerAb = csVSerializer.createWriter(gzOutStream);) {
 
             // Sorter
             //        .serializer(csVSerializer)
@@ -310,13 +314,8 @@ public class GetDdbIds {
 
         int lineCount = 0;
         try (
-                final InputStream fileStream = new FileInputStream(tmpFile); 
-                final InputStream gzipStream = new GZIPInputStream(fileStream); 
-                final InputStreamReader decoder = new InputStreamReader(gzipStream, Charset.forName("UTF-8")); //
-                 final OutputStream os = Files.newOutputStream(Path.of(output.getAbsolutePath()), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); 
-                final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8);
-                final BufferedWriter bw = new BufferedWriter(ow); 
-                final CSVPrinter csvPrinter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader());) {
+                final InputStream fileStream = new FileInputStream(tmpFile); final InputStream gzipStream = new GZIPInputStream(fileStream); final InputStreamReader decoder = new InputStreamReader(gzipStream, Charset.forName("UTF-8")); //
+                 final OutputStream os = Files.newOutputStream(Path.of(output.getAbsolutePath()), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow); final CSVPrinter csvPrinter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader());) {
 
             csvPrinter.printRecord(Doc.getHeader());
 
@@ -334,7 +333,11 @@ public class GetDdbIds {
         tmpFile.delete();
 
         if (lineCount < 1) {
-            Files.delete(Path.of(output.getAbsolutePath()));
+            try {
+                Files.delete(Path.of(output.getAbsolutePath()));
+            } catch (IOException e) {
+                //nothing
+            }
         }
 
         log.info("{} compared with {} has {} differences with status {}", fileA.getName(), fileB.getName(), lineCount, status);
