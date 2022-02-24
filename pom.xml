@@ -12,6 +12,33 @@
     <version>0.0.1-SNAPSHOT</version>
     <name>ddbid</name>
     <description>DDBid</description>
+    <url>https://mbuechner.github.io/ddbid/</url>
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <id>mbuechner</id>
+            <name>Michael Büchner</name>
+            <organization>Deutsche Digitale Bibliothek</organization>
+        </developer>
+    </developers>
+    <organization>
+        <name>Deutsche Digitale Bibliothek</name>
+        <url>https://www.deutsche-digitale-bibliothek.de/</url>
+    </organization>
+    <issueManagement>
+        <system>GitHub</system>
+        <url>https://github.com/mbuechner/ddbid/issues</url>
+    </issueManagement>
+    <scm>
+        <connection>scm:git:https://github.com/mbuechner/ddbid.git</connection>
+        <url>https://github.com/mbuechner/ddbid</url>
+    </scm>
     <properties>
         <java.version>17</java.version>
         <webjars-locator.version>0.30</webjars-locator.version>
@@ -33,10 +60,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
         </dependency>
-        <!--        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -104,11 +127,49 @@
             <version>0.1.18</version>
         </dependency>
     </dependencies>
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>4.5.3.0</version>
+            </plugin>
+        </plugins>
+    </reporting>
     <build>
+        <finalName>ddbid</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+ 
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>4.5.3.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.github.spotbugs</groupId>
+                        <artifactId>spotbugs</artifactId>
+                        <version>4.5.3</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+                <version>3.10.0</version>
+                <configuration>
+                    <outputDirectory>${basedir}/docs</outputDirectory>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.bernardomg.maven.skins</groupId>
+                        <artifactId>docs-maven-skin</artifactId>
+                        <version>2.2.6</version>
+                    </dependency> 
+                </dependencies>           
             </plugin>
         </plugins>
     </build>
