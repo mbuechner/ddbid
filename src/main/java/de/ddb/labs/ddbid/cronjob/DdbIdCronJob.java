@@ -234,6 +234,8 @@ public class DdbIdCronJob {
                     addInThread(doc.get("response").get("docs"));
 
                 }
+                // for testing
+                // break;
             }
             // wait until finished
             while (cleanUpThreads() > 0);
