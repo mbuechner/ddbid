@@ -42,7 +42,7 @@ public class Application {
     private HikariDataSource dataSource;
 
     private final static String SET_TIMEZONE = "Set TimeZone='UTC';";
-    
+
     private final static String CREATE_SCHEMA = "CREATE SCHEMA IF NOT EXISTS main;";
 
     private final static String CREATE_DB = "CREATE TABLE IF NOT EXISTS main.\"data\" (\n"
@@ -87,9 +87,13 @@ public class Application {
     public DataSource dataSource() {
         final HikariConfig config = new HikariConfig();
         config.setDriverClassName("org.duckdb.DuckDBDriver");
-        config.setMaximumPoolSize(10);
+        config.setConnectionTestQuery("SELECT 1");
+        config.addDataSourceProperty("duckdb.read_only", "false");
+        config.setReadOnly(false);
+        config.setMaximumPoolSize(16);
         //config.setMaxLifetime(3);
         config.setJdbcUrl("jdbc:duckdb:" + database);
+        
         dataSource = new HikariDataSource(config);
         return dataSource;
     }
