@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package de.ddb.labs.ddbid.model;
+package de.ddb.labs.ddbid.model.item;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import de.ddb.labs.ddbid.model.Status;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import lombok.Data;
 import lombok.Getter;
@@ -28,18 +28,7 @@ import lombok.Getter;
  * @author michael
  */
 @Data
-public class Doc {
-
-    public enum Status {
-        NEW("NEW"), MISSING("MISSING");
-
-        @Getter
-        private final String status;
-
-        private Status(String status) {
-            this.status = status;
-        }
-    }
+public class ItemDoc {
 
     @JsonIgnore
     private Timestamp timestamp;
@@ -47,8 +36,10 @@ public class Doc {
     @JsonIgnore
     private Status status;
     private String dataset_id;
-    private String[] label;
-    private String[] provider_id;
+    @Getter(lazy = true)
+    private final List<String> label = new ArrayList<>();
+    @Getter(lazy = true)
+    private final List<String> provider_id = new ArrayList<>();
     private String supplier_id;
 
     public static List<String> getHeader() {
@@ -75,8 +66,8 @@ public class Doc {
         l.add(getId());
         l.add(getStatus());
         l.add(getDataset_id());
-        l.add(Arrays.toString(getLabel()));
-        l.add(Arrays.toString(getProvider_id()));
+        l.add(getLabel().toString());
+        l.add(getProvider_id().toString());
         l.add(getSupplier_id());
         return l;
     }

@@ -34,13 +34,18 @@
                             <a class="nav-link" href="index.html">Start</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link active" href="item.html">Item</a>
+                            <a class="nav-link" href="item.html">Item</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="person.html">Person</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="organization.html">Organization</a>
+                            <a class="nav-link active" href="organization.html">Organization</a>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a target="_blank" rel="noopener" class="nav-link" href="https://github.com/mbuechner/ddbid"><i class="fab fa-github"></i> GitHub</a>
                         </li>
                     </ul>
                 </div>
@@ -58,10 +63,9 @@
                             <th>Timestamp</th>
                             <th>ID</th>
                             <th>Status</th>
-                            <th>Dataset ID</th>
-                            <th>Label</th>
-                            <th>Provider ID</th>
-                            <th>Supplier ID</th>
+                            <th>Variant ID</th>
+                            <th>Preferred Name</th>
+                            <th>Type</th>
                         </tr>
                     </thead>
                 </table>
@@ -91,7 +95,7 @@
                     //  decimal: ","
                     // },
                     "ajax": {
-                        "url": "item",
+                        "url": "organization",
                         "type": "POST",
                         "dataType": "json",
                         "contentType": "application/json",
@@ -104,7 +108,7 @@
                     "fixedHeader": true,
                     "autoWidth": true,
                     "initComplete": function (oSettings) {
-                        $.getJSON("item/timestamp", function (json) {
+                        $.getJSON("organization/timestamp", function (json) {
                             $('#ddbid').DataTable().button().add("2-0", {
                                 text: 'ALL',
                                 className: "timestampBtnEntry",
@@ -199,28 +203,18 @@
                             "data": "id",
                             "className": "text-nowrap",
                             "render": function (data, type, row, meta) {
-                                if (type === 'display') {
-                                    data = '<a href="https://www.deutsche-digitale-bibliothek.de/item/' + data + '" target="_blank">' + data + '</a>';
+                                if (type === 'display' && data.startsWith('http://d-nb.info/gnd/')) {
+                                    data = '<a href="https://www.deutsche-digitale-bibliothek.de/organization/gnd/' + data.substring(data.lastIndexOf('/') + 1, data.lenght) + '" target="_blank">' + data + '</a>';
+                                } else if (type === 'display'){
+                                    data = '<a href="https://www.deutsche-digitale-bibliothek.de/organization/' + data + '" target="_blank">' + data + '</a>';
                                 }
                                 return data;
                             }
                         },
                         {"data": "status", "className": "text-nowrap"},
-                        {"data": "dataset_id", "className": "text-wrap"},
-                        {"data": "label", "className": "text-wrap"},
-                        {
-                            "data": "provider_id",
-                            "className": "text-wrap",
-                            "render": function (data, type, row, meta) {
-                                if (type === 'display') {
-                                    data = data.replace(/([A-Z0-9]{32})/g, function (a, b) {
-                                        return '<a href="https://www.deutsche-digitale-bibliothek.de/organization/' + b + '" target="_blank">' + b + '</a>';
-                                    });
-                                }
-                                return data;
-                            }
-                        },
-                        {"data": "supplier_id", "className": "text-wrap"}
+                        {"data": "variant_id", "className": "text-wrap"},
+                        {"data": "preferredName", "className": "text-wrap"},
+                        {"data": "type", "className": "text-nowrap"}
                     ],
                     "createdRow": function (row, data, dataIndex) {
                         if (data['status'] === 'NEW') {

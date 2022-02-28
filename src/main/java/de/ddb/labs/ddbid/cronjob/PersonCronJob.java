@@ -17,7 +17,6 @@ package de.ddb.labs.ddbid.cronjob;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.ddb.labs.ddbid.model.Doc;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,7 +37,8 @@ import com.github.davidmoten.bigsorter.Reader;
 import com.github.davidmoten.bigsorter.Serializer;
 import com.github.davidmoten.bigsorter.Util;
 import com.github.davidmoten.bigsorter.Writer;
-import de.ddb.labs.ddbid.model.Doc.Status;
+import de.ddb.labs.ddbid.model.Status;
+import de.ddb.labs.ddbid.model.person.PersonDoc;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
@@ -48,6 +48,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -67,7 +68,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 @Slf4j
 @Service
-public class DdbIdCronJob {
+public class PersonCronJob {
 
     private final static int ENTITYCOUNT = 500000; // count of entities per query
     private final static int MAX_NO_OF_THREADS = 1; // max no. of writing theads
@@ -76,7 +77,7 @@ public class DdbIdCronJob {
     private final static String OUTPUT_FILENAME_EXT = ".csv.gz";
 
     private final static String API = "https://api.deutsche-digitale-bibliothek.de";
-    private final static String API_QUERY = "/search/index/search/select?q=*:*&wt=json&fl=id,label,provider_id,supplier_id,dataset_id&sort=id ASC&rows=" + ENTITYCOUNT;
+    private final static String API_QUERY = "/search/index/person/select?q=*:*&wt=json&fl=id,variant_id,preferredName,type&sort=id ASC&rows=" + ENTITYCOUNT;
 
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
@@ -90,8 +91,11 @@ public class DdbIdCronJob {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Value("${ddbid.datapath}")
+    @Value("${ddbid.datapath.person}")
     private String dataPath;
+    
+    @Value("${ddbid.database.table.person}")
+    private String tableName;
 
     // private int reRunCount = 0;
     private final List<Thread> threads = new ArrayList<>();
@@ -102,11 +106,11 @@ public class DdbIdCronJob {
     private CSVPrinter outputWriter;
     private Timestamp currentTime;
 
-    public DdbIdCronJob() {
+    public PersonCronJob() {
         currentTime = Timestamp.from(LocalDateTime.now().toInstant(ZoneOffset.UTC));
     }
 
-    @Scheduled(cron = "${ddbid.cron}")
+    @Scheduled(cron = "${ddbid.cron.person}")
     public void run() {
 
         currentTime = Timestamp.from(LocalDateTime.now().toInstant(ZoneOffset.UTC));
@@ -125,13 +129,13 @@ public class DdbIdCronJob {
             final File outputFileNameAB = new File(dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.MISSING + OUTPUT_FILENAME_EXT);
             final int diffCountAB = findDifferences(lastDumpInDataPath, newDumpinDataPath, outputFileNameAB, currentTime, Status.MISSING);
             if (diffCountAB > 0) {
-                jdbcTemplate.execute("COPY main.\"data\" FROM '" + outputFileNameAB + "' (AUTO_DETECT TRUE);");
+                jdbcTemplate.execute("COPY main." + tableName + " FROM '" + outputFileNameAB + "' (AUTO_DETECT TRUE);");
             }
 
             final File outputFileNameBA = new File(dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.NEW + OUTPUT_FILENAME_EXT);
             final int diffCountBA = findDifferences(newDumpinDataPath, lastDumpInDataPath, outputFileNameBA, currentTime, Status.NEW);
             if (diffCountBA > 0) {
-                jdbcTemplate.execute("COPY main.\"data\" FROM '" + outputFileNameBA + "' (AUTO_DETECT TRUE);");
+                jdbcTemplate.execute("COPY main." + tableName + " FROM '" + outputFileNameBA + "' (AUTO_DETECT TRUE);");
             }
         } catch (Exception e) {
             log.error("Error while processing ID dump. {}", e.getMessage());
@@ -197,7 +201,7 @@ public class DdbIdCronJob {
                 final OutputStream os = Files.newOutputStream(Path.of(outputFileName), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow);) {
 
             outputWriter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader());
-            outputWriter.printRecord(Doc.getHeader());
+            outputWriter.printRecord(PersonDoc.getHeader());
 
             log.info("Writing data to {}", outputFileName);
 
@@ -207,12 +211,12 @@ public class DdbIdCronJob {
             while (!lastCursorMark.equals(nextCursorMark) && !nextCursorMark.isBlank() && !errorOccured) {
                 // initial request
                 final Request request = new Request.Builder()
-                        .url(API + API_QUERY + "&cursorMark=" + nextCursorMark)
-                        .addHeader("Accept", "application/xml")
+                        .url(API + API_QUERY + "&cursorMark=" + URLEncoder.encode(nextCursorMark, Charset.forName("UTF-8")))
+                        .addHeader("Accept", "application/json")
                         .addHeader("Authorization", "OAuth oauth_consumer_key=\"" + apiKey + "\"")
                         .build();
 
-                log.info("Execute request with cursor \"{}\"...", nextCursorMark);
+                log.info("Execute request \"{}\"", request.url().toString());
 
                 try ( Response response = httpClient.newCall(request).execute()) {
                     if (!response.isSuccessful()) {
@@ -272,9 +276,9 @@ public class DdbIdCronJob {
         final Thread t = new Thread(() -> {
             try {
 
-                final Doc[] ec = objectMapper.treeToValue(docsArray, Doc[].class);
+                final PersonDoc[] ec = objectMapper.treeToValue(docsArray, PersonDoc[].class);
 
-                for (Doc e : ec) {
+                for (PersonDoc e : ec) {
                     outputWriter.printRecord(e.getData());
                 }
                 processedCount += ec.length;
@@ -319,7 +323,7 @@ public class DdbIdCronJob {
                 final InputStream fileStream = new FileInputStream(tmpFile); final InputStream gzipStream = new GZIPInputStream(fileStream); final InputStreamReader decoder = new InputStreamReader(gzipStream, Charset.forName("UTF-8")); //
                  final OutputStream os = Files.newOutputStream(Path.of(output.getAbsolutePath()), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow); final CSVPrinter csvPrinter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader());) {
 
-            csvPrinter.printRecord(Doc.getHeader());
+            csvPrinter.printRecord(PersonDoc.getHeader());
 
             final Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(decoder);
 

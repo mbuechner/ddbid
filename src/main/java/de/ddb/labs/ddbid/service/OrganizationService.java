@@ -15,11 +15,9 @@
  */
 package de.ddb.labs.ddbid.service;
 
-import java.util.List;
-import org.springframework.stereotype.Service;
-import de.ddb.labs.ddbid.model.DdbId;
-import de.ddb.labs.ddbid.model.Doc;
-import de.ddb.labs.ddbid.model.Doc.Status;
+import de.ddb.labs.ddbid.model.Status;
+import de.ddb.labs.ddbid.model.organization.Organization;
+import de.ddb.labs.ddbid.model.organization.OrganizationDoc;
 import de.ddb.labs.ddbid.model.paging.Column;
 import de.ddb.labs.ddbid.model.paging.Order;
 import de.ddb.labs.ddbid.model.paging.Page;
@@ -29,24 +27,30 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-public class DdbIdService {
+public class OrganizationService {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
-    public Page<DdbId> getDdbIds(PagingRequest pagingRequest) {
+    @Value("${ddbid.database.table.organization}")
+    private String tableName;
+
+    public Page<Organization> getDdbIds(PagingRequest pagingRequest) {
 
         log.debug("Request received: {}", pagingRequest.toString());
 
@@ -60,7 +64,7 @@ public class DdbIdService {
             }
         }
 
-        final StringBuilder query = new StringBuilder("SELECT * FROM main.\"data\" ");
+        final StringBuilder query = new StringBuilder("SELECT * FROM main." + tableName + " ");
 
         // WHERE (Search)
         final List<Object> whereValues = new ArrayList<>();
@@ -74,7 +78,9 @@ public class DdbIdService {
 
         // timestamp (null -> show latest, -1 -> show all, value)
         if (pagingRequest.getTimestamp() == null) {
-            where.append("timestamp=(SELECT MAX(timestamp) FROM main.\"data\") AND ");
+            where.append("timestamp=(SELECT MAX(timestamp) FROM main.");
+            where.append(tableName);
+            where.append(") AND ");
         } else if (pagingRequest.getTimestamp() == -1) {
         } else {
             where.append("timestamp=?::TIMESTAMP AND ");
@@ -89,13 +95,13 @@ public class DdbIdService {
         } else if (where.toString().endsWith("WHERE ")) {
             whereClause = whereClause.substring(0, whereClause.length() - 6);
         }
-        final int totalCount = jdbcTemplate.queryForObject("SELECT count(*) FROM main.\"data\" " + whereClause, Integer.class, whereValues.toArray());
+        final int totalCount = jdbcTemplate.queryForObject("SELECT count(*) FROM main." + tableName + " " + whereClause, Integer.class, whereValues.toArray());
         // totalCount end
 
         // with search
         if (!pagingRequest.getSearch().getValue().isEmpty()) {
             where.append("(");
-            for (String field : Doc.getHeader()) {
+            for (String field : OrganizationDoc.getHeader()) {
                 if (!field.equals("status") || !field.equals("timestamp")) {
                     where.append(field);
                     where.append(" ILIKE ? OR ");
@@ -128,7 +134,7 @@ public class DdbIdService {
             for (Order o : pagingRequest.getOrder()) {
                 List<Column> columns = pagingRequest.getColumns();
                 final String columnName = columns.get(o.getColumn()).getData();
-                if (!Doc.getHeader().contains(columnName)) {
+                if (!OrganizationDoc.getHeader().contains(columnName)) {
                     continue; // prevent sql injection
                 }
                 order.append(columnName);
@@ -154,14 +160,14 @@ public class DdbIdService {
         values.addAll(whereValues);
         values.addAll(limitValues);
 
-        List<DdbId> ddbIds;
+        List<Organization> ddbIds;
         if (values.isEmpty()) {
-            ddbIds = jdbcTemplate.query(query.toString(), new BeanPropertyRowMapper(DdbId.class));
+            ddbIds = jdbcTemplate.query(query.toString(), new BeanPropertyRowMapper(Organization.class));
         } else {
-            ddbIds = jdbcTemplate.query(query.toString(), new BeanPropertyRowMapper(DdbId.class), values.toArray());
+            ddbIds = jdbcTemplate.query(query.toString(), new BeanPropertyRowMapper(Organization.class), values.toArray());
         }
 
-        final Page<DdbId> page = new Page<>(ddbIds);
+        final Page<Organization> page = new Page<>(ddbIds);
         page.setRecordsFiltered(filteredCount);
         page.setRecordsTotal(totalCount);
         page.setDraw(pagingRequest.getDraw());
@@ -172,7 +178,7 @@ public class DdbIdService {
 
     public Map<String, Timestamp> getTimestamps() {
         try {
-            final List<Timestamp> ts = jdbcTemplate.queryForList("SELECT DISTINCT \"timestamp\" FROM main.\"data\"", Timestamp.class);
+            final List<Timestamp> ts = jdbcTemplate.queryForList("SELECT DISTINCT \"timestamp\" FROM main." + tableName, Timestamp.class);
             final Map<String, Timestamp> m = new HashMap<>();
             for (Timestamp t : ts) {
                 m.put(sdf.format(t), t);
