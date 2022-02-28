@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package de.ddb.labs.ddbid.model;
+package de.ddb.labs.ddbid.model.item;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.sql.Timestamp;
@@ -24,7 +24,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class DdbId {
+public class Item {
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = JsonFormat.DEFAULT_TIMEZONE)
     private Timestamp timestamp;

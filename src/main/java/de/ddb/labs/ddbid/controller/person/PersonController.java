@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package de.ddb.labs.ddbid.controller;
+package de.ddb.labs.ddbid.controller.person;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
-@RequestMapping({ "/item.html" })
-public class DdbIdController {
+@RequestMapping({ "/person.html" })
+public class PersonController {
 
     @GetMapping
     public String main() {
-        return "item";
+        return "person";
     }
 }

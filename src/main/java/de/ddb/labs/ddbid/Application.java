@@ -18,6 +18,9 @@ package de.ddb.labs.ddbid;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.PreDestroy;
@@ -41,11 +44,29 @@ public class Application {
 
     private HikariDataSource dataSource;
 
+    @Value("${ddbid.database.table.item}")
+    private String itemTableName;
+
+    @Value("${ddbid.database.table.person}")
+    private String personTableName;
+
+    @Value("${ddbid.database.table.organization}")
+    private String organizationTableName;
+
+    @Value("${ddbid.datapath.item}")
+    private String dataPathItem;
+
+    @Value("${ddbid.datapath.person}")
+    private String dataPathPerson;
+
+    @Value("${ddbid.datapath.organization}")
+    private String dataPathOrganization;
+
     private final static String SET_TIMEZONE = "Set TimeZone='UTC';";
 
     private final static String CREATE_SCHEMA = "CREATE SCHEMA IF NOT EXISTS main;";
 
-    private final static String CREATE_DB = "CREATE TABLE IF NOT EXISTS main.\"data\" (\n"
+    private final static String CREATE_ITEM_TABLE = "CREATE TABLE IF NOT EXISTS main.item (\n"
             + "\"timestamp\" TIMESTAMP NOT NULL,\n"
             + "id VARCHAR(32) NOT NULL,\n"
             + "status VARCHAR(16) NOT NULL,\n"
@@ -55,22 +76,64 @@ public class Application {
             + "supplier_id VARCHAR(128),\n"
             + "PRIMARY KEY (\"timestamp\", id)\n"
             + ");";
-    private final static String CREATE_SEARCH_INDEX_1 = "CREATE INDEX IF NOT EXISTS data_timestamp_IDX ON main.\"data\" (\"timestamp\");";
-    private final static String CREATE_SEARCH_INDEX_2 = "CREATE INDEX IF NOT EXISTS data_status_IDX ON main.\"data\" (\"status\");";
-    private final static String CREATE_SEARCH_INDEX_3 = "CREATE INDEX IF NOT EXISTS data_id_IDX ON main.\"data\" (\"id\");";
+    private final static String CREATE_PERSON_TABLE = "CREATE TABLE IF NOT EXISTS main.person (\n"
+            + "\"timestamp\" TIMESTAMP NOT NULL,\n"
+            + "id VARCHAR(64) NOT NULL,\n"
+            + "status VARCHAR(16) NOT NULL,\n"
+            + "variant_id VARCHAR(256),\n"
+            + "preferredName VARCHAR(1024),\n"
+            + "type VARCHAR(32),\n"
+            + "PRIMARY KEY (\"timestamp\", id)\n"
+            + ");";
+
+    private final static String CREATE_ORGANIZATION_TABLE = "CREATE TABLE IF NOT EXISTS main.organization (\n"
+            + "\"timestamp\" TIMESTAMP NOT NULL,\n"
+            + "id VARCHAR(64) NOT NULL,\n"
+            + "status VARCHAR(16) NOT NULL,\n"
+            + "variant_id VARCHAR(256),\n"
+            + "preferredName VARCHAR(1024),\n"
+            + "type VARCHAR(32),\n"
+            + "PRIMARY KEY (\"timestamp\", id)\n"
+            + ");";
+
+    private final static String CREATE_SEARCH_INDEX_1 = "CREATE INDEX IF NOT EXISTS data_timestamp_IDX ON main.{} (\"timestamp\");";
+    private final static String CREATE_SEARCH_INDEX_2 = "CREATE INDEX IF NOT EXISTS data_status_IDX ON main.{} (\"status\");";
+    private final static String CREATE_SEARCH_INDEX_3 = "CREATE INDEX IF NOT EXISTS data_id_IDX ON main.{} (\"id\");";
 
     @Bean
-    public JdbcTemplate jdbcTemplate(DataSource dataSource) {
+    public JdbcTemplate jdbcTemplate(DataSource dataSource) throws IOException {
         final JdbcTemplate duckdb = new JdbcTemplate();
         duckdb.setDataSource(dataSource);
         duckdb.execute(SET_TIMEZONE);
         duckdb.execute(CREATE_SCHEMA);
-        duckdb.execute(CREATE_DB);
-        duckdb.execute(CREATE_SEARCH_INDEX_1);
-        duckdb.execute(CREATE_SEARCH_INDEX_2);
-        duckdb.execute(CREATE_SEARCH_INDEX_3);
-        return duckdb;
+        // item
+        duckdb.execute(CREATE_ITEM_TABLE);
+        duckdb.execute(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", itemTableName));
+        duckdb.execute(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", itemTableName));
+        duckdb.execute(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", itemTableName));
+        //person
+        duckdb.execute(CREATE_PERSON_TABLE);
+        duckdb.execute(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", personTableName));
+        duckdb.execute(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", personTableName));
+        duckdb.execute(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", personTableName));
+        //person
+        duckdb.execute(CREATE_ORGANIZATION_TABLE);
+        duckdb.execute(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", organizationTableName));
+        duckdb.execute(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", organizationTableName));
+        duckdb.execute(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", organizationTableName));
 
+        // create dirs
+        if (!Files.exists(Path.of(dataPathItem))) {
+            Files.createDirectories(Path.of(dataPathItem));
+        }
+        if (!Files.exists(Path.of(dataPathPerson))) {
+            Files.createDirectories(Path.of(dataPathPerson));
+        }
+        if (!Files.exists(Path.of(dataPathOrganization))) {
+            Files.createDirectories(Path.of(dataPathOrganization));
+        }
+
+        return duckdb;
     }
 
     @PreDestroy
@@ -93,7 +156,7 @@ public class Application {
         config.setMaximumPoolSize(16);
         //config.setMaxLifetime(3);
         config.setJdbcUrl("jdbc:duckdb:" + database);
-        
+
         dataSource = new HikariDataSource(config);
         return dataSource;
     }
