@@ -26,7 +26,6 @@ import javax.annotation.PreDestroy;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -69,7 +68,7 @@ public class Application {
     
     @Bean
     public Database database() {
-        database = new Database();
+        database = new Database(databaseName);
         return database;
     }
 

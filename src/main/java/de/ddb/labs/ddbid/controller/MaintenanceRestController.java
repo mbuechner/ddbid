@@ -21,8 +21,10 @@ import de.ddb.labs.ddbid.cronjob.PersonCronJob;
 import de.ddb.labs.ddbid.database.Database;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -112,24 +114,29 @@ public class MaintenanceRestController {
     public Map<String, String> initDb() {
 
         try {
-            database.executeWithWriteAccess(SET_TIMEZONE);
-            database.executeWithWriteAccess(CREATE_SCHEMA);
+            
+            final List<String> queries = new ArrayList<>();
+            
+            queries.add(SET_TIMEZONE);
+            queries.add(CREATE_SCHEMA);
             // item
-            database.executeWithWriteAccess(CREATE_ITEM_TABLE);
-            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", itemTableName));
-            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", itemTableName));
-            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", itemTableName));
+            queries.add(CREATE_ITEM_TABLE);
+            queries.add(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", itemTableName));
+            queries.add(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", itemTableName));
+            queries.add(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", itemTableName));
             //person
-            database.executeWithWriteAccess(CREATE_PERSON_TABLE);
-            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", personTableName));
-            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", personTableName));
-            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", personTableName));
+            queries.add(CREATE_PERSON_TABLE);
+            queries.add(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", personTableName));
+            queries.add(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", personTableName));
+            queries.add(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", personTableName));
             //person
-            database.executeWithWriteAccess(CREATE_ORGANIZATION_TABLE);
-            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", organizationTableName));
-            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", organizationTableName));
-            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", organizationTableName));
+            queries.add(CREATE_ORGANIZATION_TABLE);
+            queries.add(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", organizationTableName));
+            queries.add(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", organizationTableName));
+            queries.add(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", organizationTableName));
 
+            database.executeWithWriteAccess(queries);
+            
             // create dirs
             if (!Files.exists(Path.of(dataPathItem))) {
                 Files.createDirectories(Path.of(dataPathItem));
