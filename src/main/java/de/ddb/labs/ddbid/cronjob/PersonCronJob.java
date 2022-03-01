@@ -17,28 +17,14 @@ package de.ddb.labs.ddbid.cronjob;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
-import okhttp3.OkHttpClient;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Autowired;
-import java.io.BufferedWriter;
-import java.io.OutputStreamWriter;
-import java.nio.file.StandardOpenOption;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import okhttp3.Request;
-import okhttp3.Response;
-import org.apache.commons.csv.CSVPrinter;
 import com.github.davidmoten.bigsorter.Reader;
 import com.github.davidmoten.bigsorter.Serializer;
 import com.github.davidmoten.bigsorter.Util;
 import com.github.davidmoten.bigsorter.Writer;
+import de.ddb.labs.ddbid.database.Database;
 import de.ddb.labs.ddbid.model.Status;
 import de.ddb.labs.ddbid.model.person.PersonDoc;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
@@ -48,27 +34,41 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
+import lombok.extern.slf4j.Slf4j;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-public class PersonCronJob {
+public class PersonCronJob implements Runnable {
 
     private final static int ENTITYCOUNT = 500000; // count of entities per query
     private final static int MAX_NO_OF_THREADS = 1; // max no. of writing theads
@@ -81,9 +81,6 @@ public class PersonCronJob {
 
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
     @Value("${ddbid.apikey}")
     private String apiKey;
     @Autowired
@@ -93,9 +90,12 @@ public class PersonCronJob {
 
     @Value("${ddbid.datapath.person}")
     private String dataPath;
-    
+
     @Value("${ddbid.database.table.person}")
     private String tableName;
+
+    @Autowired
+    private Database database;
 
     // private int reRunCount = 0;
     private final List<Thread> threads = new ArrayList<>();
@@ -111,6 +111,7 @@ public class PersonCronJob {
     }
 
     @Scheduled(cron = "${ddbid.cron.person}")
+    @Override
     public void run() {
 
         currentTime = Timestamp.from(LocalDateTime.now().toInstant(ZoneOffset.UTC));
@@ -129,13 +130,13 @@ public class PersonCronJob {
             final File outputFileNameAB = new File(dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.MISSING + OUTPUT_FILENAME_EXT);
             final int diffCountAB = findDifferences(lastDumpInDataPath, newDumpinDataPath, outputFileNameAB, currentTime, Status.MISSING);
             if (diffCountAB > 0) {
-                jdbcTemplate.execute("COPY main." + tableName + " FROM '" + outputFileNameAB + "' (AUTO_DETECT TRUE);");
+                database.execute("COPY main." + tableName + " FROM '" + outputFileNameAB + "' (AUTO_DETECT TRUE);");
             }
 
             final File outputFileNameBA = new File(dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.NEW + OUTPUT_FILENAME_EXT);
             final int diffCountBA = findDifferences(newDumpinDataPath, lastDumpInDataPath, outputFileNameBA, currentTime, Status.NEW);
             if (diffCountBA > 0) {
-                jdbcTemplate.execute("COPY main." + tableName + " FROM '" + outputFileNameBA + "' (AUTO_DETECT TRUE);");
+                database.execute("COPY main." + tableName + " FROM '" + outputFileNameBA + "' (AUTO_DETECT TRUE);");
             }
         } catch (Exception e) {
             log.error("Error while processing ID dump. {}", e.getMessage());

@@ -37,6 +37,7 @@ import com.github.davidmoten.bigsorter.Reader;
 import com.github.davidmoten.bigsorter.Serializer;
 import com.github.davidmoten.bigsorter.Util;
 import com.github.davidmoten.bigsorter.Writer;
+import de.ddb.labs.ddbid.database.Database;
 import de.ddb.labs.ddbid.model.Status;
 import de.ddb.labs.ddbid.model.organization.OrganizationDoc;
 import java.io.File;
@@ -64,11 +65,10 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 @Slf4j
 @Service
-public class OrganizationCronJob {
+public class OrganizationCronJob implements Runnable {
 
     private final static int ENTITYCOUNT = 500000; // count of entities per query
     private final static int MAX_NO_OF_THREADS = 1; // max no. of writing theads
@@ -81,9 +81,6 @@ public class OrganizationCronJob {
 
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
     @Value("${ddbid.apikey}")
     private String apiKey;
     @Autowired
@@ -93,9 +90,12 @@ public class OrganizationCronJob {
 
     @Value("${ddbid.datapath.organization}")
     private String dataPath;
-    
+
     @Value("${ddbid.database.table.organization}")
     private String tableName;
+
+    @Autowired
+    private Database database;
 
     // private int reRunCount = 0;
     private final List<Thread> threads = new ArrayList<>();
@@ -111,6 +111,7 @@ public class OrganizationCronJob {
     }
 
     @Scheduled(cron = "${ddbid.cron.organization}")
+    @Override
     public void run() {
 
         currentTime = Timestamp.from(LocalDateTime.now().toInstant(ZoneOffset.UTC));
@@ -129,13 +130,13 @@ public class OrganizationCronJob {
             final File outputFileNameAB = new File(dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.MISSING + OUTPUT_FILENAME_EXT);
             final int diffCountAB = findDifferences(lastDumpInDataPath, newDumpinDataPath, outputFileNameAB, currentTime, Status.MISSING);
             if (diffCountAB > 0) {
-                jdbcTemplate.execute("COPY main." + tableName + " FROM '" + outputFileNameAB + "' (AUTO_DETECT TRUE);");
+                database.execute("COPY main." + tableName + " FROM '" + outputFileNameAB + "' (AUTO_DETECT TRUE);");
             }
 
             final File outputFileNameBA = new File(dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.NEW + OUTPUT_FILENAME_EXT);
             final int diffCountBA = findDifferences(newDumpinDataPath, lastDumpInDataPath, outputFileNameBA, currentTime, Status.NEW);
             if (diffCountBA > 0) {
-                jdbcTemplate.execute("COPY main." + tableName + " FROM '" + outputFileNameBA + "' (AUTO_DETECT TRUE);");
+                database.execute("COPY main." + tableName + " FROM '" + outputFileNameBA + "' (AUTO_DETECT TRUE);");
             }
         } catch (Exception e) {
             log.error("Error while processing ID dump. {}", e.getMessage());
