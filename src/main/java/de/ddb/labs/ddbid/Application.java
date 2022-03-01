@@ -31,6 +31,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.event.EventListener;
+import org.springframework.integration.leader.event.OnGrantedEvent;
+import org.springframework.integration.leader.event.OnRevokedEvent;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -172,6 +175,16 @@ public class Application {
                 .connectTimeout(0, TimeUnit.SECONDS)
                 .readTimeout(0, TimeUnit.SECONDS)
                 .build();
+    }
+
+    @EventListener
+    public void onLeadershipGained(OnGrantedEvent event) {
+        log.info("!!! onLeadershipGained() called");
+    }
+
+    @EventListener
+    public void onLeadershipLost(OnRevokedEvent event) {
+        log.info("!!! onLeadershipLost() called");
     }
 
     public static void main(String[] args) {
