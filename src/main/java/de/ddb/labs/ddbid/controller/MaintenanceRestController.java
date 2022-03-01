@@ -112,23 +112,23 @@ public class MaintenanceRestController {
     public Map<String, String> initDb() {
 
         try {
-            database.execute(SET_TIMEZONE);
-            database.execute(CREATE_SCHEMA);
+            database.executeWithWriteAccess(SET_TIMEZONE);
+            database.executeWithWriteAccess(CREATE_SCHEMA);
             // item
-            database.execute(CREATE_ITEM_TABLE);
-            database.execute(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", itemTableName));
-            database.execute(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", itemTableName));
-            database.execute(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", itemTableName));
+            database.executeWithWriteAccess(CREATE_ITEM_TABLE);
+            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", itemTableName));
+            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", itemTableName));
+            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", itemTableName));
             //person
-            database.execute(CREATE_PERSON_TABLE);
-            database.execute(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", personTableName));
-            database.execute(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", personTableName));
-            database.execute(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", personTableName));
+            database.executeWithWriteAccess(CREATE_PERSON_TABLE);
+            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", personTableName));
+            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", personTableName));
+            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", personTableName));
             //person
-            database.execute(CREATE_ORGANIZATION_TABLE);
-            database.execute(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", organizationTableName));
-            database.execute(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", organizationTableName));
-            database.execute(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", organizationTableName));
+            database.executeWithWriteAccess(CREATE_ORGANIZATION_TABLE);
+            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", organizationTableName));
+            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", organizationTableName));
+            database.executeWithWriteAccess(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", organizationTableName));
 
             // create dirs
             if (!Files.exists(Path.of(dataPathItem))) {

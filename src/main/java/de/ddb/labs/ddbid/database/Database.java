@@ -29,14 +29,11 @@ public class Database {
     @Value("${ddbid.database}")
     private String database;
 
-    private HikariConfig config;
+    private final HikariConfig config;
     private JdbcTemplate duckdb;
     private HikariDataSource dataSource;
 
     public Database() {
-    }
-
-    public void init() {
         config = new HikariConfig();
         config.setDriverClassName("org.duckdb.DuckDBDriver");
         config.setConnectionTestQuery("SELECT 1");
@@ -45,20 +42,19 @@ public class Database {
         config.setMaximumPoolSize(16);
         //config.setMaxLifetime(3);
         config.setJdbcUrl("jdbc:duckdb:" + database);
-
-        dataSource = new HikariDataSource(config);
-        duckdb = new JdbcTemplate();
-        duckdb.setDataSource(dataSource);
-
     }
 
-    public synchronized void execute(String sql) {
-        if (dataSource == null) {
+    public void init() {
+        dataSource = new HikariDataSource(config);
+        duckdb = new JdbcTemplate(dataSource);
+    }
+
+    public synchronized void executeWithWriteAccess(String sql) {
+        if (dataSource == null || dataSource.isClosed()) {
             init();
         }
-        if (!dataSource.isClosed()) {
-            duckdb.execute(sql);
-        }
+        duckdb.execute(sql);
+        close();
     }
 
     public void close() {
