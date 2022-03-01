@@ -17,23 +17,22 @@ package de.ddb.labs.ddbid.database;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Configurable;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-@Configurable
 @Slf4j
 public class Database {
 
-    @Value("${ddbid.database}")
     private String database;
 
     private final HikariConfig config;
     private JdbcTemplate duckdb;
     private HikariDataSource dataSource;
 
-    public Database() {
+    public Database(String database) {
+        this.database = database;
+
         config = new HikariConfig();
         config.setDriverClassName("org.duckdb.DuckDBDriver");
         config.setConnectionTestQuery("SELECT 1");
@@ -45,14 +44,22 @@ public class Database {
     }
 
     public void init() {
-        dataSource = new HikariDataSource(config);
-        duckdb = new JdbcTemplate(dataSource);
+        if (dataSource == null || dataSource.isClosed()) {
+            dataSource = new HikariDataSource(config);
+            duckdb = new JdbcTemplate(dataSource);
+        }
     }
 
-    public synchronized void executeWithWriteAccess(String sql) {
-        if (dataSource == null || dataSource.isClosed()) {
-            init();
+        public synchronized void executeWithWriteAccess(List<String> sql) {
+        init();
+        for(String s : sql) {
+            duckdb.execute(s);
         }
+        close();
+    }
+    
+    public synchronized void executeWithWriteAccess(String sql) {
+        init();
         duckdb.execute(sql);
         close();
     }
