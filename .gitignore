@@ -9,6 +9,7 @@ target/
 *.csv.gz
 .env
 nb-configuration.xml
+data/*
 
 ### STS ###
 .apt_generated
