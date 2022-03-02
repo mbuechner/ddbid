@@ -16,50 +16,33 @@
 package de.ddb.labs.ddbid;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
 import de.ddb.labs.ddbid.database.Database;
-import java.io.IOException;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.PreDestroy;
-import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@SpringBootApplication
+@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class })
 @EnableScheduling
 @Slf4j
 public class Application {
 
-    private final static String SET_TIMEZONE = "Set TimeZone='UTC';";
-
     @Value("${ddbid.database}")
     private String databaseName;
-
-    private HikariDataSource dataSource;
-    
+   
     private Database database; // for write access
-
-    @Bean
-    public JdbcTemplate jdbcTemplate(DataSource dataSource) throws IOException {
-        final JdbcTemplate duckdb = new JdbcTemplate();
-        duckdb.setDataSource(dataSource);
-        duckdb.execute(SET_TIMEZONE);
-        return duckdb;
-    }
 
     @PreDestroy
     public void destroy() {
         log.info("Destroy callback triggered: Closing database...");
         try {
-            dataSource.close();
             database.close();
         } catch (Exception e) {
             log.error("Could not close connection to database. {}", e.getMessage());
@@ -70,21 +53,6 @@ public class Application {
     public Database database() {
         database = new Database(databaseName);
         return database;
-    }
-
-    @Bean
-    public DataSource dataSource() {
-        final HikariConfig config = new HikariConfig();
-        config.setDriverClassName("org.duckdb.DuckDBDriver");
-        config.setConnectionTestQuery("SELECT 1");
-        config.addDataSourceProperty("duckdb.read_only", "true");
-        config.setReadOnly(true);
-        config.setMaximumPoolSize(16);
-        //config.setMaxLifetime(3);
-        config.setJdbcUrl("jdbc:duckdb:" + databaseName);
-
-        dataSource = new HikariDataSource(config);
-        return dataSource;
     }
 
     @Bean

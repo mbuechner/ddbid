@@ -102,7 +102,7 @@ public class MaintenanceRestController {
     // Tasks
     @Autowired
     private ItemCronJob itemCronJob;
-    
+
     @Autowired
     private PersonCronJob personCronJob;
 
@@ -135,7 +135,9 @@ public class MaintenanceRestController {
             queries.add(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", organizationTableName));
             queries.add(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", organizationTableName));
 
-            database.executeWithWriteAccess(queries);
+            for (String query : queries) {
+                database.getJdbcTemplate().execute(query);
+            }
 
             // create dirs
             if (!Files.exists(Path.of(dataPathItem))) {
