@@ -36,7 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("maintenance")
 public class MaintenanceRestController {
-    
+
     @Autowired
     private Database database;
 
@@ -102,7 +102,7 @@ public class MaintenanceRestController {
     // Tasks
     @Autowired
     private ItemCronJob itemCronJob;
-
+    
     @Autowired
     private PersonCronJob personCronJob;
 
@@ -114,9 +114,9 @@ public class MaintenanceRestController {
     public Map<String, String> initDb() {
 
         try {
-            
+
             final List<String> queries = new ArrayList<>();
-            
+
             queries.add(SET_TIMEZONE);
             queries.add(CREATE_SCHEMA);
             // item
@@ -136,7 +136,7 @@ public class MaintenanceRestController {
             queries.add(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", organizationTableName));
 
             database.executeWithWriteAccess(queries);
-            
+
             // create dirs
             if (!Files.exists(Path.of(dataPathItem))) {
                 Files.createDirectories(Path.of(dataPathItem));

@@ -101,7 +101,7 @@ public class PersonService {
         // with search
         if (!pagingRequest.getSearch().getValue().isEmpty()) {
             where.append("(");
-            for (String field : PersonDoc.getHeader()) {
+            for (String field : PersonDoc.getStaticHeader()) {
                 if (!field.equals("status") || !field.equals("timestamp")) {
                     where.append(field);
                     where.append(" ILIKE ? OR ");
@@ -134,7 +134,7 @@ public class PersonService {
             for (Order o : pagingRequest.getOrder()) {
                 List<Column> columns = pagingRequest.getColumns();
                 final String columnName = columns.get(o.getColumn()).getData();
-                if (!PersonDoc.getHeader().contains(columnName)) {
+                if (!PersonDoc.getStaticHeader().contains(columnName)) {
                     continue; // prevent sql injection
                 }
                 order.append(columnName);
