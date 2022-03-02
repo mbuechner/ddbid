@@ -17,13 +17,14 @@ package de.ddb.labs.ddbid.database;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @Slf4j
-public class Database {
+public class Database<T> {
 
+    private final static String SET_TIMEZONE = "Set TimeZone='UTC';";
+    
     private String database;
 
     private final HikariConfig config;
@@ -45,28 +46,22 @@ public class Database {
 
     public void init() {
         if (dataSource == null || dataSource.isClosed()) {
+            log.info("Initialize database at {}...", database);
             dataSource = new HikariDataSource(config);
             duckdb = new JdbcTemplate(dataSource);
+            duckdb.execute(SET_TIMEZONE);
         }
     }
 
-    public synchronized void executeWithWriteAccess(List<String> sql) {
+    public JdbcTemplate getJdbcTemplate() {
         init();
-        for (String s : sql) {
-            duckdb.execute(s);
-        }
-        close();
-    }
-
-    public synchronized void executeWithWriteAccess(String sql) {
-        init();
-        duckdb.execute(sql);
-        close();
-    }
+        return duckdb;
+    }    
 
     public void close() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
+            log.info("Database closed");
         }
     }
 }

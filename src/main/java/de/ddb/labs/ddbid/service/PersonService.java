@@ -15,6 +15,7 @@
  */
 package de.ddb.labs.ddbid.service;
 
+import de.ddb.labs.ddbid.database.Database;
 import de.ddb.labs.ddbid.model.Status;
 import de.ddb.labs.ddbid.model.paging.Column;
 import de.ddb.labs.ddbid.model.paging.Order;
@@ -35,7 +36,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -43,7 +43,7 @@ import org.springframework.stereotype.Service;
 public class PersonService {
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private Database database;
 
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
@@ -95,7 +95,7 @@ public class PersonService {
         } else if (where.toString().endsWith("WHERE ")) {
             whereClause = whereClause.substring(0, whereClause.length() - 6);
         }
-        final int totalCount = jdbcTemplate.queryForObject("SELECT count(*) FROM main." + tableName + " " + whereClause, Integer.class, whereValues.toArray());
+        final int totalCount = database.getJdbcTemplate().queryForObject("SELECT count(*) FROM main." + tableName + " " + whereClause, Integer.class, whereValues.toArray());
         // totalCount end
 
         // with search
@@ -126,7 +126,7 @@ public class PersonService {
         }
 
         final String filteredCountQuery = query.toString().replaceFirst("\\*", "count(*)");
-        final int filteredCount = jdbcTemplate.queryForObject(filteredCountQuery, Integer.class, whereValues.toArray());
+        final int filteredCount = database.getJdbcTemplate().queryForObject(filteredCountQuery, Integer.class, whereValues.toArray());
 
         // ORDER BY
         if (!pagingRequest.getOrder().isEmpty()) {
@@ -162,9 +162,9 @@ public class PersonService {
 
         List<Person> ddbIds;
         if (values.isEmpty()) {
-            ddbIds = jdbcTemplate.query(query.toString(), new BeanPropertyRowMapper(Person.class));
+            ddbIds = database.getJdbcTemplate().query(query.toString(), new BeanPropertyRowMapper(Person.class));
         } else {
-            ddbIds = jdbcTemplate.query(query.toString(), new BeanPropertyRowMapper(Person.class), values.toArray());
+            ddbIds = database.getJdbcTemplate().query(query.toString(), new BeanPropertyRowMapper(Person.class), values.toArray());
         }
 
         final Page<Person> page = new Page<>(ddbIds);
@@ -178,7 +178,7 @@ public class PersonService {
 
     public Map<String, Timestamp> getTimestamps() {
         try {
-            final List<Timestamp> ts = jdbcTemplate.queryForList("SELECT DISTINCT \"timestamp\" FROM main." + tableName, Timestamp.class);
+            final List<Timestamp> ts = database.getJdbcTemplate().queryForList("SELECT DISTINCT \"timestamp\" FROM main." + tableName, Timestamp.class);
             final Map<String, Timestamp> m = new HashMap<>();
             for (Timestamp t : ts) {
                 m.put(sdf.format(t), t);
