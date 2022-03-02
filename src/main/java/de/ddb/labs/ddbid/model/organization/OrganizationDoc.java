@@ -16,6 +16,7 @@
 package de.ddb.labs.ddbid.model.organization;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import de.ddb.labs.ddbid.model.Doc;
 import de.ddb.labs.ddbid.model.Status;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -28,19 +29,19 @@ import lombok.Getter;
  * @author michael
  */
 @Data
-public class OrganizationDoc {
+public class OrganizationDoc extends Doc {
 
     @JsonIgnore
     private Timestamp timestamp;
     private String id;
     @JsonIgnore
     private Status status;
-    @Getter(lazy=true)
+    @Getter(lazy = true)
     private final List<String> variant_id = new ArrayList<>();
     private String preferredName;
     private String type;
 
-    public static List<String> getHeader() {
+    public static List<String> getStaticHeader() {
         final List<String> l = new ArrayList<>();
         l.add("timestamp");
         l.add("id");
@@ -51,12 +52,19 @@ public class OrganizationDoc {
         return l;
     }
 
+    @Override
+     public List<String> getHeader() {
+        return getStaticHeader();
+    }
+
+    @Override
     public List<Object> getData(Timestamp timestamp, Status status) {
         setTimestamp(timestamp);
         setStatus(status);
         return getData();
     }
 
+    @Override
     public List<Object> getData() {
         final List<Object> l = new ArrayList<>();
         l.add(getTimestamp());

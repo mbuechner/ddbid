@@ -101,7 +101,7 @@ public class ItemService {
         // with search
         if (!pagingRequest.getSearch().getValue().isEmpty()) {
             where.append("(");
-            for (String field : ItemDoc.getHeader()) {
+            for (String field : ItemDoc.getStaticHeader()) {
                 if (!field.equals("status") || !field.equals("timestamp")) {
                     where.append(field);
                     where.append(" ILIKE ? OR ");
@@ -134,7 +134,7 @@ public class ItemService {
             for (Order o : pagingRequest.getOrder()) {
                 List<Column> columns = pagingRequest.getColumns();
                 final String columnName = columns.get(o.getColumn()).getData();
-                if (!ItemDoc.getHeader().contains(columnName)) {
+                if (!ItemDoc.getStaticHeader().contains(columnName)) {
                     continue; // prevent sql injection
                 }
                 order.append(columnName);

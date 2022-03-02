@@ -50,14 +50,14 @@ public class Database {
         }
     }
 
-        public synchronized void executeWithWriteAccess(List<String> sql) {
+    public synchronized void executeWithWriteAccess(List<String> sql) {
         init();
-        for(String s : sql) {
+        for (String s : sql) {
             duckdb.execute(s);
         }
         close();
     }
-    
+
     public synchronized void executeWithWriteAccess(String sql) {
         init();
         duckdb.execute(sql);

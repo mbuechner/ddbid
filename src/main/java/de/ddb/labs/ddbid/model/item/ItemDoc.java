@@ -15,6 +15,7 @@
  */
 package de.ddb.labs.ddbid.model.item;
 
+import de.ddb.labs.ddbid.model.Doc;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.ddb.labs.ddbid.model.Status;
 import java.sql.Timestamp;
@@ -28,7 +29,7 @@ import lombok.Getter;
  * @author michael
  */
 @Data
-public class ItemDoc {
+public class ItemDoc extends Doc {
 
     @JsonIgnore
     private Timestamp timestamp;
@@ -42,7 +43,7 @@ public class ItemDoc {
     private final List<String> provider_id = new ArrayList<>();
     private String supplier_id;
 
-    public static List<String> getHeader() {
+    public static List<String> getStaticHeader() {
         final List<String> l = new ArrayList<>();
         l.add("timestamp");
         l.add("id");
@@ -54,12 +55,19 @@ public class ItemDoc {
         return l;
     }
 
+    @Override
+    public List<String> getHeader() {
+        return getStaticHeader();
+    }
+
+    @Override
     public List<Object> getData(Timestamp timestamp, Status status) {
         setTimestamp(timestamp);
         setStatus(status);
         return getData();
     }
 
+    @Override
     public List<Object> getData() {
         final List<Object> l = new ArrayList<>();
         l.add(getTimestamp());
