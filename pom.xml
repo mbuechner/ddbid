@@ -78,10 +78,15 @@
             <artifactId>spring-retry</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+        
+        <!--        <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-aspects</artifactId>
-            <!--<version>5.2.8.RELEASE</version>-->
-        </dependency>
+            <version>5.2.8.RELEASE</version>
+        </dependency>-->
         <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>bootstrap</artifactId>
@@ -194,7 +199,6 @@
                 <version>1.6.8</version>
                 <executions>
                     <execution>
-                        <!-- the wget goal actually binds itself to this phase by default -->
                         <phase>process-resources</phase>
                         <goals>
                             <goal>wget</goal>

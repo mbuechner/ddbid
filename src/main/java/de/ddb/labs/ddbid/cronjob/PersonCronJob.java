@@ -44,12 +44,12 @@ public class PersonCronJob extends CronJob {
     @Scheduled(cron = "${ddbid.cron.person}")
     @Retryable(value = RuntimeException.class, maxAttempts = 3, backoff = @Backoff(delay = 600000))
     @Override
-    public void run() throws IOException {
+    public void sched() throws IOException {
         log.info("{} started...", this.getClass().getName());
         super.setQuery(QUERY);
         super.setDataPath(dataPath);
         super.setTableName(tableName);
-        super.run();
+        super.sched();
         log.info("{} finished.", this.getClass().getName());
     }
 }

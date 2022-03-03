@@ -21,6 +21,7 @@ import java.lang.reflect.InvocationTargetException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -41,15 +42,26 @@ public class ItemCronJob extends CronJob {
         super(ItemDoc.class);
     }
 
-    @Scheduled(cron = "${ddbid.cron.item}")
-    @Retryable(value = RuntimeException.class, maxAttempts = 3, backoff = @Backoff(delay = 600000))
     @Override
-    public void run() throws IOException {
+    @Scheduled(cron = "${ddbid.cron.item}")
+    public void sched() throws IOException {
         log.info("{} started...", this.getClass().getName());
         super.setQuery(QUERY);
         super.setDataPath(dataPath);
         super.setTableName(tableName);
-        super.run();
+        super.sched();
         log.info("{} finished.", this.getClass().getName());
+    }
+
+    @Override
+    @Retryable(value = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000))
+    public void retry() throws Exception {
+        super.sched();
+    }
+
+    @Recover
+    @Override
+    public void recover() {
+        // do nothing
     }
 }
