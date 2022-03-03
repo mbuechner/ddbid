@@ -16,9 +16,12 @@
 package de.ddb.labs.ddbid.cronjob;
 
 import de.ddb.labs.ddbid.model.organization.OrganizationDoc;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -39,8 +42,9 @@ public class OrganizationCronJob extends CronJob {
     }
 
     @Scheduled(cron = "${ddbid.cron.organization}")
+    @Retryable(value = RuntimeException.class, maxAttempts = 3, backoff = @Backoff(delay = 600000))
     @Override
-    public void run() {
+    public void run() throws IOException {
         log.info("{} started...", this.getClass().getName());
         super.setQuery(QUERY);
         super.setDataPath(dataPath);

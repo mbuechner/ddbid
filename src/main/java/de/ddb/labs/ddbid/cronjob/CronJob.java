@@ -72,7 +72,7 @@ import org.springframework.beans.factory.annotation.Value;
  * @param <T>
  */
 @Slf4j
-public class CronJob<T> implements Runnable {
+public class CronJob<T> {
 
     protected static final String API = "https://api.deutsche-digitale-bibliothek.de";
     protected static final String COMPARE_OUTPUT_FILENAME_PREFIX = "CMP_";
@@ -122,9 +122,9 @@ public class CronJob<T> implements Runnable {
 
     /**
      *
+     * @throws java.io.IOException
      */
-    @Override
-    public void run() {
+    public void run() throws IOException, IllegalArgumentException, RuntimeException {
 
         if (this.query == null || this.query.isBlank()) {
             throw new IllegalArgumentException("Query parameter not set");
@@ -138,34 +138,28 @@ public class CronJob<T> implements Runnable {
 
         currentTime = Timestamp.from(LocalDateTime.now().toInstant(ZoneOffset.UTC));
 
-        try {
+        // we cleanup first
+        cleanInvalidDumps(dataPath);
 
-            // we cleanup first
-            cleanInvalidDumps(dataPath);
+        // make new dump
+        final File newDumpinDataPath = dumpIds();
 
-            // make new dump
-            final File newDumpinDataPath = dumpIds();
-
-            final File lastDumpInDataPath = lastDumpInDataPath(dataPath); // get filename of last dump
-            if (lastDumpInDataPath == null) {
-                log.warn("There's no last dump in path {}. Nothing to compare.", dataPath);
-                return;
-            }
-            final String fileABaseName = lastDumpInDataPath.getName().substring(0, lastDumpInDataPath.getName().indexOf('.'));
-            final String fileBBaseName = newDumpinDataPath.getName().substring(0, newDumpinDataPath.getName().indexOf('.'));
-            final File outputFileNameAB = new File(dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.MISSING + OUTPUT_FILENAME_EXT);
-            final int diffCountAB = findDifferences(lastDumpInDataPath, newDumpinDataPath, outputFileNameAB, currentTime, Status.MISSING);
-            if (diffCountAB > 0) {
-                database.getJdbcTemplate().execute("COPY main." + tableName + " FROM '" + outputFileNameAB + "' (AUTO_DETECT TRUE);");
-            }
-            final File outputFileNameBA = new File(dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.NEW + OUTPUT_FILENAME_EXT);
-            final int diffCountBA = findDifferences(newDumpinDataPath, lastDumpInDataPath, outputFileNameBA, currentTime, Status.NEW);
-            if (diffCountBA > 0) {
-                database.getJdbcTemplate().execute("COPY main." + tableName + " FROM '" + outputFileNameBA + "' (AUTO_DETECT TRUE);");
-            }
-        } catch (Exception e) {
-            log.error("Error while processing ID dump. {}", e.getMessage());
-            //run(); // re-run
+        final File lastDumpInDataPath = lastDumpInDataPath(dataPath); // get filename of last dump
+        if (lastDumpInDataPath == null) {
+            log.warn("There's no last dump in path {}. Nothing to compare.", dataPath);
+            return;
+        }
+        final String fileABaseName = lastDumpInDataPath.getName().substring(0, lastDumpInDataPath.getName().indexOf('.'));
+        final String fileBBaseName = newDumpinDataPath.getName().substring(0, newDumpinDataPath.getName().indexOf('.'));
+        final File outputFileNameAB = new File(dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.MISSING + OUTPUT_FILENAME_EXT);
+        final int diffCountAB = findDifferences(lastDumpInDataPath, newDumpinDataPath, outputFileNameAB, currentTime, Status.MISSING);
+        if (diffCountAB > 0) {
+            database.getJdbcTemplate().execute("COPY main." + tableName + " FROM '" + outputFileNameAB + "' (AUTO_DETECT TRUE);");
+        }
+        final File outputFileNameBA = new File(dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.NEW + OUTPUT_FILENAME_EXT);
+        final int diffCountBA = findDifferences(newDumpinDataPath, lastDumpInDataPath, outputFileNameBA, currentTime, Status.NEW);
+        if (diffCountBA > 0) {
+            database.getJdbcTemplate().execute("COPY main." + tableName + " FROM '" + outputFileNameBA + "' (AUTO_DETECT TRUE);");
         }
     }
 
@@ -220,6 +214,7 @@ public class CronJob<T> implements Runnable {
             outputWriter.close();
         } catch (Exception e) {
             errorOccured = true;
+            log.error("{}", e.getMessage());
         }
 
         if (totalCount > processedCount) {
@@ -230,8 +225,7 @@ public class CronJob<T> implements Runnable {
         if (errorOccured) {
             Files.delete(Path.of(outputFileName));
             log.warn("An error occured and the process was stopped. Corrupt dump {} was deleted, too.", outputFileName);
-            log.info("Try to re-run this cron job asap...");
-            throw new RuntimeException("An error occured while processing the Id dump");
+            throw new RuntimeException("An error occured while processing the dump");
         } else {
             // write OK file
             Files.write(Path.of(outputFileNameWithoutExt + OK_FILENAME_EXT), Arrays.asList("OK"), StandardCharsets.UTF_8);
