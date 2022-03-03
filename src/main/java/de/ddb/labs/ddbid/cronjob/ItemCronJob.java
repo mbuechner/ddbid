@@ -16,6 +16,7 @@
 package de.ddb.labs.ddbid.cronjob;
 
 import de.ddb.labs.ddbid.model.item.ItemDoc;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,7 +44,7 @@ public class ItemCronJob extends CronJob {
     @Scheduled(cron = "${ddbid.cron.item}")
     @Retryable(value = RuntimeException.class, maxAttempts = 3, backoff = @Backoff(delay = 600000))
     @Override
-    public void run() {
+    public void run() throws IOException {
         log.info("{} started...", this.getClass().getName());
         super.setQuery(QUERY);
         super.setDataPath(dataPath);

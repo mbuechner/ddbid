@@ -56,21 +56,21 @@
             <button type="button" class="btn btn-primary btn-floating btn-sm" id="btn-back-to-top">
                 <a><i class="fas fa-arrow-up text-light"></i></a>
             </button>
-            <div class="table-responsive">
-                <table id="ddbid" class="table table-hover table-sm dt-responsive nowrap" cellpadding="0" cellspacing="0" width="100%">
-                    <thead>
-                        <tr>
-                            <th>Timestamp</th>
-                            <th>ID</th>
-                            <th>Status</th>
-                            <th>Variant ID</th>
-                            <th>Preferred Name</th>
-                            <th>Type</th>
-                        </tr>
-                    </thead>
-                </table>
-            </div>
+
+            <table id="ddbid" class="table table-hover table-sm dt-responsive nowrap" cellpadding="0" cellspacing="0" width="100%">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>ID</th>
+                        <th>Status</th>
+                        <th>Variant ID</th>
+                        <th>Preferred Name</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+            </table>
         </div>
+
 
         <script th:src="@{webjars/jquery/jquery.min.js}"></script>
         <script th:src="@{webjars/bootstrap/js/bootstrap.min.js}"></script>
@@ -81,7 +81,7 @@
 
             $(document).ready(function () {
                 $('#ddbid').DataTable({
-                    "dom": 'B<"row"<"col-6"i><"col-6"f>><"pb-3 mb-5"rt><"footer fixed-bottom mt-auto py-3 bg-light"<"float-right"p>>',
+                    "dom": 'B<"row mb-3"<"col-12 col-md-6 pb-2"i><"col-12 col-md-6 pb-2"f>><"pb-3 mb-5"r<"table-responsive"t>><"footer fixed-bottom mt-auto py-3 bg-light"<"float-right"p>>',
                     "processing": true,
                     "serverSide": true,
                     "paging": true,
@@ -205,7 +205,7 @@
                             "render": function (data, type, row, meta) {
                                 if (type === 'display' && data.startsWith('http://d-nb.info/gnd/')) {
                                     data = '<a href="https://www.deutsche-digitale-bibliothek.de/organization/gnd/' + data.substring(data.lastIndexOf('/') + 1, data.lenght) + '" target="_blank">' + data + '</a>';
-                                } else if (type === 'display'){
+                                } else if (type === 'display') {
                                     data = '<a href="https://www.deutsche-digitale-bibliothek.de/organization/' + data + '" target="_blank">' + data + '</a>';
                                 }
                                 return data;

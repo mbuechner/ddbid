@@ -19,6 +19,7 @@ import de.ddb.labs.ddbid.cronjob.ItemCronJob;
 import de.ddb.labs.ddbid.cronjob.OrganizationCronJob;
 import de.ddb.labs.ddbid.cronjob.PersonCronJob;
 import de.ddb.labs.ddbid.database.Database;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -26,6 +27,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.TaskScheduler;
@@ -35,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("maintenance")
+@Slf4j
 public class MaintenanceRestController {
 
     @Autowired
@@ -169,9 +172,42 @@ public class MaintenanceRestController {
     public Map<String, String> runCrons() {
 
         try {
-            taskScheduler.schedule(itemCronJob, new Date());
-            taskScheduler.schedule(personCronJob, new Date());
-            taskScheduler.schedule(organizationCronJob, new Date());
+            final Runnable itemCronJobRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        itemCronJob.run();
+                    } catch (Exception ex) {
+                        log.error("{}", ex.getMessage());
+                    }
+                }
+            };
+
+            final Runnable personCronJobRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        personCronJob.run();
+                    } catch (Exception ex) {
+                        log.error("{}", ex.getMessage());
+                    }
+                }
+            };
+
+            final Runnable organizationCronJobRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        organizationCronJob.run();
+                    } catch (Exception ex) {
+                        log.error("{}", ex.getMessage());
+                    }
+                }
+            };
+
+            taskScheduler.schedule(itemCronJobRunnable, new Date());
+            taskScheduler.schedule(personCronJobRunnable, new Date());
+            taskScheduler.schedule(organizationCronJobRunnable, new Date());
         } catch (Exception e) {
             return new HashMap<>() {
                 {

@@ -30,7 +30,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class })
+@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
 @EnableScheduling
 @EnableRetry
 @Slf4j
@@ -38,7 +38,7 @@ public class Application {
 
     @Value("${ddbid.database}")
     private String databaseName;
-   
+
     private Database database; // for write access
 
     @PreDestroy
@@ -50,7 +50,7 @@ public class Application {
             log.error("Could not close connection to database. {}", e.getMessage());
         }
     }
-    
+
     @Bean
     public Database database() {
         database = new Database(databaseName);

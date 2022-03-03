@@ -76,7 +76,11 @@
         <dependency>
             <groupId>org.springframework.retry</groupId>
             <artifactId>spring-retry</artifactId>
-            <version>1.3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-aspects</artifactId>
+            <!--<version>5.2.8.RELEASE</version>-->
         </dependency>
         <dependency>
             <groupId>org.webjars</groupId>
@@ -183,6 +187,26 @@
                         <version>2.2.6</version>
                     </dependency> 
                 </dependencies>           
+            </plugin>
+            <plugin>
+                <groupId>com.googlecode.maven-download-plugin</groupId>
+                <artifactId>download-maven-plugin</artifactId>
+                <version>1.6.8</version>
+                <executions>
+                    <execution>
+                        <!-- the wget goal actually binds itself to this phase by default -->
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>wget</goal>
+                        </goals>
+                        <configuration>
+                            <url>https://datatables.net/download/builder?bs4/jszip-2.5.0/pdfmake-0.1.36/dt-1.11.5/b-2.2.2/b-colvis-2.2.2/b-html5-2.2.2/date-1.1.2/fh-3.2.2/r-2.2.9/rg-1.1.4/sp-2.0.0/sl-1.3.4</url>
+                            <outputFileName>datatable.zip</outputFileName>
+                            <unpack>true</unpack>
+                            <outputDirectory>${project.build.directory}/classes/static/assets/datatables</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
