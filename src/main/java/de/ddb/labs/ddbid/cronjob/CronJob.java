@@ -46,10 +46,8 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -66,11 +64,6 @@ import org.apache.commons.csv.CSVRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
-/**
- *
- * @author buechner
- * @param <T>
- */
 @Slf4j
 public class CronJob<T> {
 
@@ -82,9 +75,9 @@ public class CronJob<T> {
     protected static final int MAX_NO_OF_THREADS = 1; // max no. of writing theads
     private final Class<Doc> docType;
     private final Doc doc;
-    private final List<Thread> threads = new ArrayList<>();
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-
+    private final Timestamp currentTime;
+    
     @Setter
     private String query; // set in child class!
     @Setter
@@ -92,7 +85,6 @@ public class CronJob<T> {
     @Setter
     private String tableName;  // set in child class!
     private CSVPrinter outputWriter;
-    private Timestamp currentTime;
     private boolean errorOccured = false;
     private int processedCount = 0;
     private int totalCount = -1;
@@ -118,13 +110,22 @@ public class CronJob<T> {
     public CronJob(Class<Doc> docType) throws NoSuchMethodException, InstantiationException, InvocationTargetException, IllegalArgumentException, IllegalAccessException {
         this.docType = docType;
         this.doc = docType.getDeclaredConstructor().newInstance();
+        this.currentTime = Timestamp.from(LocalDateTime.now().toInstant(ZoneOffset.UTC));
+    }
+
+    public void retry() throws Exception {
+        sched();
+    }
+
+    public void recover() {
+        // do nothing
     }
 
     /**
      *
      * @throws java.io.IOException
      */
-    public void run() throws IOException, IllegalArgumentException, RuntimeException {
+    public void sched() throws IOException, IllegalArgumentException, RuntimeException {
 
         if (this.query == null || this.query.isBlank()) {
             throw new IllegalArgumentException("Query parameter not set");
@@ -135,8 +136,6 @@ public class CronJob<T> {
         if (tableName == null || tableName.isBlank()) {
             throw new IllegalArgumentException("TableName parameter not set");
         }
-
-        currentTime = Timestamp.from(LocalDateTime.now().toInstant(ZoneOffset.UTC));
 
         // we cleanup first
         cleanInvalidDumps(dataPath);
@@ -202,14 +201,17 @@ public class CronJob<T> {
                     // set cursorMarks
                     lastCursorMark = nextCursorMark;
                     nextCursorMark = doc.get("nextCursorMark").asText("");
-                    // put it in a thread
-                    addInThread(doc.get("response").get("docs"));
+
+                    final List<Doc> ec = objectMapper.treeToValue(doc.get("response").get("docs"), objectMapper.getTypeFactory().constructCollectionType(List.class, docType));
+                    for (Doc e : ec) {
+                        outputWriter.printRecord(e.getData());
+                    }
+                    processedCount += ec.size();
+                    log.info("{} of {} processed...", processedCount, totalCount);
+
                 }
                 // for testing
                 break;
-            }
-            // wait until finished
-            while (cleanUpThreads() > 0) {
             }
             outputWriter.close();
         } catch (Exception e) {
@@ -318,41 +320,6 @@ public class CronJob<T> {
             }
         }
 
-    }
-
-    private int cleanUpThreads() {
-        final Iterator it = threads.iterator();
-        while (it.hasNext()) {
-            final Thread th = (Thread) it.next();
-            if (!th.isAlive()) {
-                it.remove();
-                log.info("Thread {} finished and removed.", th.getName());
-            }
-        }
-        return threads.size();
-    }
-
-    private void addInThread(JsonNode docsArray) {
-        // wait to add new thread
-        while (cleanUpThreads() >= MAX_NO_OF_THREADS) {
-            ;
-        }
-        final Thread t = new Thread(() -> {
-            try {
-                final List<Doc> ec = objectMapper.treeToValue(docsArray, objectMapper.getTypeFactory().constructCollectionType(List.class, docType));
-                for (Doc e : ec) {
-                    outputWriter.printRecord(e.getData());
-                }
-                processedCount += ec.size();
-                log.info("{} of {} processed...", processedCount, totalCount);
-            } catch (Exception e) {
-                log.error("{}", e.getMessage());
-                errorOccured = true;
-            }
-        });
-        threads.add(t);
-        t.start();
-        log.info("Thread {} added and started...", t.getName());
     }
 
     private int findDifferences(File fileA, File fileB, File output, Timestamp timestamp, Status status) throws FileNotFoundException, IOException {
