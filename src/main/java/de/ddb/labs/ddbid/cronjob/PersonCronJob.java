@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,8 +16,6 @@
 package de.ddb.labs.ddbid.cronjob;
 
 import de.ddb.labs.ddbid.model.person.PersonDoc;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
@@ -25,11 +23,14 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+
 @Slf4j
 @Service
 public class PersonCronJob extends CronJob {
 
-    private final static String QUERY = "/search/index/person/select?q=*:*&wt=json&fl=id,variant_id,preferredName,type&sort=id ASC&rows=" + ENTITYCOUNT;
+    private static final String QUERY = "/search/index/person/select?q=*:*&wt=json&fl=id,variant_id,preferredName,type&sort=id ASC&rows=" + ENTITYCOUNT;
 
     @Value(value = "${ddbid.datapath.person}")
     private String dataPath;
@@ -41,15 +42,15 @@ public class PersonCronJob extends CronJob {
         super(PersonDoc.class);
     }
 
-    @Scheduled(cron = "${ddbid.cron.person}")
-    @Retryable(value = RuntimeException.class, maxAttempts = 3, backoff = @Backoff(delay = 600000))
     @Override
-    public void sched() throws IOException {
+    @Scheduled(cron = "${ddbid.cron.person}")
+    @Retryable(value = { Exception.class }, maxAttemptsExpression = "${ddbid.cron.retry.maxAttempts}", backoff = @Backoff(delayExpression = "${ddbid.cron.retry.delay}"))
+    public void schedule() throws IOException {
         log.info("{} started...", this.getClass().getName());
         super.setQuery(QUERY);
         super.setDataPath(dataPath);
         super.setTableName(tableName);
-        super.sched();
+        super.schedule();
         log.info("{} finished.", this.getClass().getName());
     }
 }

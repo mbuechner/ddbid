@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,14 +23,6 @@ import de.ddb.labs.ddbid.model.paging.Column;
 import de.ddb.labs.ddbid.model.paging.Order;
 import de.ddb.labs.ddbid.model.paging.Page;
 import de.ddb.labs.ddbid.model.paging.PagingRequest;
-import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,15 +30,18 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.stream.Collectors;
+
 @Slf4j
 @Service
 public class ItemService {
 
+    private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
     @Autowired
     private Database database;
-
-    private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-
     @Value("${ddbid.database.table.item}")
     private String tableName;
 
@@ -119,7 +114,7 @@ public class ItemService {
             where.setLength(where.length() - 6);
         }
 
-        query.append(where.toString());
+        query.append(where);
 
         if (pagingRequest.getTimestamp() != null) {
             log.debug("Timestamp: {}", new Timestamp(pagingRequest.getTimestamp()));
@@ -144,7 +139,7 @@ public class ItemService {
             }
             order.setLength(order.length() - 2); // remove ', '
             order.append(' '); //add ' '
-            query.append(order.toString());
+            query.append(order);
         }
 
         // LIMIT and OFFSET (Paging)
@@ -172,7 +167,7 @@ public class ItemService {
         page.setRecordsTotal(totalCount);
         page.setDraw(pagingRequest.getDraw());
 
-        log.debug("Sending page: {}", page.toString());
+        log.debug("Sending page: {}", page);
         return page;
     }
 

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,9 +17,6 @@ package de.ddb.labs.ddbid;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.ddb.labs.ddbid.database.Database;
-import java.util.TimeZone;
-import java.util.concurrent.TimeUnit;
-import javax.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,6 +26,10 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.annotation.EnableScheduling;
+
+import javax.annotation.PreDestroy;
+import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
 @EnableScheduling
@@ -40,6 +41,11 @@ public class Application {
     private String databaseName;
 
     private Database database; // for write access
+
+    public static void main(String[] args) {
+        TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
+        SpringApplication.run(Application.class, args);
+    }
 
     @PreDestroy
     public void destroy() {
@@ -68,10 +74,5 @@ public class Application {
                 .connectTimeout(0, TimeUnit.SECONDS)
                 .readTimeout(0, TimeUnit.SECONDS)
                 .build();
-    }
-
-    public static void main(String[] args) {
-        TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
-        SpringApplication.run(Application.class, args);
     }
 }

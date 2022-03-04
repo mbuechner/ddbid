@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,32 +15,32 @@
  */
 package de.ddb.labs.ddbid.model.item;
 
-import de.ddb.labs.ddbid.model.Doc;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import de.ddb.labs.ddbid.model.Doc;
 import de.ddb.labs.ddbid.model.Status;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.List;
 import lombok.Data;
 import lombok.Getter;
 
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- *
  * @author michael
  */
 @Data
 public class ItemDoc extends Doc {
 
+    @Getter(lazy = true)
+    private final List<String> label = new ArrayList<>();
+    @Getter(lazy = true)
+    private final List<String> provider_id = new ArrayList<>();
     @JsonIgnore
     private Timestamp timestamp;
     private String id;
     @JsonIgnore
     private Status status;
     private String dataset_id;
-    @Getter(lazy = true)
-    private final List<String> label = new ArrayList<>();
-    @Getter(lazy = true)
-    private final List<String> provider_id = new ArrayList<>();
     private String supplier_id;
 
     public static List<String> getStaticHeader() {

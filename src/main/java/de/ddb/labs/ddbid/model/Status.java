@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,7 +23,7 @@ public enum Status {
     @Getter
     private final String status;
 
-    private Status(String status) {
+    Status(String status) {
         this.status = status;
     }
 }

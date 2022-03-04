@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,26 +18,26 @@ package de.ddb.labs.ddbid.model.organization;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.ddb.labs.ddbid.model.Doc;
 import de.ddb.labs.ddbid.model.Status;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.List;
 import lombok.Data;
 import lombok.Getter;
 
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- *
  * @author michael
  */
 @Data
 public class OrganizationDoc extends Doc {
 
+    @Getter(lazy = true)
+    private final List<String> variant_id = new ArrayList<>();
     @JsonIgnore
     private Timestamp timestamp;
     private String id;
     @JsonIgnore
     private Status status;
-    @Getter(lazy = true)
-    private final List<String> variant_id = new ArrayList<>();
     private String preferredName;
     private String type;
 
@@ -53,7 +53,7 @@ public class OrganizationDoc extends Doc {
     }
 
     @Override
-     public List<String> getHeader() {
+    public List<String> getHeader() {
         return getStaticHeader();
     }
 

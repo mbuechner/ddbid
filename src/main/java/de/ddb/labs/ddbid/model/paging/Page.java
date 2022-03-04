@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,9 +18,9 @@ package de.ddb.labs.ddbid.model.paging;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 import java.util.List;
-import lombok.ToString;
 
 @Getter
 @Setter
@@ -28,13 +28,12 @@ import lombok.ToString;
 @NoArgsConstructor
 public class Page<T> {
 
-    public Page(List<T> data) {
-        this.data = data;
-    }
-
     private List<T> data;
     private int recordsFiltered;
     private int recordsTotal;
     private int draw;
+    public Page(List<T> data) {
+        this.data = data;
+    }
 
 }

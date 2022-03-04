@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,15 +16,15 @@
 package de.ddb.labs.ddbid.cronjob;
 
 import de.ddb.labs.ddbid.model.item.ItemDoc;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 
 @Slf4j
 @Service
@@ -44,24 +44,13 @@ public class ItemCronJob extends CronJob {
 
     @Override
     @Scheduled(cron = "${ddbid.cron.item}")
-    public void sched() throws IOException {
+    @Retryable(value = { Exception.class }, maxAttemptsExpression = "${ddbid.cron.retry.maxAttempts}", backoff = @Backoff(delayExpression = "${ddbid.cron.retry.delay}"))
+    public void schedule() throws IOException {
         log.info("{} started...", this.getClass().getName());
         super.setQuery(QUERY);
         super.setDataPath(dataPath);
         super.setTableName(tableName);
-        super.sched();
+        super.schedule();
         log.info("{} finished.", this.getClass().getName());
-    }
-
-    @Override
-    @Retryable(value = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000))
-    public void retry() throws Exception {
-        super.sched();
-    }
-
-    @Recover
-    @Override
-    public void recover() {
-        // do nothing
     }
 }
