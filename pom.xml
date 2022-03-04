@@ -128,16 +128,21 @@
             <version>4.9.3</version>
             <type>jar</type>
         </dependency>
-        <dependency>
+<!--        <dependency>
             <groupId>com.github.davidmoten</groupId>
             <artifactId>commons-csv</artifactId>
             <version>1.6.002</version>
             <type>jar</type>
+        </dependency>-->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-csv</artifactId>
+            <version>1.8</version>
         </dependency>
         <dependency>
             <groupId>com.github.davidmoten</groupId>
             <artifactId>big-sorter</artifactId>
-            <version>0.1.18</version>
+            <version>0.1.20</version>
         </dependency>
     </dependencies>
     <reporting>
