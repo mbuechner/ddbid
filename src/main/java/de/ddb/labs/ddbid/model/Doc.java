@@ -4,21 +4,22 @@
  */
 package de.ddb.labs.ddbid.model;
 
-import static de.ddb.labs.ddbid.model.item.ItemDoc.getStaticHeader;
+import lombok.Data;
+
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.Data;
+
+import static de.ddb.labs.ddbid.model.item.ItemDoc.getStaticHeader;
 
 /**
- *
  * @author buechner
  */
 @Data
 public class Doc {
-        
+
     public List<String> getHeader() {
-         return getStaticHeader();
+        return getStaticHeader();
     }
 
     public List<Object> getData(Timestamp timestamp, Status status) {
@@ -26,8 +27,7 @@ public class Doc {
     }
 
     public List<Object> getData() {
-        final List<Object> l = new ArrayList<>();
-        return l;
+        return new ArrayList<>();
     }
-    
+
 }

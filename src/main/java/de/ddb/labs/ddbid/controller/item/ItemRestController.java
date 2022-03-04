@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,13 +19,14 @@ import de.ddb.labs.ddbid.model.item.Item;
 import de.ddb.labs.ddbid.model.paging.Page;
 import de.ddb.labs.ddbid.model.paging.PagingRequest;
 import de.ddb.labs.ddbid.service.ItemService;
-import java.sql.Timestamp;
-import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.sql.Timestamp;
+import java.util.Map;
 
 @RestController
 @RequestMapping("item")

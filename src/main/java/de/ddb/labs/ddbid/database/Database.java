@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,10 +24,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 public class Database<T> {
 
     private final static String SET_TIMEZONE = "Set TimeZone='UTC';";
-    
-    private String database;
-
     private final HikariConfig config;
+    private final String database;
     private JdbcTemplate duckdb;
     private HikariDataSource dataSource;
 
@@ -56,7 +54,7 @@ public class Database<T> {
     public JdbcTemplate getJdbcTemplate() {
         init();
         return duckdb;
-    }    
+    }
 
     public void close() {
         if (dataSource != null && !dataSource.isClosed()) {

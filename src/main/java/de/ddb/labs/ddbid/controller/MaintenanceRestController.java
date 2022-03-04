@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,37 +15,28 @@
  */
 package de.ddb.labs.ddbid.controller;
 
-import de.ddb.labs.ddbid.cronjob.ItemCronJob;
-import de.ddb.labs.ddbid.cronjob.OrganizationCronJob;
-import de.ddb.labs.ddbid.cronjob.PersonCronJob;
 import de.ddb.labs.ddbid.database.Database;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.TaskScheduler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("maintenance")
 @Slf4j
 public class MaintenanceRestController {
 
-    @Autowired
-    private Database database;
-
     private final static String SET_TIMEZONE = "Set TimeZone='UTC';";
-
     private final static String CREATE_SCHEMA = "CREATE SCHEMA IF NOT EXISTS main;";
-
     private final static String CREATE_ITEM_TABLE = "CREATE TABLE IF NOT EXISTS main.item (\n"
             + "\"timestamp\" TIMESTAMP NOT NULL,\n"
             + "id VARCHAR(32) NOT NULL,\n"
@@ -65,7 +56,6 @@ public class MaintenanceRestController {
             + "type VARCHAR(32),\n"
             + "PRIMARY KEY (\"timestamp\", id)\n"
             + ");";
-
     private final static String CREATE_ORGANIZATION_TABLE = "CREATE TABLE IF NOT EXISTS main.organization (\n"
             + "\"timestamp\" TIMESTAMP NOT NULL,\n"
             + "id VARCHAR(64) NOT NULL,\n"
@@ -75,11 +65,11 @@ public class MaintenanceRestController {
             + "type VARCHAR(32),\n"
             + "PRIMARY KEY (\"timestamp\", id)\n"
             + ");";
-
     private final static String CREATE_SEARCH_INDEX_1 = "CREATE INDEX IF NOT EXISTS data_timestamp_IDX ON main.{} (\"timestamp\");";
     private final static String CREATE_SEARCH_INDEX_2 = "CREATE INDEX IF NOT EXISTS data_status_IDX ON main.{} (\"status\");";
     private final static String CREATE_SEARCH_INDEX_3 = "CREATE INDEX IF NOT EXISTS data_id_IDX ON main.{} (\"id\");";
-
+    @Autowired
+    private Database database;
     @Value("${ddbid.datapath.item}")
     private String dataPathItem;
 
