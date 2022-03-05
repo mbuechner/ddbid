@@ -128,12 +128,6 @@
             <version>4.9.3</version>
             <type>jar</type>
         </dependency>
-<!--        <dependency>
-            <groupId>com.github.davidmoten</groupId>
-            <artifactId>commons-csv</artifactId>
-            <version>1.6.002</version>
-            <type>jar</type>
-        </dependency>-->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-csv</artifactId>
@@ -208,6 +202,36 @@
                             <outputDirectory>${project.build.directory}/classes/static/assets/datatables
                             </outputDirectory>
                         </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.samaxes.maven</groupId>
+                <artifactId>minify-maven-plugin</artifactId>
+                <version>1.7.6</version>
+                <executions>
+                    <execution>
+                        <id>default-minify</id>
+                        <phase>prepare-package</phase>
+                        <configuration>
+                            <charset>UTF-8</charset>
+                            <webappSourceDir>${basedir}/src/main/resources/static</webappSourceDir>
+                            <webappTargetDir>${project.build.outputDirectory}/static</webappTargetDir>
+                            <jsSourceDir>js</jsSourceDir>
+                            <jsSourceFiles>
+                                <jsSourceFile>item.js</jsSourceFile>
+                                <jsSourceFile>person.js</jsSourceFile>
+                                <jsSourceFile>organization.js</jsSourceFile>
+                            </jsSourceFiles>
+                            <jsTargetDir>js</jsTargetDir>
+                            <jsEngine>CLOSURE</jsEngine>
+                            <skipMerge>true</skipMerge>
+                            <nosuffix>true</nosuffix>
+                            <verbose>true</verbose>
+                        </configuration>
+                        <goals>
+                            <goal>minify</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>
