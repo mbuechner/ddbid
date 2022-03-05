@@ -163,6 +163,7 @@ public class ItemService {
         }
 
         final Page<Item> page = new Page<>(ddbIds);
+        ddbIds = null; // free memory
         page.setRecordsFiltered(filteredCount);
         page.setRecordsTotal(totalCount);
         page.setDraw(pagingRequest.getDraw());

@@ -246,7 +246,8 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
         int totalCount = -1;
         int processedCount = 0;
         boolean errorOccurred = false;
-        try (final OutputStream os = Files.newOutputStream(Path.of(outputFileName), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow)) {
+        try (final OutputStream os = Files.newOutputStream(Path.of(outputFileName), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+             final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow)) {
             CSVPrinter outputWriter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader());
             outputWriter.printRecord(doc.getHeader());
             log.info("Writing data to dump file {}", outputFileName);
@@ -256,13 +257,15 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
                 // initial request
                 final Request request = new Request.Builder().url(API + query + "&cursorMark=" + URLEncoder.encode(nextCursorMark, StandardCharsets.UTF_8)).addHeader("Accept", "application/json").addHeader("Authorization", "OAuth oauth_consumer_key=\"" + apiKey + "\"").build();
                 log.info("Execute request \"{}\"", request.url());
+                JsonNode doc;
+                List<Doc> ec;
                 try (final Response response = httpClient.newCall(request).execute()) {
                     if (!response.isSuccessful()) {
                         errorOccurred = true;
                         log.warn("API respose code {} for {}", response.code(), response);
                         break;
                     }
-                    final JsonNode doc = objectMapper.readTree(response.body().byteStream());
+                    doc = objectMapper.readTree(response.body().byteStream());
                     if (totalCount == -1) {
                         totalCount = doc.get("response").get("numFound").asInt(0);
                     }
@@ -270,13 +273,17 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
                     lastCursorMark = nextCursorMark;
                     nextCursorMark = doc.get("nextCursorMark").asText("");
 
-                    final List<Doc> ec = objectMapper.treeToValue(doc.get("response").get("docs"), objectMapper.getTypeFactory().constructCollectionType(List.class, docType));
+                    ec = objectMapper.treeToValue(doc.get("response").get("docs"), objectMapper.getTypeFactory().constructCollectionType(List.class, docType));
                     for (Doc e : ec) {
                         outputWriter.printRecord(e.getData());
                     }
                     processedCount += ec.size();
                     log.info("{} of {} processed...", processedCount, totalCount);
-
+                } finally {
+                    // free memory
+                    doc = null;
+                    ec = null;
+                    System.gc();
                 }
                 // for testing
                 // break;
@@ -330,7 +337,7 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
              final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow);
              final CSVPrinter csvPrinter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
             csvPrinter.printRecord(doc.getHeader());
-            final Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(decoder);
+            Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(decoder);
             for (CSVRecord record : records) {
                 final Map<String, String> map = record.toMap();
                 map.put("timestamp", sdf.format(timestamp));
@@ -338,8 +345,12 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
                 csvPrinter.printRecord(map.values());
                 lineCount++;
             }
+            records= null; // free memory
+            System.gc();
         }
-        tmpFile.delete();
+        if(tmpFile.delete()) {
+            tmpFile.deleteOnExit();
+        }
         if (lineCount < 1) {
             try {
                 Files.delete(Path.of(output.getAbsolutePath()));
