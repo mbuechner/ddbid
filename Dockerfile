@@ -4,7 +4,7 @@ COPY src /tmp/src/
 WORKDIR /tmp/
 RUN mvn package
 
-FROM openjdk:11-jre-slim
+FROM openjdk:11-slim-bullseye
 ENV DDBID.PORT=8080
 RUN apt-get -y update && apt-get -y install curl && mkdir /home/ddbid
 COPY --from=MAVEN_CHAIN /tmp/target/ddbid.jar /home/ddbid/ddbid.jar
