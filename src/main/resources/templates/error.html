@@ -3,19 +3,22 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
-    <meta content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no" name="viewport"/>
-    <meta content="" name="description"/>
-    <meta content="" name="author"/>
+    <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport"/>
+    <meta content="DDBid is a small and lightweight tool to record all DDB object IDs, compare it with previous ID dumps and show differences (new and missing items, persons and organizations)."
+          name="description"/>
+    <meta content="Michael Büchner" name="author"/>
     <title>DDBid</title>
     <link th:href="@{webjars/bootswatch-lux/5.0.2/bootstrap.min.css} " th:rel="stylesheet"/>
+    <link th:href="@{css/custom.css}" th:rel="stylesheet"/>
 </head>
 <body>
 <!-- Navigation -->
 <div class="navbar navbar-expand-lg static-top navbar-dark bg-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="/">
+        <a class="navbar-brand" href="#">
             <i class="fas fa-1x fa-life-ring fa-spin"></i> DDBid</a>
-        <button aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation" class="navbar-toggler"
+        <button aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation"
+                class="navbar-toggler"
                 data-bs-target="#navbarResponsive" data-bs-toggle="collapse" type="button">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -45,7 +48,6 @@
         </div>
     </div>
 </div>
-
 <script th:src="@{webjars/jquery/jquery.min.js}"></script>
 <script th:src="@{webjars/bootstrap/js/bootstrap.min.js}"></script>
 <script th:src="@{webjars/font-awesome/5.15.4/js/all.min.js}"></script>
