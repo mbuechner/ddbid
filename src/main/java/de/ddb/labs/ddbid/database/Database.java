@@ -38,7 +38,8 @@ public class Database<T> {
         config.addDataSourceProperty("duckdb.read_only", "false");
         config.setReadOnly(false);
         config.setMaximumPoolSize(16);
-        //config.setMaxLifetime(3);
+        config.setMinimumIdle(8);
+        config.setConnectionTimeout(600000); // 10min.
         config.setJdbcUrl("jdbc:duckdb:" + database);
     }
 

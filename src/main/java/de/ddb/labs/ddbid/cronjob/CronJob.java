@@ -139,6 +139,10 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
      * @return
      */
     private static void cleanInvalidDumps(String dataPath) {
+        // compare files
+        final File[] files = new File(dataPath).listFiles( (dir,name) -> name.startsWith(COMPARE_OUTPUT_FILENAME_PREFIX));
+        Arrays.asList(files).stream().forEach(File::delete);
+        
         // dump files
         final String dumpPatternString = "[0-9]{4}\\-[0-9]{2}\\-[0-9]{2}" + OUTPUT_FILENAME_EXT.replaceAll("\\.", "\\\\.");
         final Pattern dumpPattern = Pattern.compile(dumpPatternString);
@@ -217,17 +221,11 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
         if (diffCountAB > 0) {
             database.getJdbcTemplate().execute("COPY main." + tableName + " FROM '" + outputFileNameAB + "' (AUTO_DETECT TRUE);");
         }
-        if(!outputFileNameAB.delete()) {
-            outputFileNameAB.deleteOnExit();
-        }
 
         final File outputFileNameBA = new File(dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.NEW + OUTPUT_FILENAME_EXT);
         final int diffCountBA = findDifferences(newDumpinDataPath, lastDumpInDataPath, outputFileNameBA, currentTime, Status.NEW);
         if (diffCountBA > 0) {
             database.getJdbcTemplate().execute("COPY main." + tableName + " FROM '" + outputFileNameBA + "' (AUTO_DETECT TRUE);");
-        }
-        if(!outputFileNameBA.delete()) {
-            outputFileNameBA.deleteOnExit();
         }
     }
 
@@ -360,4 +358,6 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
         log.info("{} compared with {} has {} differences with status {}", fileA.getName(), fileB.getName(), lineCount, status);
         return lineCount;
     }
+    
+    
 }
