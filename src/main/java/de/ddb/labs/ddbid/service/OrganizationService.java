@@ -178,7 +178,7 @@ public class OrganizationService {
             final Map<String, Timestamp> m = new HashMap<>();
             for (Timestamp t : ts) {
                 cal.setTime(t);
-                m.put("CW " + cal.get(Calendar.WEEK_OF_YEAR), t);
+                m.put("CW" + cal.get(Calendar.WEEK_OF_YEAR), t);
             }
             return m;
         } catch (EmptyResultDataAccessException e) {

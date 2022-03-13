@@ -81,7 +81,7 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
     @Autowired
     private ObjectMapper objectMapper;
     private Timestamp currentTime;
-    
+
     /**
      *
      * @param docType
@@ -93,7 +93,7 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
      */
     public CronJob(Class<Doc> docType) throws NoSuchMethodException, InstantiationException, InvocationTargetException, IllegalArgumentException, IllegalAccessException {
         this.docType = docType;
-        this.doc = docType.getDeclaredConstructor().newInstance(); 
+        this.doc = docType.getDeclaredConstructor().newInstance();
     }
 
     /**
@@ -140,9 +140,9 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
      */
     private static void cleanInvalidDumps(String dataPath) {
         // compare files
-        final File[] files = new File(dataPath).listFiles( (dir,name) -> name.startsWith(COMPARE_OUTPUT_FILENAME_PREFIX));
+        final File[] files = new File(dataPath).listFiles((dir, name) -> name.startsWith(COMPARE_OUTPUT_FILENAME_PREFIX));
         Arrays.asList(files).stream().forEach(File::delete);
-        
+
         // dump files
         final String dumpPatternString = "[0-9]{4}\\-[0-9]{2}\\-[0-9]{2}" + OUTPUT_FILENAME_EXT.replaceAll("\\.", "\\\\.");
         final Pattern dumpPattern = Pattern.compile(dumpPatternString);
@@ -173,7 +173,7 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
         };
         final File[] okfilefiles = new File(dataPath).listFiles(okfileFileFilter);
 
-        // look for ok files ov every dump
+        // look for ok files on every dump
         for (File dump : dumpfiles) {
             final String dumpFileName = dump.getName().replace(OUTPUT_FILENAME_EXT, OK_FILENAME_EXT);
             if (!Arrays.stream(okfilefiles).map(p -> p.getName()).anyMatch(dumpFileName::equals)) {
@@ -190,7 +190,7 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
      * @throws java.io.IOException
      */
     public void schedule() throws IOException, IllegalArgumentException, RuntimeException {
-        
+
         this.currentTime = Timestamp.from(LocalDateTime.now().toInstant(ZoneOffset.UTC));
 
         if (this.query == null || this.query.isBlank()) {
@@ -208,7 +208,7 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
 
         final File lastDumpInDataPath = lastDumpInDataPath(dataPath); // get filename of last dump
         final File newDumpinDataPath = dumpIds(); // make new dump
-        
+
         if (lastDumpInDataPath == null) {
             log.warn("There's no last dump in path {}. Nothing to compare.", dataPath);
             return;
@@ -219,13 +219,19 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
         final File outputFileNameAB = new File(dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.MISSING + OUTPUT_FILENAME_EXT);
         final int diffCountAB = findDifferences(lastDumpInDataPath, newDumpinDataPath, outputFileNameAB, currentTime, Status.MISSING);
         if (diffCountAB > 0) {
-            database.getJdbcTemplate().execute("COPY main." + tableName + " FROM '" + outputFileNameAB + "' (AUTO_DETECT TRUE);");
+            final String queryTmp = "COPY main." + tableName + " FROM '" + outputFileNameAB + "' (AUTO_DETECT TRUE);";
+            log.info("Copy MISSING {} to database with \"{}\"...", tableName, queryTmp);
+            database.getJdbcTemplate().execute(queryTmp);
+            log.info("Finished copying to database.");
         }
 
         final File outputFileNameBA = new File(dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.NEW + OUTPUT_FILENAME_EXT);
         final int diffCountBA = findDifferences(newDumpinDataPath, lastDumpInDataPath, outputFileNameBA, currentTime, Status.NEW);
         if (diffCountBA > 0) {
-            database.getJdbcTemplate().execute("COPY main." + tableName + " FROM '" + outputFileNameBA + "' (AUTO_DETECT TRUE);");
+            final String queryTmp = "COPY main." + tableName + " FROM '" + outputFileNameBA + "' (AUTO_DETECT TRUE);";
+            log.info("Copy NEW {} to database with \"{}\"...", tableName, queryTmp);
+            database.getJdbcTemplate().execute(queryTmp);
+            log.info("Finished copying to database.");
         }
     }
 
@@ -244,9 +250,7 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
         int totalCount = -1;
         int processedCount = 0;
         boolean errorOccurred = false;
-        try (final OutputStream os = Files.newOutputStream(Path.of(outputFileName), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
-             final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow);
-            final CSVPrinter outputWriter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+        try (final OutputStream os = Files.newOutputStream(Path.of(outputFileName), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow); final CSVPrinter outputWriter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
             outputWriter.printRecord(doc.getHeader());
             log.info("Writing data to dump file {}", outputFileName);
             String lastCursorMark = "";
@@ -316,23 +320,11 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
             final String b = y.get("id");
             return a.compareTo(b);
         };
-        try (final InputStream fileStreamA = new FileInputStream(fileA);
-             final GZIPInputStream gzipA = new GZIPInputStream(fileStreamA);
-             final Reader readerA = csVSerializer.createReader(gzipA);
-             final InputStream fileStreamB = new FileInputStream(fileB);
-             final GZIPInputStream gzipB = new GZIPInputStream(fileStreamB);
-             final Reader<CSVRecord> readerB = csVSerializer.createReader(gzipB);
-             final OutputStream fileOutputStream = new FileOutputStream(tmpFile, false);
-             final GZIPOutputStream gzOutStream = new GZIPOutputStream(fileOutputStream);
-             final Writer<CSVRecord> writerAb = csVSerializer.createWriter(gzOutStream)) {
+        try (final InputStream fileStreamA = new FileInputStream(fileA); final GZIPInputStream gzipA = new GZIPInputStream(fileStreamA); final Reader readerA = csVSerializer.createReader(gzipA); final InputStream fileStreamB = new FileInputStream(fileB); final GZIPInputStream gzipB = new GZIPInputStream(fileStreamB); final Reader<CSVRecord> readerB = csVSerializer.createReader(gzipB); final OutputStream fileOutputStream = new FileOutputStream(tmpFile, false); final GZIPOutputStream gzOutStream = new GZIPOutputStream(fileOutputStream); final Writer<CSVRecord> writerAb = csVSerializer.createWriter(gzOutStream)) {
             Util.findComplement(readerA, readerB, comparator, writerAb);
         }
         int lineCount = 0;
-        try (final InputStream fileStream = new FileInputStream(tmpFile); final InputStream gzipStream = new GZIPInputStream(fileStream);
-             final InputStreamReader decoder = new InputStreamReader(gzipStream, StandardCharsets.UTF_8);
-             final OutputStream os = Files.newOutputStream(Path.of(output.getAbsolutePath()), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
-             final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow);
-             final CSVPrinter csvPrinter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+        try (final InputStream fileStream = new FileInputStream(tmpFile); final InputStream gzipStream = new GZIPInputStream(fileStream); final InputStreamReader decoder = new InputStreamReader(gzipStream, StandardCharsets.UTF_8); final OutputStream os = Files.newOutputStream(Path.of(output.getAbsolutePath()), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow); final CSVPrinter csvPrinter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
             csvPrinter.printRecord(doc.getHeader());
             Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(decoder);
             for (CSVRecord record : records) {
@@ -342,10 +334,10 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
                 csvPrinter.printRecord(map.values());
                 lineCount++;
             }
-            records= null; // free memory
+            records = null; // free memory
             System.gc();
         }
-        if(tmpFile.delete()) {
+        if (tmpFile.delete()) {
             tmpFile.deleteOnExit();
         }
         if (lineCount < 1) {
@@ -358,6 +350,5 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
         log.info("{} compared with {} has {} differences with status {}", fileA.getName(), fileB.getName(), lineCount, status);
         return lineCount;
     }
-    
-    
+
 }
