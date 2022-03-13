@@ -202,10 +202,9 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
         // we clean up first
         cleanInvalidDumps(dataPath);
 
-        // make new dump
-        final File newDumpinDataPath = dumpIds();
-
         final File lastDumpInDataPath = lastDumpInDataPath(dataPath); // get filename of last dump
+        final File newDumpinDataPath = dumpIds(); // make new dump
+        
         if (lastDumpInDataPath == null) {
             log.warn("There's no last dump in path {}. Nothing to compare.", dataPath);
             return;
