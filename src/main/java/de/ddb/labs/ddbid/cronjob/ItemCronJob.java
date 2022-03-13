@@ -28,7 +28,7 @@ import java.lang.reflect.InvocationTargetException;
 
 @Slf4j
 @Service
-public class ItemCronJob extends CronJob {
+public class ItemCronJob extends CronJob implements CronJobInterface {
 
     private static final String QUERY = "/search/index/search/select?q=*:*&wt=json&fl=id,label,provider_id,supplier_id,dataset_id&sort=id ASC&rows=" + ENTITYCOUNT;
 
@@ -52,5 +52,14 @@ public class ItemCronJob extends CronJob {
         super.setTableName(tableName);
         super.schedule();
         log.info("{} finished.", this.getClass().getName());
+    }
+
+    @Override
+    public void run() {
+        try {
+            schedule();
+        } catch(IOException e) {
+            log.error("{}", e.getMessage());
+        }
     }
 }
