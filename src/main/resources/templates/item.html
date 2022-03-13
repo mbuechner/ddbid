@@ -11,13 +11,14 @@
     <link th:href="@{webjars/bootswatch-lux/5.0.2/bootstrap.min.css} " th:rel="stylesheet"/>
     <link th:href="@{css/custom.css}" th:rel="stylesheet"/>
     <link th:href="@{assets/datatables/datatables.min.css}" th:rel="stylesheet"/>
+    <script th:src="@{webjars/font-awesome/5.15.4/js/all.min.js}" data-auto-replace-svg="nest"></script>
 </head>
 <body>
 <!-- Navigation -->
 <div class="navbar navbar-expand-lg static-top navbar-dark bg-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="#">
-            <i class="fas fa-1x fa-life-ring fa-spin"></i> DDBid</a>
+        <a class="navbar-brand" href="index.html">
+            <i class="fas fa-1x fa-life-ring"></i> DDBid</a>
         <button aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation"
                 class="navbar-toggler"
                 data-bs-target="#navbarResponsive" data-bs-toggle="collapse" type="button">
@@ -56,13 +57,13 @@
         <table class="table table-hover table-sm dt-responsive nowrap" id="ddbid" style="width: 100%">
             <thead>
             <tr>
-                <th style="min-width:100px;">Timestamp</th>
-                <th style="min-width:100px;">ID</th>
-                <th style="min-width:100px;">Status</th>
-                <th style="min-width:100px;">Dataset ID</th>
-                <th style="min-width:100px;">Label</th>
-                <th style="min-width:100px;">Provider ID</th>
-                <th style="min-width:100px;">Supplier ID</th>
+                <th>Timestamp</th>
+                <th>ID</th>
+                <th>Status</th>
+                <th>Dataset ID</th>
+                <th>Label</th>
+                <th>Provider ID</th>
+                <th>Supplier ID</th>
             </tr>
             </thead>
         </table>
@@ -70,7 +71,6 @@
 </div>
 <script th:src="@{webjars/jquery/jquery.min.js}"></script>
 <script th:src="@{webjars/bootstrap/js/bootstrap.min.js}"></script>
-<script th:src="@{webjars/font-awesome/5.15.4/js/all.min.js}"></script>
 <script th:src="@{assets/datatables/datatables.min.js}"></script>
 <script th:src="@{js/item.js}"></script>
 </body>
