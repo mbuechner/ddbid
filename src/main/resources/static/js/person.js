@@ -46,7 +46,7 @@ $(document).ready(function() {
                     }
                 });
                 var count = 0;
-                const oEntries = Object.entries(json)
+                const oEntries = Object.entries(json);
                 for (const [key, value] of oEntries) {
                     $('#ddbid').DataTable().button().add("1-0", {
                         text: key,

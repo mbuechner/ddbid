@@ -31,7 +31,6 @@ import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -39,7 +38,8 @@ import java.util.stream.Collectors;
 @Service
 public class OrganizationService {
 
-    private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+    private final Calendar cal = Calendar.getInstance(Locale.GERMANY);
+    
     @Autowired
     private Database database;
     @Value("${ddbid.database.table.organization}")
@@ -177,7 +177,8 @@ public class OrganizationService {
             final List<Timestamp> ts = database.getJdbcTemplate().queryForList("SELECT DISTINCT \"timestamp\" FROM main." + tableName, Timestamp.class);
             final Map<String, Timestamp> m = new HashMap<>();
             for (Timestamp t : ts) {
-                m.put(sdf.format(t), t);
+                cal.setTime(t);
+                m.put("CW " + cal.get(Calendar.WEEK_OF_YEAR), t);
             }
             return m;
         } catch (EmptyResultDataAccessException e) {

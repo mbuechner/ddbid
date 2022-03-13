@@ -64,7 +64,6 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
     private final Class<Doc> docType;
     private final Doc doc;
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-    private final Timestamp currentTime;
 
     @Setter
     private String query; // set in child class!
@@ -81,7 +80,8 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
     private OkHttpClient httpClient;
     @Autowired
     private ObjectMapper objectMapper;
-
+    private Timestamp currentTime;
+    
     /**
      *
      * @param docType
@@ -93,8 +93,7 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
      */
     public CronJob(Class<Doc> docType) throws NoSuchMethodException, InstantiationException, InvocationTargetException, IllegalArgumentException, IllegalAccessException {
         this.docType = docType;
-        this.doc = docType.getDeclaredConstructor().newInstance();
-        this.currentTime = Timestamp.from(LocalDateTime.now().toInstant(ZoneOffset.UTC));
+        this.doc = docType.getDeclaredConstructor().newInstance(); 
     }
 
     /**
@@ -187,6 +186,8 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
      * @throws java.io.IOException
      */
     public void schedule() throws IOException, IllegalArgumentException, RuntimeException {
+        
+        this.currentTime = Timestamp.from(LocalDateTime.now().toInstant(ZoneOffset.UTC));
 
         if (this.query == null || this.query.isBlank()) {
             throw new IllegalArgumentException("Query parameter not set");
@@ -247,8 +248,8 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
         int processedCount = 0;
         boolean errorOccurred = false;
         try (final OutputStream os = Files.newOutputStream(Path.of(outputFileName), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
-             final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow)) {
-            CSVPrinter outputWriter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader());
+             final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow);
+            final CSVPrinter outputWriter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
             outputWriter.printRecord(doc.getHeader());
             log.info("Writing data to dump file {}", outputFileName);
             String lastCursorMark = "";
@@ -288,7 +289,6 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
                 // for testing
                 // break;
             }
-            outputWriter.close();
         } catch (Exception e) {
             errorOccurred = true;
             log.error("{}", e.getMessage());
