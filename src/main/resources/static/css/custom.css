@@ -26,3 +26,6 @@
     z-index: 2;
     cursor: pointer;
 }
+table th {
+     min-width: 150px;
+}
