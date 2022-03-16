@@ -44,7 +44,7 @@ public class DownloadRestController<T> {
     @Value(value = "${ddbid.datapath.person}")
     private String personDataPath;
 
-    @Value(value = "download/${ddbid.datapath.organization}")
+    @Value(value = "${ddbid.datapath.organization}")
     private String organizationDataPath;
 
     @GetMapping
