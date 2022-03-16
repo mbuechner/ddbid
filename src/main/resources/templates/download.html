@@ -49,10 +49,29 @@
             </div>
         </div>
         <div class="container-fluid">
-            <div class="d-flex justify-content-center align-items-center" style="height: 100vh;">
-                <h1 class="mr-3 pr-3 align-top border-right inline-block align-content-center" th:text="${status}"></h1>
-                <div class="inline-block align-middle">
-                    <h2 class="font-weight-normal lead" id="desc" th:text="${error}"></h2>
+            <div class="px-4 my-5 text-center">
+                <div class="row">
+                    <div class="col-md py-5">
+                        <h1>Item</h1>
+                        <ul class="list-group">
+                            <li class="list-group-item" th:if="${itemList.empty}">No Downloads available</li>
+                            <li class="list-group-item" th:each="e : ${itemList}"><a th:text="${e.key}" th:href="@{'download/item/' + ${e.key}}">Entry</a><small> (<span th:text="(${e.value})">1GiB</span>)</small></li>
+                        </ul>
+                    </div>
+                    <div class="col-md py-5">
+                        <h1>Person</h1>
+                        <ul class="list-group">
+                            <li class="list-group-item" th:if="${personList.empty}">No Downloads available</li>
+                            <li class="list-group-item" th:each="e : ${personList}"><a th:text="${e.key}" th:href="@{'download/person/' + ${e.key}}">Entry</a><small> (<span th:text="(${e.value})">1GiB</span>)</small></li>
+                        </ul>
+                    </div>
+                    <div class="col-md py-5">
+                        <h1>Organization</h1>
+                        <ul class="list-group">
+                            <li class="list-group-item" th:if="${organizationList.empty}">No Downloads available</li>
+                            <li class="list-group-item" th:each="e : ${organizationList}"><a th:text="${e.key}" th:href="@{'download/organization/' + ${e.key}}">Entry</a><small> (<span th:text="(${e.value})">1GiB</span>)</small></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>

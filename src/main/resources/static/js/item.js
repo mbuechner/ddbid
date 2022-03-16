@@ -149,6 +149,10 @@ $(document).ready(function() {
                 "className": "text-nowrap"
             },
             {
+                "data": "provider_item_id",
+                "className": "text-nowrap"
+            },
+            {
                 "data": "dataset_id",
                 "className": "text-wrap"
             },
@@ -167,6 +171,10 @@ $(document).ready(function() {
                     }
                     return data;
                 }
+            },
+            {
+                "data": "sector_fct",
+                "className": "text-nowrap"
             },
             {
                 "data": "supplier_id",

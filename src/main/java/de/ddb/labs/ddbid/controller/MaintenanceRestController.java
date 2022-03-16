@@ -19,6 +19,7 @@ import de.ddb.labs.ddbid.cronjob.ItemCronJob;
 import de.ddb.labs.ddbid.cronjob.OrganizationCronJob;
 import de.ddb.labs.ddbid.cronjob.PersonCronJob;
 import de.ddb.labs.ddbid.database.Database;
+import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,6 +53,8 @@ public class MaintenanceRestController {
             + "supplier_id VARCHAR(128),\n"
             + "PRIMARY KEY (\"timestamp\", id)\n"
             + ");";
+    private final static String CREATE_ITEM_TABLE_ALTER01 = "ALTER TABLE item ADD COLUMN provider_item_id VARCHAR(512);";
+    private final static String CREATE_ITEM_TABLE_ALTER02 = "ALTER TABLE item ADD COLUMN sector_fct VARCHAR(16);";
     private final static String CREATE_PERSON_TABLE = "CREATE TABLE IF NOT EXISTS main.person (\n"
             + "\"timestamp\" TIMESTAMP NOT NULL,\n"
             + "id VARCHAR(64) NOT NULL,\n"
@@ -108,32 +111,38 @@ public class MaintenanceRestController {
 
     @GetMapping
     @RequestMapping("initdb")
-    public Map<String, String> initDb() {
+    public Map<String, Object> initDb() {
 
+        final List<String> queries = new ArrayList<>();
+
+        queries.add(SET_TIMEZONE);
+        queries.add(CREATE_SCHEMA);
+        // item
+        queries.add(CREATE_ITEM_TABLE);
+        queries.add(CREATE_ITEM_TABLE_ALTER01);
+        queries.add(CREATE_ITEM_TABLE_ALTER02);
+        queries.add(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", itemTableName));
+        queries.add(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", itemTableName));
+        queries.add(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", itemTableName));
+        //person
+        queries.add(CREATE_PERSON_TABLE);
+        queries.add(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", personTableName));
+        queries.add(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", personTableName));
+        queries.add(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", personTableName));
+        //person
+        queries.add(CREATE_ORGANIZATION_TABLE);
+        queries.add(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", organizationTableName));
+        queries.add(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", organizationTableName));
+        queries.add(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", organizationTableName));
+
+        final List<String> errors = new ArrayList<>();
         try {
-
-            final List<String> queries = new ArrayList<>();
-
-            queries.add(SET_TIMEZONE);
-            queries.add(CREATE_SCHEMA);
-            // item
-            queries.add(CREATE_ITEM_TABLE);
-            queries.add(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", itemTableName));
-            queries.add(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", itemTableName));
-            queries.add(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", itemTableName));
-            //person
-            queries.add(CREATE_PERSON_TABLE);
-            queries.add(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", personTableName));
-            queries.add(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", personTableName));
-            queries.add(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", personTableName));
-            //person
-            queries.add(CREATE_ORGANIZATION_TABLE);
-            queries.add(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", organizationTableName));
-            queries.add(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", organizationTableName));
-            queries.add(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", organizationTableName));
-
             for (String query : queries) {
-                database.getJdbcTemplate().execute(query);
+                try {
+                    database.getJdbcTemplate().execute(query);
+                } catch (Exception ex) {
+                    errors.add(ex.getMessage());
+                }
             }
 
             // create dirs
@@ -146,8 +155,19 @@ public class MaintenanceRestController {
             if (!Files.exists(Path.of(dataPathOrganization))) {
                 Files.createDirectories(Path.of(dataPathOrganization));
             }
-        } catch (Exception e) {
-            return new HashMap<>() {
+
+            if (!errors.isEmpty()) {
+                throw new RuntimeException("SQL-Errors occured");
+            }
+        } catch (RuntimeException e) {
+            return new HashMap<String, Object>() {
+                {
+                    put("status", "warn");
+                    put("message", errors);
+                }
+            };
+        } catch (IOException e) {
+            return new HashMap<String, Object>() {
                 {
                     put("status", "error");
                     put("message", e.getMessage());
