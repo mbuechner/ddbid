@@ -36,6 +36,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequestMapping("download")
 @Slf4j
 public class DownloadRestController<T> {
 
@@ -49,7 +50,7 @@ public class DownloadRestController<T> {
     private String organizationDataPath;
 
     @GetMapping
-    @RequestMapping("download/{type:.+}/{filename:.+}")
+    @RequestMapping("{type:.+}/{filename:.+}")
     public ResponseEntity<Resource> listFiles(@PathVariable("type") String type, @PathVariable("filename") String filename) throws IOException {
 
         final HttpHeaders responseHeaders = new HttpHeaders();

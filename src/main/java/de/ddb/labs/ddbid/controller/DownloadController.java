@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.ModelAndView;
 
 @Controller
-@RequestMapping({"/", "/download.html"})
+@RequestMapping({"/download.html"})
 public class DownloadController {
 
     private static final ThreadLocal<DecimalFormat> FORMATTER
