@@ -12,9 +12,6 @@ import java.util.List;
 
 import static de.ddb.labs.ddbid.model.item.ItemDoc.getStaticHeader;
 
-/**
- * @author buechner
- */
 @Data
 public class Doc {
 

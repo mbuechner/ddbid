@@ -31,9 +31,11 @@ public class Item {
     private Timestamp timestamp;
     private String id;
     private String status;
+    private String provider_item_id;
     private String dataset_id;
     private String label;
     private String provider_id;
+    private String sector_fct;
     private String supplier_id;
 
 }

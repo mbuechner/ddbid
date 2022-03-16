@@ -25,9 +25,6 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * @author michael
- */
 @Data
 public class ItemDoc extends Doc {
 
@@ -40,7 +37,9 @@ public class ItemDoc extends Doc {
     private String id;
     @JsonIgnore
     private Status status;
+    private String provider_item_id;
     private String dataset_id;
+    private String sector_fct;
     private String supplier_id;
 
     public static List<String> getStaticHeader() {
@@ -48,9 +47,11 @@ public class ItemDoc extends Doc {
         l.add("timestamp");
         l.add("id");
         l.add("status");
+        l.add("provider_item_id");
         l.add("dataset_id");
         l.add("label");
         l.add("provider_id");
+        l.add("sector_fct");
         l.add("supplier_id");
         return l;
     }
@@ -73,9 +74,11 @@ public class ItemDoc extends Doc {
         l.add(getTimestamp());
         l.add(getId());
         l.add(getStatus());
+        l.add(getProvider_item_id());
         l.add(getDataset_id());
         l.add(getLabel().toString());
         l.add(getProvider_id().toString());
+        l.add(getSector_fct());
         l.add(getSupplier_id());
         return l;
     }

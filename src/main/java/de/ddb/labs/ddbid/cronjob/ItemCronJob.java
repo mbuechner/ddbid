@@ -30,7 +30,7 @@ import java.lang.reflect.InvocationTargetException;
 @Service
 public class ItemCronJob extends CronJob implements CronJobInterface {
 
-    private static final String QUERY = "/search/index/search/select?q=*:*&wt=json&fl=id,label,provider_id,supplier_id,dataset_id&sort=id ASC&rows=" + ENTITYCOUNT;
+    private static final String QUERY = "/search/index/search/select?q=*:*&wt=json&fl=id,provider_item_id,label,provider_id,supplier_id,dataset_id,sector_fct&sort=id ASC&rows=" + ENTITYCOUNT;
 
     @Value(value = "${ddbid.datapath.item}")
     private String dataPath;
