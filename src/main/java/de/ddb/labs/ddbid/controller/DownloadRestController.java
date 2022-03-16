@@ -16,22 +16,20 @@
 package de.ddb.labs.ddbid.controller;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.InputStream;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -51,10 +49,7 @@ public class DownloadRestController<T> {
 
     @GetMapping
     @RequestMapping("{type:.+}/{filename:.+}")
-    public ResponseEntity<Resource> listFiles(@PathVariable("type") String type, @PathVariable("filename") String filename) throws IOException {
-
-        final HttpHeaders responseHeaders = new HttpHeaders();
-        responseHeaders.set("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+    public void listFiles(@PathVariable("type") String type, @PathVariable("filename") String filename, HttpServletResponse response) throws IOException {
 
         if (type.equals("item")) {
             final Set s = Stream.of(new File(itemDataPath).listFiles())
@@ -64,13 +59,13 @@ public class DownloadRestController<T> {
                     .collect(Collectors.toSet());
             if (s.contains(filename)) {
                 final File file = new File(itemDataPath + filename);
-                final Path path = Paths.get(file.getAbsolutePath());
-                final ByteArrayResource resource = new ByteArrayResource(Files.readAllBytes(path));
-                return ResponseEntity.ok()
-                        .headers(responseHeaders)
-                        .contentLength(file.length())
-                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                        .body(resource);
+                final InputStream is = new FileInputStream(file);
+
+                response.setContentLengthLong(file.length());
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
+                response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+
+                IOUtils.copyLarge(is, response.getOutputStream());
             }
 
         } else if (type.equals("person")) {
@@ -81,13 +76,13 @@ public class DownloadRestController<T> {
                     .collect(Collectors.toSet());
             if (s.contains(filename)) {
                 final File file = new File(personDataPath + filename);
-                final Path path = Paths.get(file.getAbsolutePath());
-                final ByteArrayResource resource = new ByteArrayResource(Files.readAllBytes(path));
-                return ResponseEntity.ok()
-                        .headers(responseHeaders)
-                        .contentLength(file.length())
-                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                        .body(resource);
+                final InputStream is = new FileInputStream(file);
+
+                response.setContentLengthLong(file.length());
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
+                response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+
+                IOUtils.copyLarge(is, response.getOutputStream());
             }
         } else if (type.equals("organization")) {
             final Set s = Stream.of(new File(organizationDataPath).listFiles())
@@ -97,16 +92,17 @@ public class DownloadRestController<T> {
                     .collect(Collectors.toSet());
             if (s.contains(filename)) {
                 final File file = new File(organizationDataPath + filename);
-                final Path path = Paths.get(file.getAbsolutePath());
-                final ByteArrayResource resource = new ByteArrayResource(Files.readAllBytes(path));
-                return ResponseEntity.ok()
-                        .headers(responseHeaders)
-                        .contentLength(file.length())
-                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                        .body(resource);
-            }
-        }
+                final InputStream is = new FileInputStream(file);
 
-        return ResponseEntity.notFound().build();
+                response.setContentLengthLong(file.length());
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
+                response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+
+                IOUtils.copyLarge(is, response.getOutputStream());
+            }
+        } else {
+
+            response.sendError(404);
+        }
     }
 }
