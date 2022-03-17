@@ -140,8 +140,8 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
      */
     private static void cleanInvalidDumps(String dataPath) {
         // compare files
-        final File[] files = new File(dataPath).listFiles((dir, name) -> name.startsWith(COMPARE_OUTPUT_FILENAME_PREFIX));
-        Arrays.asList(files).stream().forEach(File::delete);
+        // final File[] files = new File(dataPath).listFiles((dir, name) -> name.startsWith(COMPARE_OUTPUT_FILENAME_PREFIX));
+        // Arrays.asList(files).stream().forEach(File::delete);
 
         // dump files
         final String dumpPatternString = "[0-9]{4}\\-[0-9]{2}\\-[0-9]{2}" + OUTPUT_FILENAME_EXT.replaceAll("\\.", "\\\\.");
