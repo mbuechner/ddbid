@@ -140,6 +140,7 @@ public class MaintenanceRestController {
             for (String query : queries) {
                 try {
                     database.getJdbcTemplate().execute(query);
+                    database.commit(); // make sure change are written
                 } catch (Exception ex) {
                     errors.add(ex.getMessage());
                 }
