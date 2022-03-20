@@ -53,14 +53,17 @@ public class DownloadController {
         mav.addObject("itemList", Stream.of(new File(itemDataPath).listFiles())
                 .filter(file -> !file.isDirectory())
                 .filter(file -> file.getName().endsWith(".gz"))
+                .sorted()
                 .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()))));
         mav.addObject("personList", Stream.of(new File(personDataPath).listFiles())
                 .filter(file -> !file.isDirectory())
                 .filter(file -> file.getName().endsWith(".gz"))
+                .sorted()
                 .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()))));
         mav.addObject("organizationList", Stream.of(new File(organizationDataPath).listFiles())
                 .filter(file -> !file.isDirectory())
                 .filter(file -> file.getName().endsWith(".gz"))
+                .sorted()
                 .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()))));
         mav.setViewName("download");
 
