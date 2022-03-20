@@ -218,21 +218,23 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
 
         final File outputFileNameAB = new File(dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.MISSING + OUTPUT_FILENAME_EXT);
         final int diffCountAB = findDifferences(lastDumpInDataPath, newDumpinDataPath, outputFileNameAB, currentTime, Status.MISSING);
-        if (diffCountAB > 0) {
-            final String tblHead = doc.getHeader().toString().substring(1, doc.getHeader().toString().length() - 1);
-            final String queryTmp = "COPY main." + tableName + "(" + tblHead + ") FROM '" + outputFileNameAB + "' (AUTO_DETECT TRUE);";
-            log.info("Copy MISSING {} to database with \"{}\"...", tableName, queryTmp);
-            database.getJdbcTemplate().execute(queryTmp);
-            log.info("Finished copying to database.");
-        }
 
         final File outputFileNameBA = new File(dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.NEW + OUTPUT_FILENAME_EXT);
         final int diffCountBA = findDifferences(newDumpinDataPath, lastDumpInDataPath, outputFileNameBA, currentTime, Status.NEW);
+
+        if (diffCountAB > 0) {
+            final String queryTmp = "COPY main." + tableName + " FROM '" + outputFileNameAB + "' (AUTO_DETECT TRUE, HEADER);";
+            log.info("Copy MISSING {} to database with \"{}\"...", tableName, queryTmp);
+            database.getJdbcTemplate().execute(queryTmp);
+            database.commit();
+            log.info("Finished copying to database.");
+        }
+
         if (diffCountBA > 0) {
-            final String tblHead = doc.getHeader().toString().substring(1, doc.getHeader().toString().length() - 1);
-            final String queryTmp = "COPY main." + tableName + "(" + tblHead + ") FROM '" + outputFileNameBA + "' (AUTO_DETECT TRUE);";
+            final String queryTmp = "COPY main." + tableName + " FROM '" + outputFileNameBA + "' (AUTO_DETECT TRUE, HEADER);";
             log.info("Copy NEW {} to database with \"{}\"...", tableName, queryTmp);
             database.getJdbcTemplate().execute(queryTmp);
+            database.commit();
             log.info("Finished copying to database.");
         }
     }
@@ -341,13 +343,6 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
         }
         if (tmpFile.delete()) {
             tmpFile.deleteOnExit();
-        }
-        if (lineCount < 1) {
-            try {
-                Files.delete(Path.of(output.getAbsolutePath()));
-            } catch (IOException e) {
-                //nothing
-            }
         }
         log.info("{} compared with {} has {} differences with status {}", fileA.getName(), fileB.getName(), lineCount, status);
         return lineCount;

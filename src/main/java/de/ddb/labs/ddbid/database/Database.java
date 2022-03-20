@@ -18,6 +18,8 @@ package de.ddb.labs.ddbid.database;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -43,9 +45,13 @@ public class Database<T> {
         config.setJdbcUrl("jdbc:duckdb:" + database);
     }
 
-    public void commit() throws SQLException {
+    public void commit() {
         if (dataSource == null || dataSource.isClosed()) {
-            dataSource.getConnection().commit();
+            try {
+                dataSource.getConnection().commit();
+            } catch (SQLException ex) {
+                log.warn("Could not commit to database. {}", ex.getMessage());
+            }
         }
     }
 
