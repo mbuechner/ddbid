@@ -17,6 +17,7 @@ package de.ddb.labs.ddbid.controller;
 
 import java.io.File;
 import java.text.DecimalFormat;
+import java.util.Comparator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,12 +30,15 @@ import org.springframework.web.servlet.ModelAndView;
 @RequestMapping({"/download.html"})
 public class DownloadController {
 
-    private static final ThreadLocal<DecimalFormat> FORMATTER
-            = new ThreadLocal<DecimalFormat>() {
+    private final static ThreadLocal<DecimalFormat> FORMATTER = new ThreadLocal<DecimalFormat>() {
         @Override
         protected DecimalFormat initialValue() {
             return new DecimalFormat("#,##0.#");
         }
+    };
+
+    private final Comparator comparator = (Comparator) (Object o1, Object o2) -> {
+        return ((File) o1).getName().compareTo(((File) o2).getName());
     };
 
     @Value(value = "${ddbid.datapath.item}")
@@ -53,17 +57,17 @@ public class DownloadController {
         mav.addObject("itemList", Stream.of(new File(itemDataPath).listFiles())
                 .filter(file -> !file.isDirectory())
                 .filter(file -> file.getName().endsWith(".gz"))
-                .sorted()
+                .sorted(comparator)
                 .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()))));
         mav.addObject("personList", Stream.of(new File(personDataPath).listFiles())
                 .filter(file -> !file.isDirectory())
                 .filter(file -> file.getName().endsWith(".gz"))
-                .sorted()
+                .sorted(comparator)
                 .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()))));
         mav.addObject("organizationList", Stream.of(new File(organizationDataPath).listFiles())
                 .filter(file -> !file.isDirectory())
                 .filter(file -> file.getName().endsWith(".gz"))
-                .sorted()
+                .sorted(comparator)
                 .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()))));
         mav.setViewName("download");
 
