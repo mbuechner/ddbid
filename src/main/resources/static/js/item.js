@@ -8,8 +8,8 @@ $(document).ready(function() {
         "responsive": false,
         "pagingType": "first_last_numbers",
         "lengthMenu": [
-            [5, 10, 25, 50, 100, 250, 500, -1],
-            [5, 10, 25, 50, 100, 250, 500, "All"]
+            [100, 250, 500, 1000, 2500, 5000, -1],
+            [100, 250, 500, 1000, 2500, 5000, "All"]
         ],
         "pageLength": 100,
         // "language": {
