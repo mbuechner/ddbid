@@ -18,6 +18,7 @@ package de.ddb.labs.ddbid.controller;
 import java.io.File;
 import java.text.DecimalFormat;
 import java.util.Comparator;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,10 +38,6 @@ public class DownloadController {
         }
     };
 
-    private final Comparator comparator = (Comparator) (Object o1, Object o2) -> {
-        return ((File) o1).getName().compareTo(((File) o2).getName());
-    };
-
     @Value(value = "${ddbid.datapath.item}")
     private String itemDataPath;
 
@@ -57,18 +54,15 @@ public class DownloadController {
         mav.addObject("itemList", Stream.of(new File(itemDataPath).listFiles())
                 .filter(file -> !file.isDirectory())
                 .filter(file -> file.getName().endsWith(".gz"))
-                .sorted(comparator)
-                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()))));
+                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, TreeMap::new)));
         mav.addObject("personList", Stream.of(new File(personDataPath).listFiles())
                 .filter(file -> !file.isDirectory())
                 .filter(file -> file.getName().endsWith(".gz"))
-                .sorted(comparator)
-                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()))));
+                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, TreeMap::new)));
         mav.addObject("organizationList", Stream.of(new File(organizationDataPath).listFiles())
                 .filter(file -> !file.isDirectory())
                 .filter(file -> file.getName().endsWith(".gz"))
-                .sorted(comparator)
-                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()))));
+                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, TreeMap::new)));
         mav.setViewName("download");
 
         return mav;
