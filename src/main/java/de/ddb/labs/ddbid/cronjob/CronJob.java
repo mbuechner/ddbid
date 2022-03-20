@@ -290,7 +290,7 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
                     System.gc();
                 }
                 // for testing
-                break;
+                // break;
             }
         } catch (Exception e) {
             errorOccurred = true;
@@ -299,7 +299,7 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
 
         if (totalCount > processedCount) {
             log.warn("Total object count is {}, but processed object count is only {}", totalCount, processedCount);
-            // errorOccurred = true;
+            errorOccurred = true;
         }
 
         if (errorOccurred) {
