@@ -1,4 +1,5 @@
 $(document).ready(function() {
+    $("#ddbid_processing").addClass("alert alert-secondary");
     $('#ddbid').DataTable({
         "dom": 'B<"row mb-3"<"col-12 col-md-6 pb-2"i><"col-12 col-md-6 pb-2"f>><"pb-3 mb-5"r<"table-responsive"t>><"footer fixed-bottom mt-auto py-3 bg-light"<"float-right"p>>',
         "processing": true,
@@ -12,10 +13,11 @@ $(document).ready(function() {
             [100, 250, 500, 1000, 2500, 5000, "All"]
         ],
         "pageLength": 100,
-        // "language": {
-        //  url: "/assets/datatables/de-DE.json",
-        //  decimal: ","
-        // },
+        "language": {
+            // url: "/assets/datatables/de-DE.json",
+            // decimal: ","
+            "processing": '<div class="spinner-border text-secondary" role="status" style="width: 3rem; height: 3rem; z-index: 20;"></div>'
+        },
         "ajax": {
             "url": "item",
             "type": "POST",
@@ -63,8 +65,6 @@ $(document).ready(function() {
                         }
                     });
                 }
-                $('#overlay').css("visibility", "hidden");
-                $('#overlayBg').removeAttr("class");
             });
         },
         buttons: [
@@ -189,7 +189,7 @@ $(document).ready(function() {
             }
         }
     });
-
+    
     $(function() {
         $(window).scroll(function() {
             if ($(this).scrollTop() > 100) {
