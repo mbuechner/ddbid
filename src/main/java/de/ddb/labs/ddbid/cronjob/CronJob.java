@@ -223,7 +223,8 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
         final int diffCountBA = findDifferences(newDumpinDataPath, lastDumpInDataPath, outputFileNameBA, currentTime, Status.NEW);
 
         if (diffCountAB > 0) {
-            final String queryTmp = "COPY main." + tableName + " FROM '" + outputFileNameAB + "' (AUTO_DETECT TRUE, HEADER);";
+            final String tblHead = doc.getHeader().toString().substring(1, doc.getHeader().toString().length() - 1);
+            final String queryTmp = "COPY main." + tableName + "(" + tblHead + ") FROM '" + outputFileNameAB + "' (AUTO_DETECT TRUE, HEADER);";
             log.info("Copy MISSING {} to database with \"{}\"...", tableName, queryTmp);
             database.getJdbcTemplate().execute(queryTmp);
             database.commit();
@@ -231,7 +232,8 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
         }
 
         if (diffCountBA > 0) {
-            final String queryTmp = "COPY main." + tableName + " FROM '" + outputFileNameBA + "' (AUTO_DETECT TRUE, HEADER);";
+            final String tblHead = doc.getHeader().toString().substring(1, doc.getHeader().toString().length() - 1);
+            final String queryTmp = "COPY main." + tableName + "(" + tblHead + ") FROM '" + outputFileNameBA + "' (AUTO_DETECT TRUE, HEADER);";
             log.info("Copy NEW {} to database with \"{}\"...", tableName, queryTmp);
             database.getJdbcTemplate().execute(queryTmp);
             database.commit();
