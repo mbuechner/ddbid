@@ -54,29 +54,21 @@
             <button class="btn btn-primary btn-floating btn-sm" id="btn-back-to-top" type="button">
                 <i class="fas fa-arrow-up text-light"></i>
             </button>
-            <div class="overlay" id="overlay">
-                <div class="d-flex justify-content-center">
-                    <div class="spinner-border text-secondary" role="status" style="width: 3rem; height: 3rem; z-index: 20;">
-                    </div>
-                </div>
-            </div>
-            <div class="overlayBg" id="overlayBg">
-                <table class="table table-hover table-sm dt-responsive nowrap" id="ddbid" style="width: 100%">
-                    <thead>
-                        <tr>
-                            <th>Timestamp</th>
-                            <th>ID</th>
-                            <th>Status</th>
-                            <th>Provider Item ID</th>
-                            <th>Dataset ID</th>
-                            <th>Label</th>
-                            <th>Provider ID</th>
-                            <th>Sector</th>
-                            <th>Supplier ID</th>
-                        </tr>
-                    </thead>
-                </table>
-            </div>
+            <table class="table table-hover table-sm dt-responsive nowrap" id="ddbid" style="width: 100%">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>ID</th>
+                        <th>Status</th>
+                        <th>Provider Item ID</th>
+                        <th>Dataset ID</th>
+                        <th>Label</th>
+                        <th>Provider ID</th>
+                        <th>Sector</th>
+                        <th>Supplier ID</th>
+                    </tr>
+                </thead>
+            </table>
         </div>
         <script th:src="@{webjars/jquery/jquery.min.js}"></script>
         <script th:src="@{webjars/bootstrap/js/bootstrap.min.js}"></script>
