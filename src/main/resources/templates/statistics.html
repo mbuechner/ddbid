@@ -1,0 +1,313 @@
+<!DOCTYPE HTML>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="utf-8"/>
+        <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+        <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport"/>
+        <meta content="DDBid is a small and lightweight tool to record all DDB object IDs, compare it with previous ID dumps and show differences (new and missing items, persons and organizations)."
+              name="description"/>
+        <meta content="Michael Büchner" name="author"/>
+        <title>DDBid</title>
+        <link th:href="@{webjars/bootswatch-lux/5.0.2/bootstrap.min.css} " th:rel="stylesheet"/>
+        <link th:href="@{css/custom.css}" th:rel="stylesheet"/>
+        <script th:src="@{webjars/font-awesome/5.15.4/js/all.min.js}" data-auto-replace-svg="nest"></script>
+    </head>
+    <body>
+        <!-- Navigation -->
+        <div class="navbar navbar-expand-lg static-top navbar-dark bg-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="index.html">
+                    <i class="fas fa-1x fa-life-ring"></i> DDBid</a>
+                <button aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation"
+                        class="navbar-toggler"
+                        data-bs-target="#navbarResponsive" data-bs-toggle="collapse" type="button">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarResponsive">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <a class="nav-link" href="item.html">Item</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="person.html">Person</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="organization.html">Organization</a>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="statistics.html"><i
+                                    class="fas fa-chart-line"></i> Statistics</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="download.html"><i
+                                    class="fas fa-download"></i> Download</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="https://github.com/mbuechner/ddbid" rel="noopener" target="_blank"><i
+                                    class="fab fa-github"></i> GitHub</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="container-fluid">
+            <div class="row justify-content-md-center">
+                <div class="col-xxl-4">
+                    <canvas id="missingItemConfig"></canvas>
+                </div>
+                <div class="col-xxl-4">
+                    <canvas id="missingPersonConfig"></canvas>
+                </div>
+                <div class="col-xxl-4">
+                    <canvas id="missingOrganizationConfig"></canvas>
+                </div>
+            </div> 
+            <div class="row justify-content-md-center mt-5">
+                <div class="col-xl-4">
+                    <canvas id="missingByProvider" width="100%" height="300"></canvas>
+                </div>
+                <div class="col-xl-6">
+                    <div id="missingByProviderLegend" class="mt-5 small"></div>
+                </div>
+            </div>
+            <div class="row justify-content-md-center mt-5">
+                <div class="col-xl-4">
+                    <canvas id="missingBySector" width="100%" height="300"></canvas>
+                </div>
+                <div class="col-xl-6">
+                    <div id="missingBySectorLegend" class="mt-5 small"></div>
+                </div>
+            </div>
+        </div>
+        <script th:src="@{webjars/jquery/jquery.min.js}"></script>
+        <script th:src="@{webjars/bootstrap/js/bootstrap.min.js}"></script>
+        <script th:src="@{webjars/chartjs/3.7.1/dist/chart.min.js}"></script>
+        <script th:src="@{js/palette.js}"></script>
+        <script th:src="@{js/htmlLegendPlugin.js}"></script>
+        <script th:inline="javascript">
+            /*<![CDATA[*/
+
+            // Append '4d' to the colors (alpha channel), except for the hovered index
+            function handleHover(evt, item, legend) {
+                legend.chart.data.datasets[0].backgroundColor.forEach((color, index, colors) => {
+                    colors[index] = index === item.index || color.length === 9 ? color : color + '4D';
+                });
+                legend.chart.update();
+            }
+
+            // Removes the alpha channel from background colors
+            function handleLeave(evt, item, legend) {
+                legend.chart.data.datasets[0].backgroundColor.forEach((color, index, colors) => {
+                    colors[index] = color.length === 9 ? color.slice(0, -2) : color;
+                });
+                legend.chart.update();
+            }
+
+            function hexToRgbA(hex, alpha) {
+                var c;
+                if (/^#?([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
+                    if (hex.startsWith('#')) {
+                        c = hex.substring(1).split('');
+                    } else {
+                        c = hex.split('');
+                    }
+                    if (c.length === 3) {
+                        c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+                    }
+                    c = '0x' + c.join('');
+                    return 'rgba(' + [(c >> 16) & 255, (c >> 8) & 255, c & 255].join(',') + ',' + alpha + ')';
+                }
+                throw new Error('Bad Hex');
+            }
+
+            const color = palette('tol-rainbow', 3);
+            const missingOrganizationConfig = {
+                type: 'bar',
+                data: {
+                    labels: /*[[${organizationMissingKeys}]]*/ null,
+                    datasets: [
+                        {
+                            label: 'organization',
+                            data: /*[[${organizationMissingValues}]]*/ null,
+                            borderColor: hexToRgbA(color[2], 1),
+                            backgroundColor: hexToRgbA(color[2], 0.2),
+                            yAxisID: 'y'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    stacked: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'MISSING'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left'
+                        }
+                    }
+                }
+            };
+            const missingPersonConfig = {
+                type: 'bar',
+                data: {
+                    labels: /*[[${personMissingKeys}]]*/ null,
+                    datasets: [
+                        {
+                            label: 'person',
+                            data: /*[[${personMissingValues}]]*/ null,
+                            borderColor: hexToRgbA(color[1], 1),
+                            backgroundColor: hexToRgbA(color[1], 0.2),
+                            yAxisID: 'y'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    stacked: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'MISSING'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left'
+                        }
+                    }
+                }
+            };
+            const missingItemConfig = {
+                type: 'bar',
+                data: {
+                    labels: /*[[${itemMissingKeys}]]*/ null,
+                    datasets: [
+                        {
+                            label: 'item',
+                            data: /*[[${itemMissingValues}]]*/ null,
+                            borderColor: hexToRgbA(color[0], 1),
+                            backgroundColor: hexToRgbA(color[0], 0.2),
+                            yAxisID: 'y'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    stacked: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'MISSING'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left'
+                        }
+                    }
+                }
+            };
+
+            const missingByProviderData = /*[[${missingByProvider_idKeys}]]*/ null;
+            const missingByProvider = {
+                type: 'pie',
+                data: {
+                    labels: missingByProviderData,
+                    datasets: [
+                        {
+                            label: 'MISSING by provider_id',
+                            data: /*[[${missingByProvider_idValues}]]*/ null,
+                            backgroundColor: palette('tol-rainbow', missingByProviderData.length).map(function (hex) {
+                                return '#' + hex;
+                            })
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                        title: {
+                            display: true,
+                            text: 'MISSING by provider_id'
+                        },
+                        htmlLegend: {
+                            // ID of the container to put the legend in
+                            containerID: 'missingByProviderLegend',
+                        }
+                    }
+                },
+                plugins: [htmlLegendPlugin]
+            };
+
+            const missingBySectorData = /*[[${missingBySector_fctKeys}]]*/ null;
+            const missingBySector = {
+                type: 'pie',
+                data: {
+                    labels: missingBySectorData,
+                    datasets: [
+                        {
+                            label: 'MISSING by sector_fct',
+                            data: /*[[${missingBySector_fctValues}]]*/ null,
+                            backgroundColor: palette('tol-rainbow', missingBySectorData.length).map(function (hex) {
+                                return '#' + hex;
+                            })
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                        title: {
+                            display: true,
+                            text: 'MISSING by sector_fct'
+                        },
+                        htmlLegend: {
+                            // ID of the container to put the legend in
+                            containerID: 'missingBySectorLegend'
+                        }
+                    }
+                },
+                plugins: [htmlLegendPlugin]
+            };
+
+            new Chart($('#missingItemConfig'), missingItemConfig);
+            new Chart($('#missingPersonConfig'), missingPersonConfig);
+            new Chart($('#missingOrganizationConfig'), missingOrganizationConfig);
+            new Chart($('#missingByProvider'), missingByProvider);
+            new Chart($('#missingBySector'), missingBySector);
+            /*]]>*/
+        </script>
+    </body>
+</html>

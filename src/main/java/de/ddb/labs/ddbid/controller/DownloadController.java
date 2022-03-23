@@ -17,7 +17,6 @@ package de.ddb.labs.ddbid.controller;
 
 import java.io.File;
 import java.text.DecimalFormat;
-import java.util.Comparator;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
