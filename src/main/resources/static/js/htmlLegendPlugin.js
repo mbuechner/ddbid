@@ -57,7 +57,7 @@ const htmlLegendPlugin = {
       boxSpan.style.height = '20px';
       boxSpan.style.marginRight = '10px';
       boxSpan.style.width = '20px';
-      boxSpan.style.cursor = 'pointer';
+      // boxSpan.style.cursor = 'pointer';
 
       boxSpan.onclick = () => {
         const {type} = chart.config;
