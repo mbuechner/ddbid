@@ -226,7 +226,7 @@
                                 <jsSourceFile>item.js</jsSourceFile>
                                 <jsSourceFile>person.js</jsSourceFile>
                                 <jsSourceFile>organization.js</jsSourceFile>
-                                <!--<jsSourceFile>htmlLegendPlugin.js</jsSourceFile>-->
+                                <jsSourceFile>htmlLegendPlugin.js</jsSourceFile>
                                 <jsSourceFile>palette.js</jsSourceFile>
                             </jsSourceFiles>
                             <jsTargetDir>js</jsTargetDir>
