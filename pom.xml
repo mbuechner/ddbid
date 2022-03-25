@@ -228,6 +228,7 @@
                                 <jsSourceFile>organization.js</jsSourceFile>
                                 <jsSourceFile>htmlLegendPlugin.js</jsSourceFile>
                                 <jsSourceFile>palette.js</jsSourceFile>
+                                <jsSourceFile>statistics.js</jsSourceFile>
                             </jsSourceFiles>
                             <jsTargetDir>js</jsTargetDir>
                             <jsEngine>CLOSURE</jsEngine>

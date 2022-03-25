@@ -16,10 +16,6 @@ const getOrCreateLegendList = (chart, id) => {
   return listContainer;
 };
 
-/**
- * @param {String} HTML representing a single element
- * @return {Element}
- */
 function htmlToElement(html) {
     var template = document.createElement('template');
     html = html.trim(); // Never return a text node of whitespace as the result
@@ -42,7 +38,7 @@ const htmlLegendPlugin = {
 
     items.forEach(item => {
       const li = document.createElement('li');
-      li.className = "list-group-item";
+      li.className = "list-group-item py-2";
       // li.style.alignItems = 'center';
       // li.style.display = 'inline-block';
       // i.style.flexDirection = 'row';
@@ -54,9 +50,9 @@ const htmlLegendPlugin = {
       boxSpan.style.borderColor = item.strokeStyle;
       boxSpan.style.borderWidth = item.lineWidth + 'px';
       boxSpan.style.display = 'inline-block';
-      boxSpan.style.height = '20px';
-      boxSpan.style.marginRight = '10px';
-      boxSpan.style.width = '20px';
+      boxSpan.style.height = '16px';
+      boxSpan.style.marginRight = '7px';
+      boxSpan.style.width = '16px';
       // boxSpan.style.cursor = 'pointer';
 
       boxSpan.onclick = () => {
