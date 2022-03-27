@@ -46,9 +46,8 @@ public class StatisticsController {
             + "GROUP BY provider_id\n"
             + "ORDER BY count(id) DESC;";
 
-    private final static String MISSING_BY_SECTOR = "SELECT sector_fct, count(id) AS MISSING FROM main.item \n"
-            + "WHERE status = 'MISSING'\n"
-            + "AND status != null\n"
+    private final static String MISSING_BY_SECTOR = "SELECT sector_fct, count(id) AS MISSING FROM main.item\n"
+            + "WHERE status = 'MISSING' AND sector_fct IS NOT NULL\n"
             + "GROUP BY sector_fct\n"
             + "ORDER BY count(id) DESC;";
 
