@@ -17,3 +17,6 @@ table th {
     margin: 0 !important;
     border: 0 !important;
 }
+#missingBySectorLegend, #missingByProviderLegend {
+    font-size: 10px;
+}

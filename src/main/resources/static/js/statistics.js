@@ -169,7 +169,7 @@ function missingByProvider_id(missingByProvider_idKeys, missingByProvider_idValu
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true,
             plugins: {
                 legend: {
                     display: false,
@@ -215,7 +215,7 @@ function missingBySector_fct(missingBySector_fctKeys, missingBySector_fctValues)
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true,
             plugins: {
                 legend: {
                     display: false,
