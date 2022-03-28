@@ -15,6 +15,7 @@
  */
 package de.ddb.labs.ddbid.controller;
 
+import de.ddb.labs.ddbid.cronjob.CorrectorCronJob;
 import de.ddb.labs.ddbid.cronjob.ItemCronJob;
 import de.ddb.labs.ddbid.cronjob.OrganizationCronJob;
 import de.ddb.labs.ddbid.cronjob.PersonCronJob;
@@ -26,7 +27,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -108,6 +108,9 @@ public class MaintenanceRestController {
 
     @Autowired
     private OrganizationCronJob organizationCronJob;
+
+    @Autowired
+    private CorrectorCronJob correctorCronJob;
 
     @GetMapping
     @RequestMapping("initdb")
@@ -192,6 +195,28 @@ public class MaintenanceRestController {
             taskScheduler.schedule(personCronJob, new Date());
             taskScheduler.schedule(organizationCronJob, new Date());
 
+        } catch (Exception e) {
+            return new HashMap<>() {
+                {
+                    put("status", "error");
+                    put("message", e.getMessage());
+                }
+            };
+        }
+
+        return new HashMap<>() {
+            {
+                put("status", "ok");
+            }
+        };
+    }
+
+    @GetMapping
+    @RequestMapping("testcron")
+    public Map<String, String> testCron() {
+
+        try {
+            taskScheduler.schedule(correctorCronJob, new Date());
         } catch (Exception e) {
             return new HashMap<>() {
                 {
