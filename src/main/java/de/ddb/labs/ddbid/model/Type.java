@@ -17,13 +17,13 @@ package de.ddb.labs.ddbid.model;
 
 import lombok.Getter;
 
-public enum Status {
-    NEW("NEW"), MISSING("MISSING"), FOUND("FOUND");
+public enum Type {
+    ITEM("ITEM"), PERSON("PERSON"), ORGANIZATION("ORGANIZATION");
 
     @Getter
-    private final String status;
+    private final String type;
 
-    Status(String status) {
-        this.status = status;
+    Type(String type) {
+        this.type = type;
     }
 }
