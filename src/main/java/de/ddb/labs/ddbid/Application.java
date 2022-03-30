@@ -30,6 +30,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import javax.annotation.PreDestroy;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
+import okhttp3.Dispatcher;
 
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
 @EnableScheduling
@@ -70,9 +71,13 @@ public class Application {
 
     @Bean
     public OkHttpClient httpClient() {
+        final Dispatcher dispatcher = new Dispatcher();
+        dispatcher.setMaxRequests(64);
+        dispatcher.setMaxRequestsPerHost(8);
         return new OkHttpClient.Builder()
                 .connectTimeout(0, TimeUnit.SECONDS)
                 .readTimeout(0, TimeUnit.SECONDS)
+                .dispatcher(dispatcher)
                 .build();
     }
 }
