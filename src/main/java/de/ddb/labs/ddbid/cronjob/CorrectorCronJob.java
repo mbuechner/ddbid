@@ -16,6 +16,7 @@
 package de.ddb.labs.ddbid.cronjob;
 
 import de.ddb.labs.ddbid.database.Database;
+import de.ddb.labs.ddbid.model.Status;
 import de.ddb.labs.ddbid.model.Type;
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -117,8 +118,8 @@ public class CorrectorCronJob implements CronJobInterface {
                         if (countLines(body) > 1) {
                             log.warn("Found {} with {}, so it was re-ingested. Deleted it from DB.", i.getValue(), response.request().url().toString());
                             countItem.incrementAndGet();
-                            final String query = "UPDATE {{tbl}} SET status = ? WHERE \"timestamp\" = ? AND id = ?".replace("{{tbl}}", type.toString().toLowerCase());
-                            // database.getJdbcTemplate().update(query, Status.FOUND.toString(), i.getKey(), i.getValue());
+                            final String query = "UPDATE main.{{tbl}} SET status = ? WHERE \"timestamp\" = ? AND id = ?".replace("{{tbl}}", type.toString().toLowerCase());
+                            database.getJdbcTemplate().update(query, Status.FOUND.toString(), i.getKey(), i.getValue());
                         }
                     }
                 }
