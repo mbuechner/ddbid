@@ -80,7 +80,7 @@ public class GitHubService {
         final Path folder = Files.createTempDirectory("git");
         folder.toFile().deleteOnExit();
 
-        log.info("Clone Branch " + GIT_BRANCH + " von " + GIT_URL + "...");
+        log.info("Clone Branch {} of {} to {}", GIT_BRANCH, GIT_URL, folder.toString());
         this.git = Git.cloneRepository()
                 .setURI(GIT_URL)
                 .setDirectory(folder.toFile())
