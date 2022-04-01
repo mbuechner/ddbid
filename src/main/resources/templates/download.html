@@ -41,9 +41,6 @@
                                     class="fas fa-chart-line"></i> Statistics</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="migration.html"><i class="fas fa-stream"></i> Migration</a>
-                        </li>
-                        <li class="nav-item">
                             <a class="nav-link" href="download.html"><i
                                     class="fas fa-download"></i> Download</a>
                         </li>
@@ -57,7 +54,7 @@
         </div>
         <div class="container-fluid">
             <div class="px-4 my-5 text-center">
-                <div class="row">
+                <div class="row justify-content-md-center">
                     <div class="col-md py-5">
                         <h1>Item</h1>
                         <ul class="list-group">
@@ -77,6 +74,16 @@
                         <ul class="list-group">
                             <li class="list-group-item" th:if="${organizationList.empty}">No Downloads available</li>
                             <li class="list-group-item" th:each="e : ${organizationList}"><a class="text-break" th:text="${e.key}" th:href="@{'download/organization/' + ${e.key}}">Entry</a><small> (<span th:text="(${e.value})">1GiB</span>)</small></li>
+                        </ul>
+                    </div>
+                </div>
+                <hr>
+                <div class="row justify-content-md-center clearfix">
+                    <div class="col-md-5 py-5">
+                        <h1>Direct migration</h1>
+                        <ul class="list-group">
+                            <li class="list-group-item" th:if="${commits.empty}">No Downloads available</li>
+                            <li class="list-group-item" th:each="e : ${commits}"><a class="text-break" th:href="@{'download/migration/' + ${e.key} + '/' + ${e.value}}">ddb-dataset-provider.csv</a><small> (<span th:text="(${e.value.toString})">Date</span>)</small></li>
                         </ul>
                     </div>
                 </div>
