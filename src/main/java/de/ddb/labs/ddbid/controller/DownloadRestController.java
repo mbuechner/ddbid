@@ -15,6 +15,7 @@
  */
 package de.ddb.labs.ddbid.controller;
 
+import de.ddb.labs.ddbid.service.GitHubService;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -25,6 +26,10 @@ import java.util.stream.Stream;
 import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.errors.CorruptObjectException;
+import org.eclipse.jgit.errors.IncorrectObjectTypeException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,9 +52,12 @@ public class DownloadRestController<T> {
     @Value(value = "${ddbid.datapath.organization}")
     private String organizationDataPath;
 
+    @Autowired
+    private GitHubService gitHub;
+
     @GetMapping
-    @RequestMapping("{type:.+}/{filename:.+}")
-    public void listFiles(@PathVariable("type") String type, @PathVariable("filename") String filename, HttpServletResponse response) throws IOException {
+    @RequestMapping("ddbid/{type:.+}/{filename:.+}")
+    public void getDdbIdFile(@PathVariable("type") String type, @PathVariable("filename") String filename, HttpServletResponse response) throws IOException {
 
         if (type.equals("item")) {
             final Set s = Stream.of(new File(itemDataPath).listFiles())
@@ -104,5 +112,13 @@ public class DownloadRestController<T> {
 
             response.sendError(404);
         }
+    }
+
+    @GetMapping
+    @RequestMapping("migration/{commit}/{date}")
+    public void getMigrationFile(@PathVariable("commit") String commit, @PathVariable("date") String date, HttpServletResponse response) throws IOException, IncorrectObjectTypeException, CorruptObjectException, GitAPIException {
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + date + "-" + GitHubService.FILE_NAME + "\"");
+        response.setContentType(MediaType.TEXT_PLAIN_VALUE);
+        IOUtils.copyLarge(gitHub.getFile(commit), response.getOutputStream());
     }
 }

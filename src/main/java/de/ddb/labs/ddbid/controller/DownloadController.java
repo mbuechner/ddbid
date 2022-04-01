@@ -15,11 +15,15 @@
  */
 package de.ddb.labs.ddbid.controller;
 
+import de.ddb.labs.ddbid.service.GitHubService;
 import java.io.File;
+import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,8 +50,11 @@ public class DownloadController {
     @Value(value = "${ddbid.datapath.organization}")
     private String organizationDataPath;
 
+    @Autowired
+    private GitHubService gitHub;
+
     @GetMapping
-    public ModelAndView main() {
+    public ModelAndView main() throws IOException, GitAPIException {
 
         final ModelAndView mav = new ModelAndView();
         mav.addObject("itemList", Stream.of(new File(itemDataPath).listFiles())
@@ -62,6 +69,7 @@ public class DownloadController {
                 .filter(file -> !file.isDirectory())
                 .filter(file -> file.getName().endsWith(".gz"))
                 .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, TreeMap::new)));
+        mav.addObject("commits", gitHub.getCommits());
         mav.setViewName("download");
 
         return mav;
