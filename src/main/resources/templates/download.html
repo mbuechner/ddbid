@@ -59,21 +59,21 @@
                         <h1>Item</h1>
                         <ul class="list-group">
                             <li class="list-group-item" th:if="${itemList.empty}">No Downloads available</li>
-                            <li class="list-group-item" th:each="e : ${itemList}"><a class="text-break" th:text="${e.key}" th:href="@{'download/item/' + ${e.key}}">Entry</a><small> (<span th:text="(${e.value})">1GiB</span>)</small></li>
+                            <li class="list-group-item" th:each="e : ${itemList}"><a class="text-break" th:text="${e.key}" th:href="@{'download/ddbid/item/' + ${e.key}}">Entry</a><small> (<span th:text="(${e.value})">1GiB</span>)</small></li>
                         </ul>
                     </div>
                     <div class="col-md py-5">
                         <h1>Person</h1>
                         <ul class="list-group">
                             <li class="list-group-item" th:if="${personList.empty}">No Downloads available</li>
-                            <li class="list-group-item" th:each="e : ${personList}"><a class="text-break" th:text="${e.key}" th:href="@{'download/person/' + ${e.key}}">Entry</a><small> (<span th:text="(${e.value})">1GiB</span>)</small></li>
+                            <li class="list-group-item" th:each="e : ${personList}"><a class="text-break" th:text="${e.key}" th:href="@{'download/ddbid/person/' + ${e.key}}">Entry</a><small> (<span th:text="(${e.value})">1GiB</span>)</small></li>
                         </ul>
                     </div>
                     <div class="col-md py-5">
                         <h1>Organization</h1>
                         <ul class="list-group">
                             <li class="list-group-item" th:if="${organizationList.empty}">No Downloads available</li>
-                            <li class="list-group-item" th:each="e : ${organizationList}"><a class="text-break" th:text="${e.key}" th:href="@{'download/organization/' + ${e.key}}">Entry</a><small> (<span th:text="(${e.value})">1GiB</span>)</small></li>
+                            <li class="list-group-item" th:each="e : ${organizationList}"><a class="text-break" th:text="${e.key}" th:href="@{'download/ddbid/organization/' + ${e.key}}">Entry</a><small> (<span th:text="(${e.value})">1GiB</span>)</small></li>
                         </ul>
                     </div>
                 </div>
