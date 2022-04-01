@@ -15,7 +15,6 @@
  */
 package de.ddb.labs.ddbid.service;
 
-import static com.github.davidmoten.bigsorter.Serializer.java;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -24,6 +23,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -157,23 +157,26 @@ public class GitHubService {
             init();
         }
 
-        log.info("Kopiere " + file.getFileName() + " zu " + FILE_NAME + "...");
+        // log.info("Copy " + file.getFileName() + " to " + FILE_NAME + "...");
         Files.copy(file, Paths.get(repository.getDirectory().getParent(), FILE_NAME), StandardCopyOption.REPLACE_EXISTING);
 
-        log.info("Git-Befehl ADD...");
+        // pull first
+        git.pull().call();
+
+        // log.info("Git ADD...");
         git.add()
                 .addFilepattern(FILE_NAME)
                 .call();
-        log.info("Git-Befehl COMMIT...");
+        // log.info("Git COMMIT...");
         git.commit()
                 .setAll(true)
-                .setMessage("Aktualisierung von " + FILE_NAME + " am " + dtf.format(Instant.now()) + ".")
+                .setMessage("Aktualisierung von " + FILE_NAME + " am " + LocalDateTime.now().format(dtf) + ".")
                 .call();
-        log.info("Git-Befehl PUSH...");
+        // log.info("Git PUSH...");
         final PushCommand push = git.push();
         push.setCredentialsProvider(new UsernamePasswordCredentialsProvider(GIT_NAME, GIT_PASS));
         push.call();
-        log.info("Erfolgreich auf GitHub veröffentlicht!");
+        log.info("Git commitment was successfull");
     }
 
     public void close() {

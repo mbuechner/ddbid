@@ -15,11 +15,8 @@
  */
 package de.ddb.labs.ddbid.cronjob;
 
-
-import java.io.IOException;
-
 public interface CronJobInterface extends Runnable {
 
-    void schedule() throws IOException;
+    void schedule() throws Exception;
     
 }

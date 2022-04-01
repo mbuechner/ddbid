@@ -83,7 +83,7 @@
                         <h1>Direct migration</h1>
                         <ul class="list-group">
                             <li class="list-group-item" th:if="${commits.empty}">No Downloads available</li>
-                            <li class="list-group-item" th:each="e : ${commits}"><a class="text-break" th:href="@{'download/migration/' + ${e.key} + '/' + ${e.value}}">ddb-dataset-provider.csv</a><small> (<span th:text="(${e.value.toString})">Date</span>)</small></li>
+                            <li class="list-group-item" th:each="e : ${commits}"><a class="text-break" th:text="@{${e.value.toString} + '-ddb-dataset-provider.csv'}" th:href="@{'download/migration/' + ${e.key} + '/' + ${e.value}}">ddb-dataset-provider.csv</a></li>
                         </ul>
                     </div>
                 </div>

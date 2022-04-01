@@ -17,6 +17,7 @@ package de.ddb.labs.ddbid;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.ddb.labs.ddbid.database.Database;
+import de.ddb.labs.ddbid.service.GitHubService;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +32,7 @@ import javax.annotation.PreDestroy;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import okhttp3.Dispatcher;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
 @EnableScheduling
@@ -48,11 +50,15 @@ public class Application {
         SpringApplication.run(Application.class, args);
     }
 
+    @Autowired
+    private GitHubService gitHub;
+
     @PreDestroy
     public void destroy() {
         log.info("Destroy callback triggered: Closing database...");
         try {
             database.close();
+            gitHub.close();
         } catch (Exception e) {
             log.error("Could not close connection to database. {}", e.getMessage());
         }
