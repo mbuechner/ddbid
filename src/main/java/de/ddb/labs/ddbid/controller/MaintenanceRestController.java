@@ -16,6 +16,7 @@
 package de.ddb.labs.ddbid.controller;
 
 import de.ddb.labs.ddbid.cronjob.CorrectorCronJob;
+import de.ddb.labs.ddbid.cronjob.DirectMigrationCronJob;
 import de.ddb.labs.ddbid.cronjob.ItemCronJob;
 import de.ddb.labs.ddbid.cronjob.OrganizationCronJob;
 import de.ddb.labs.ddbid.cronjob.PersonCronJob;
@@ -97,8 +98,8 @@ public class MaintenanceRestController {
     private final static String ADD_MISSING_SECTOR_21 = "UPDATE item SET sector_fct = 'sec_06' WHERE provider_id = '[VS424HF5PDIIP6JGX77KXU27RFTTF4GS, oid1526292408684, XJRNQZS3AW2U2BZTHYJQ2MAGF45YT6X2]' AND sector_fct IS NULL;";
     private final static String ADD_MISSING_SECTOR_22 = "UPDATE item SET sector_fct = 'sec_01' WHERE provider_id = '[XYMQPA4OHAYDDFYWHV6Q4RFUIISTLQJV, 00000896]' AND sector_fct IS NULL;";
     private final static String ADD_MISSING_SECTOR_23 = "UPDATE item SET sector_fct = 'sec_03' WHERE provider_id = '[ZUSXA5RDTYUYRQ5DWSIOL2TXHV62R47F, 00008976]' AND sector_fct IS NULL;";
-    */
-    
+     */
+
     private final static String CREATE_SEARCH_INDEX_1 = "CREATE INDEX IF NOT EXISTS data_timestamp_IDX ON main.{} (\"timestamp\");";
     private final static String CREATE_SEARCH_INDEX_2 = "CREATE INDEX IF NOT EXISTS data_status_IDX ON main.{} (\"status\");";
     private final static String CREATE_SEARCH_INDEX_3 = "CREATE INDEX IF NOT EXISTS data_id_IDX ON main.{} (\"id\");";
@@ -138,6 +139,9 @@ public class MaintenanceRestController {
     @Autowired
     private CorrectorCronJob correctorCronJob;
 
+    @Autowired
+    private DirectMigrationCronJob directMigrationCronJob;
+
     @GetMapping
     @RequestMapping("initdb")
     public Map<String, Object> initDb() {
@@ -174,7 +178,7 @@ public class MaintenanceRestController {
         queries.add(ADD_MISSING_SECTOR_21);
         queries.add(ADD_MISSING_SECTOR_22);
         queries.add(ADD_MISSING_SECTOR_23);
-        */
+         */
         queries.add(CREATE_SEARCH_INDEX_1.replaceAll("\\{\\}", itemTableName));
         queries.add(CREATE_SEARCH_INDEX_2.replaceAll("\\{\\}", itemTableName));
         queries.add(CREATE_SEARCH_INDEX_3.replaceAll("\\{\\}", itemTableName));
@@ -246,6 +250,7 @@ public class MaintenanceRestController {
             taskScheduler.schedule(personCronJob, new Date());
             taskScheduler.schedule(organizationCronJob, new Date());
             taskScheduler.schedule(correctorCronJob, new Date());
+            taskScheduler.schedule(directMigrationCronJob, new Date());
 
         } catch (Exception e) {
             return new HashMap<>() {
