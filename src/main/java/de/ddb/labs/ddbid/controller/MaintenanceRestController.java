@@ -42,7 +42,6 @@ import org.springframework.scheduling.TaskScheduler;
 @Slf4j
 public class MaintenanceRestController {
     
-    private final static String SET_TIMEZONE = "Set TimeZone='Europe/Berlin';";
     private final static String CREATE_SCHEMA = "CREATE SCHEMA IF NOT EXISTS main;";
     private final static String CREATE_ITEM_TABLE = "CREATE TABLE IF NOT EXISTS main.item (\n"
             + "\"timestamp\" TIMESTAMP NOT NULL,\n"
@@ -148,7 +147,6 @@ public class MaintenanceRestController {
 
         final List<String> queries = new ArrayList<>();
 
-        queries.add(SET_TIMEZONE);
         queries.add(CREATE_SCHEMA);
         // item
         queries.add(CREATE_ITEM_TABLE);
@@ -246,10 +244,10 @@ public class MaintenanceRestController {
 
         try {
 
-            taskScheduler.schedule(itemCronJob, new Date());
-            taskScheduler.schedule(personCronJob, new Date());
-            taskScheduler.schedule(organizationCronJob, new Date());
-            taskScheduler.schedule(correctorCronJob, new Date());
+//            taskScheduler.schedule(itemCronJob, new Date());
+//            taskScheduler.schedule(personCronJob, new Date());
+//            taskScheduler.schedule(organizationCronJob, new Date());
+//            taskScheduler.schedule(correctorCronJob, new Date());
             taskScheduler.schedule(directMigrationCronJob, new Date());
 
         } catch (Exception e) {

@@ -43,8 +43,11 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -191,7 +194,7 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
      */
     public void schedule() throws IOException, IllegalArgumentException, RuntimeException {
 
-        this.currentTime = Timestamp.from(LocalDateTime.now().toInstant(ZoneOffset.of("Europe/Berlin")));
+        this.currentTime = Timestamp.valueOf(ZonedDateTime.now().toLocalDateTime());
 
         if (this.query == null || this.query.isBlank()) {
             throw new IllegalArgumentException("Query parameter not set");

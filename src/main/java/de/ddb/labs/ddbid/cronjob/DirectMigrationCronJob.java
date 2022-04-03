@@ -50,7 +50,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class DirectMigrationCronJob implements CronJobInterface {
 
-    private final DateTimeFormatter formatterWithThreeDecimals = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(ZoneId.of("Europe/Berlin"));
+    private final DateTimeFormatter formatterWithThreeDecimals = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(ZoneId.systemDefault());
 
     @Autowired
     private OkHttpClient httpClient;
@@ -713,8 +713,6 @@ public class DirectMigrationCronJob implements CronJobInterface {
 
                         }
                     }
-                    final ZonedDateTime tmp = ZonedDateTime.ofInstant(sortedDates.lastKey().toInstant(), ZoneId.of("Europe/Berlin"));
-                    final ZonedDateTime date = ZonedDateTime.of(tmp.getYear(), tmp.getMonthValue(), tmp.getDayOfMonth(), tmp.getHour(), tmp.getMinute(), tmp.getSecond(), tmp.getNano(), ZoneId.of("Europe/Berlin"));
                     printer.printRecord(
                             datasetId, // "dataset_id",
                             DIRECTMIGRATION_LIST.contains(datasetId) ? "Direktmigration" : trimSquaredBrackets(query03.getFacetValues().get(DDBQuery.FACET.DATASET_LABEL.toString()).toString()), // "dataset_label",
@@ -732,7 +730,7 @@ public class DirectMigrationCronJob implements CronJobInterface {
                             String.valueOf(query03.getNumberOfResults()), // "count",
                             trimSquaredBrackets(query03.getFacetValues().get(DDBQuery.FACET.INGEST_ID.toString()).toString()), // "ingest_id",
                             trimSquaredBrackets(query03.getFacetValues().get(DDBQuery.FACET.SOURCE_FORMAT.toString()).toString()), // "metadata_format",
-                            !sortedDates.isEmpty() ? formatterWithThreeDecimals.format(date) : "" // "ingest_complete_date"
+                            !sortedDates.isEmpty() ? formatterWithThreeDecimals.format(sortedDates.lastKey().toInstant()) : "" // "ingest_complete_date"
                     );
                 }
             }
