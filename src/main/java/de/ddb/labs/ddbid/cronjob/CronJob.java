@@ -57,8 +57,8 @@ import java.util.zip.GZIPOutputStream;
 public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
 
     protected static final String API = "https://api.deutsche-digitale-bibliothek.de";
-    protected static final String COMPARE_OUTPUT_FILENAME_PREFIX = "CMP_";
-    protected static final String OUTPUT_FILENAME_EXT = ".csv.gz";
+    public static final String COMPARE_OUTPUT_FILENAME_PREFIX = "CMP_";
+    public static final String OUTPUT_FILENAME_EXT = ".csv.gz";
     protected static final String OK_FILENAME_EXT = ".txt";
     protected static final int ENTITYCOUNT = 500000; // count of entities per query
     private final Class<Doc> docType;

@@ -38,13 +38,14 @@ public class OrganizationCronJob extends CronJob implements CronJobInterface {
     @Value(value = "${ddbid.database.table.organization}")
     private String tableName;
 
-    public OrganizationCronJob() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
+    public OrganizationCronJob(@Value(value = "${ddbid.cron.organization}") String scheduledPattern) throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
         super(OrganizationDoc.class);
+        log.info("{} is scheduled at {}", getClass().getName(), scheduledPattern);
     }
 
     @Override
     @Scheduled(cron = "${ddbid.cron.organization}")
-    @Retryable(value = { Exception.class }, maxAttemptsExpression = "${ddbid.cron.retry.maxAttempts}", backoff = @Backoff(delayExpression = "${ddbid.cron.retry.delay}"))
+    @Retryable(value = {Exception.class}, maxAttemptsExpression = "${ddbid.cron.retry.maxAttempts}", backoff = @Backoff(delayExpression = "${ddbid.cron.retry.delay}"))
     public void schedule() throws IOException {
         log.info("{} started...", this.getClass().getName());
         super.setQuery(QUERY);
@@ -53,12 +54,12 @@ public class OrganizationCronJob extends CronJob implements CronJobInterface {
         super.schedule();
         log.info("{} finished.", this.getClass().getName());
     }
-    
+
     @Override
     public void run() {
         try {
             schedule();
-        } catch(IOException e) {
+        } catch (IOException e) {
             log.error("{}", e.getMessage());
         }
     }

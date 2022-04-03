@@ -56,6 +56,10 @@ public class CorrectorCronJob implements CronJobInterface {
 
     private final static String QUERY = "SELECT \"timestamp\", id FROM {{tbl}} WHERE status = 'MISSING';";
 
+    public CorrectorCronJob(@Value(value = "${ddbid.cron.corrector}") String scheduledPattern) {
+        log.info("{} is scheduled at {}", getClass().getName(), scheduledPattern);
+    }
+
     @Override
     @Scheduled(cron = "${ddbid.cron.corrector}")
     @Retryable(value = {Exception.class}, maxAttemptsExpression = "${ddbid.cron.retry.maxAttempts}", backoff = @Backoff(delayExpression = "${ddbid.cron.retry.delay}"))
@@ -103,7 +107,7 @@ public class CorrectorCronJob implements CronJobInterface {
                     .get()
                     .addHeader("Authorization", "OAuth oauth_consumer_key=\"" + apiKey + "\"")
                     .build();
-            
+
             httpClient.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
