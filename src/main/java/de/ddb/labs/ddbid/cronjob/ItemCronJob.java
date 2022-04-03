@@ -38,13 +38,14 @@ public class ItemCronJob extends CronJob implements CronJobInterface {
     @Value(value = "${ddbid.database.table.item}")
     private String tableName;
 
-    public ItemCronJob() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
+    public ItemCronJob(@Value(value = "${ddbid.cron.item}") String scheduledPattern) throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
         super(ItemDoc.class);
+        log.info("{} is scheduled at {}", getClass().getName(), scheduledPattern);
     }
 
     @Override
     @Scheduled(cron = "${ddbid.cron.item}")
-    @Retryable(value = { Exception.class }, maxAttemptsExpression = "${ddbid.cron.retry.maxAttempts}", backoff = @Backoff(delayExpression = "${ddbid.cron.retry.delay}"))
+    @Retryable(value = {Exception.class}, maxAttemptsExpression = "${ddbid.cron.retry.maxAttempts}", backoff = @Backoff(delayExpression = "${ddbid.cron.retry.delay}"))
     public void schedule() throws IOException {
         log.info("{} started...", this.getClass().getName());
         super.setQuery(QUERY);
@@ -58,7 +59,7 @@ public class ItemCronJob extends CronJob implements CronJobInterface {
     public void run() {
         try {
             schedule();
-        } catch(IOException e) {
+        } catch (IOException e) {
             log.error("{}", e.getMessage());
         }
     }

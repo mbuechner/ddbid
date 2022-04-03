@@ -19,12 +19,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.Instant;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -574,6 +571,10 @@ public class DirectMigrationCronJob implements CronJobInterface {
         "ff9fb847876fd8c7ffb6d5fce6cd975a15740f8a",
         "ffabcf0dbc116217b1421bd02f9534c83bac24b4"
     });
+
+    public DirectMigrationCronJob(@Value(value = "${ddbid.cron.directmigration}") String scheduledPattern) {
+        log.info("{} is scheduled at {}", getClass().getName(), scheduledPattern);
+    }
 
     @Override
     public void run() {

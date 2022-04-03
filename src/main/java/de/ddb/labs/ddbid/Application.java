@@ -18,24 +18,25 @@ package de.ddb.labs.ddbid;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.ddb.labs.ddbid.database.Database;
 import de.ddb.labs.ddbid.service.GitHubService;
+import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
+import javax.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.Dispatcher;
 import okhttp3.OkHttpClient;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-import javax.annotation.PreDestroy;
-import java.util.TimeZone;
-import java.util.concurrent.TimeUnit;
-import okhttp3.Dispatcher;
-import org.springframework.beans.factory.annotation.Autowired;
-
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
 @EnableScheduling
+@ConditionalOnProperty(name = "scheduler.enabled", matchIfMissing = true)
 @EnableRetry
 @Slf4j
 public class Application {
@@ -45,13 +46,13 @@ public class Application {
 
     private Database database; // for write access
 
+    @Autowired
+    private GitHubService gitHub;
+
     public static void main(String[] args) {
         TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
         SpringApplication.run(Application.class, args);
     }
-
-    @Autowired
-    private GitHubService gitHub;
 
     @PreDestroy
     public void destroy() {

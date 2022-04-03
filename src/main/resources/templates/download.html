@@ -19,31 +19,49 @@
             <div class="px-4 my-5 text-center">
                 <div class="row justify-content-md-center">
                     <div class="col-md py-5">
-                        <h1>Item</h1>
+                        <h2>Item</h2>
+                        <h5>Data dumps</h5>
                         <ul class="list-group">
                             <li class="list-group-item" th:if="${itemList.empty}">No Downloads available</li>
                             <li class="list-group-item" th:each="e : ${itemList}"><a class="text-break" th:text="${e.key}" th:href="@{'download/ddbid/item/' + ${e.key}}">Entry</a><small> (<span th:text="(${e.value})">1GiB</span>)</small></li>
                         </ul>
+                        <h5 class="mt-3">Compare files</h5>
+                        <ul class="list-group">
+                            <li class="list-group-item" th:if="${itemList.empty}">No Downloads available</li>
+                            <li class="list-group-item" th:each="e : ${itemListCmp}"><a class="text-break" th:text="${e.key}" th:href="@{'download/ddbid/item/' + ${e.key}}">Entry</a><small> (<span th:text="(${e.value})">1GiB</span>)</small></li>
+                        </ul>
                     </div>
                     <div class="col-md py-5">
-                        <h1>Person</h1>
+                        <h2>Person</h2>
+                        <h5>Data dumps</h5>
                         <ul class="list-group">
                             <li class="list-group-item" th:if="${personList.empty}">No Downloads available</li>
                             <li class="list-group-item" th:each="e : ${personList}"><a class="text-break" th:text="${e.key}" th:href="@{'download/ddbid/person/' + ${e.key}}">Entry</a><small> (<span th:text="(${e.value})">1GiB</span>)</small></li>
                         </ul>
+                        <h5 class="mt-3">Compare files</h5>
+                        <ul class="list-group">
+                            <li class="list-group-item" th:if="${personList.empty}">No Downloads available</li>
+                            <li class="list-group-item" th:each="e : ${personListCmp}"><a class="text-break" th:text="${e.key}" th:href="@{'download/ddbid/person/' + ${e.key}}">Entry</a><small> (<span th:text="(${e.value})">1GiB</span>)</small></li>
+                        </ul>
                     </div>
                     <div class="col-md py-5">
-                        <h1>Organization</h1>
+                        <h2>Organization</h2>
+                        <h5>Data dumps</h5>
                         <ul class="list-group">
                             <li class="list-group-item" th:if="${organizationList.empty}">No Downloads available</li>
                             <li class="list-group-item" th:each="e : ${organizationList}"><a class="text-break" th:text="${e.key}" th:href="@{'download/ddbid/organization/' + ${e.key}}">Entry</a><small> (<span th:text="(${e.value})">1GiB</span>)</small></li>
+                        </ul>
+                        <h5 class="mt-3">Compare files</h5>
+                        <ul class="list-group">
+                            <li class="list-group-item" th:if="${organizationList.empty}">No Downloads available</li>
+                            <li class="list-group-item" th:each="e : ${organizationListCmp}"><a class="text-break" th:text="${e.key}" th:href="@{'download/ddbid/organization/' + ${e.key}}">Entry</a><small> (<span th:text="(${e.value})">1GiB</span>)</small></li>
                         </ul>
                     </div>
                 </div>
                 <hr>
                 <div class="row justify-content-md-center clearfix">
-                    <div class="col-md-5 py-5">
-                        <h1>Direct migration</h1>
+                    <div class="col-md-4 py-5">
+                        <h2>Direct migration</h2>
                         <ul class="list-group">
                             <li class="list-group-item" th:if="${commits.empty}">No Downloads available</li>
                             <li class="list-group-item" th:each="e : ${commits}"><a class="text-break" th:text="@{${e.value.toString} + '-ddb-dataset-provider.csv'}" th:href="@{'download/migration/' + ${e.key} + '/' + ${e.value}}">ddb-dataset-provider.csv</a></li>

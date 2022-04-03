@@ -15,11 +15,13 @@
  */
 package de.ddb.labs.ddbid.controller;
 
+import de.ddb.labs.ddbid.cronjob.CronJob;
 import de.ddb.labs.ddbid.service.GitHubService;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
-import java.util.TreeMap;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -59,16 +61,41 @@ public class DownloadController {
         final ModelAndView mav = new ModelAndView();
         mav.addObject("itemList", Stream.of(new File(itemDataPath).listFiles())
                 .filter(file -> !file.isDirectory())
-                .filter(file -> file.getName().endsWith(".gz"))
-                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, TreeMap::new)));
+                .filter(file -> file.getName().endsWith(CronJob.OUTPUT_FILENAME_EXT))
+                .filter(file -> !file.getName().startsWith(CronJob.COMPARE_OUTPUT_FILENAME_PREFIX))
+                .sorted(Comparator.reverseOrder())
+                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, LinkedHashMap::new)));
+        mav.addObject("itemListCmp", Stream.of(new File(itemDataPath).listFiles())
+                .filter(file -> !file.isDirectory())
+                .filter(file -> file.getName().endsWith(CronJob.OUTPUT_FILENAME_EXT))
+                .filter(file -> file.getName().startsWith(CronJob.COMPARE_OUTPUT_FILENAME_PREFIX))
+                .sorted(Comparator.reverseOrder())
+                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, LinkedHashMap::new)));
         mav.addObject("personList", Stream.of(new File(personDataPath).listFiles())
                 .filter(file -> !file.isDirectory())
-                .filter(file -> file.getName().endsWith(".gz"))
-                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, TreeMap::new)));
+                .filter(file -> file.getName().endsWith(CronJob.OUTPUT_FILENAME_EXT))
+                .filter(file -> !file.getName().startsWith(CronJob.COMPARE_OUTPUT_FILENAME_PREFIX))
+                .sorted(Comparator.reverseOrder())
+                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, LinkedHashMap::new)));
+        mav.addObject("personListCmp", Stream.of(new File(personDataPath).listFiles())
+                .filter(file -> !file.isDirectory())
+                .filter(file -> file.getName().endsWith(CronJob.OUTPUT_FILENAME_EXT))
+                .filter(file -> file.getName().startsWith(CronJob.COMPARE_OUTPUT_FILENAME_PREFIX))
+                .sorted(Comparator.reverseOrder())
+                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, LinkedHashMap::new)));
         mav.addObject("organizationList", Stream.of(new File(organizationDataPath).listFiles())
                 .filter(file -> !file.isDirectory())
-                .filter(file -> file.getName().endsWith(".gz"))
-                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, TreeMap::new)));
+                .filter(file -> file.getName().endsWith(CronJob.OUTPUT_FILENAME_EXT))
+                .filter(file -> !file.getName().startsWith(CronJob.COMPARE_OUTPUT_FILENAME_PREFIX))
+                .sorted(Comparator.reverseOrder())
+                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, LinkedHashMap::new)));
+        mav.addObject("organizationListCmp", Stream.of(new File(organizationDataPath).listFiles())
+                .filter(file -> !file.isDirectory())
+                .filter(file -> file.getName().endsWith(CronJob.OUTPUT_FILENAME_EXT))
+                .filter(file -> file.getName().startsWith(CronJob.COMPARE_OUTPUT_FILENAME_PREFIX))
+                .sorted(Comparator.reverseOrder())
+                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, LinkedHashMap::new)));
+
         mav.addObject("commits", gitHub.getCommits());
         mav.setViewName("download");
 
