@@ -41,8 +41,8 @@ import org.springframework.scheduling.TaskScheduler;
 @RequestMapping("maintenance")
 @Slf4j
 public class MaintenanceRestController {
-
-    private final static String SET_TIMEZONE = "Set TimeZone='UTC';";
+    
+    private final static String SET_TIMEZONE = "Set TimeZone='Europe/Berlin';";
     private final static String CREATE_SCHEMA = "CREATE SCHEMA IF NOT EXISTS main;";
     private final static String CREATE_ITEM_TABLE = "CREATE TABLE IF NOT EXISTS main.item (\n"
             + "\"timestamp\" TIMESTAMP NOT NULL,\n"
