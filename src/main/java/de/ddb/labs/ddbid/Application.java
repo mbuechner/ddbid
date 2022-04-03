@@ -50,7 +50,7 @@ public class Application {
     private GitHubService gitHub;
 
     public static void main(String[] args) {
-        TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
+        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
         SpringApplication.run(Application.class, args);
     }
 

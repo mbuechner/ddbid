@@ -5,6 +5,7 @@ WORKDIR /tmp/
 RUN mvn package
 
 FROM debian:bullseye-slim
+ENV TZ=Europe/Berlin
 ENV DDBID.PORT=8080
 ENV XDG_CONFIG_HOME=/tmp
 RUN apt-get -y update && apt-get -y install openjdk-11-jre nano && mkdir /home/ddbid

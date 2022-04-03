@@ -713,7 +713,7 @@ public class DirectMigrationCronJob implements CronJobInterface {
 
                         }
                     }
-                    final ZonedDateTime tmp = ZonedDateTime.ofInstant(sortedDates.lastKey().toInstant(), ZoneId.of("UTC"));
+                    final ZonedDateTime tmp = ZonedDateTime.ofInstant(sortedDates.lastKey().toInstant(), ZoneId.of("Europe/Berlin"));
                     final ZonedDateTime date = ZonedDateTime.of(tmp.getYear(), tmp.getMonthValue(), tmp.getDayOfMonth(), tmp.getHour(), tmp.getMinute(), tmp.getSecond(), tmp.getNano(), ZoneId.of("Europe/Berlin"));
                     printer.printRecord(
                             datasetId, // "dataset_id",

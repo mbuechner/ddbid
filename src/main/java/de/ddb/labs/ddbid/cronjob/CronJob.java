@@ -191,7 +191,7 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
      */
     public void schedule() throws IOException, IllegalArgumentException, RuntimeException {
 
-        this.currentTime = Timestamp.from(LocalDateTime.now().toInstant(ZoneOffset.UTC));
+        this.currentTime = Timestamp.from(LocalDateTime.now().toInstant(ZoneOffset.of("Europe/Berlin")));
 
         if (this.query == null || this.query.isBlank()) {
             throw new IllegalArgumentException("Query parameter not set");
