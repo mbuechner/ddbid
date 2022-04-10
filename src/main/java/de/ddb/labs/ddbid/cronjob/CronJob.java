@@ -63,7 +63,7 @@ public class CronJob<ItemDoc, PersonDoc, OrganizationDoc> {
     public static final String COMPARE_OUTPUT_FILENAME_PREFIX = "CMP_";
     public static final String OUTPUT_FILENAME_EXT = ".csv.gz";
     protected static final String OK_FILENAME_EXT = ".txt";
-    protected static final int ENTITYCOUNT = 500000; // count of entities per query
+    protected static final int ENTITYCOUNT = 100000; // count of entities per query
     private final Class<Doc> docType;
     private final Doc doc;
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
