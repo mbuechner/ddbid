@@ -18,7 +18,6 @@ package de.ddb.labs.ddbid;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.ddb.labs.ddbid.database.Database;
 import de.ddb.labs.ddbid.service.GitHubService;
-import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -31,13 +30,17 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.retry.annotation.EnableRetry;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
 @EnableScheduling
 @ConditionalOnProperty(name = "scheduler.enabled", matchIfMissing = true)
 @EnableRetry
+@EnableAsync
 @Slf4j
 public class Application {
 
@@ -45,6 +48,10 @@ public class Application {
     private String databaseName;
 
     private Database database; // for write access
+
+    private OkHttpClient httpClient; // http client
+
+    private ObjectMapper objectMapper; // http client
 
     @Autowired
     private GitHubService gitHub;
@@ -59,31 +66,43 @@ public class Application {
         try {
             database.close();
             gitHub.close();
+            httpClient.dispatcher().cancelAll();
         } catch (Exception e) {
             log.error("Could not close connection to database. {}", e.getMessage());
         }
     }
-
+    
     @Bean
     public Database database() {
+        if (database != null) {
+            return database;
+        }
         database = new Database(databaseName);
         return database;
     }
 
     @Bean
-    public ObjectMapper objectMapper() {
-        return new ObjectMapper();
-    }
-
-    @Bean
     public OkHttpClient httpClient() {
+        if (httpClient != null) {
+            return httpClient;
+        }
         final Dispatcher dispatcher = new Dispatcher();
         dispatcher.setMaxRequests(64);
         dispatcher.setMaxRequestsPerHost(8);
-        return new OkHttpClient.Builder()
+        httpClient = new OkHttpClient.Builder()
                 .connectTimeout(0, TimeUnit.SECONDS)
                 .readTimeout(0, TimeUnit.SECONDS)
                 .dispatcher(dispatcher)
                 .build();
+        return httpClient;
+    }
+
+    @Bean
+    public ObjectMapper objectMapper() {
+        if (objectMapper != null) {
+            return objectMapper;
+        }
+        objectMapper = new ObjectMapper();
+        return objectMapper;
     }
 }

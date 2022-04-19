@@ -4,6 +4,7 @@
  */
 package de.ddb.labs.ddbid.cronjob;
 
+import de.ddb.labs.ddbid.cronjob.interfaces.CronJobInterface;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.ddb.labs.ddbid.cronjob.helpers.DDBQuery;
@@ -20,7 +21,6 @@ import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;

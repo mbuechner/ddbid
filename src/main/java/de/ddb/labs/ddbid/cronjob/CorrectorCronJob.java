@@ -15,6 +15,7 @@
  */
 package de.ddb.labs.ddbid.cronjob;
 
+import de.ddb.labs.ddbid.cronjob.interfaces.CronJobInterface;
 import de.ddb.labs.ddbid.database.Database;
 import de.ddb.labs.ddbid.model.Status;
 import de.ddb.labs.ddbid.model.Type;
