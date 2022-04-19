@@ -15,18 +15,20 @@
  */
 package de.ddb.labs.ddbid.controller;
 
-import de.ddb.labs.ddbid.cronjob.CronJob;
+import de.ddb.labs.ddbid.cronjob.ItemCronJob;
+import de.ddb.labs.ddbid.cronjob.OrganizationCronJob;
+import de.ddb.labs.ddbid.cronjob.PersonCronJob;
 import de.ddb.labs.ddbid.service.GitHubService;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -43,63 +45,38 @@ public class DownloadController {
         }
     };
 
-    @Value(value = "${ddbid.datapath.item}")
-    private String itemDataPath;
-
-    @Value(value = "${ddbid.datapath.person}")
-    private String personDataPath;
-
-    @Value(value = "${ddbid.datapath.organization}")
-    private String organizationDataPath;
-
     @Autowired
     private GitHubService gitHub;
+
+    @Autowired
+    private ItemCronJob itemCronJob;
+
+    @Autowired
+    private OrganizationCronJob organizationCronJob;
+
+    @Autowired
+    private PersonCronJob personCronJob;
 
     @GetMapping
     public ModelAndView main() throws IOException, GitAPIException {
 
         final ModelAndView mav = new ModelAndView();
-        mav.addObject("itemList", Stream.of(new File(itemDataPath).listFiles())
-                .filter(file -> !file.isDirectory())
-                .filter(file -> file.getName().endsWith(CronJob.OUTPUT_FILENAME_EXT))
-                .filter(file -> !file.getName().startsWith(CronJob.COMPARE_OUTPUT_FILENAME_PREFIX))
-                .sorted(Comparator.reverseOrder())
-                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, LinkedHashMap::new)));
-        mav.addObject("itemListCmp", Stream.of(new File(itemDataPath).listFiles())
-                .filter(file -> !file.isDirectory())
-                .filter(file -> file.getName().endsWith(CronJob.OUTPUT_FILENAME_EXT))
-                .filter(file -> file.getName().startsWith(CronJob.COMPARE_OUTPUT_FILENAME_PREFIX))
-                .sorted(Comparator.reverseOrder())
-                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, LinkedHashMap::new)));
-        mav.addObject("personList", Stream.of(new File(personDataPath).listFiles())
-                .filter(file -> !file.isDirectory())
-                .filter(file -> file.getName().endsWith(CronJob.OUTPUT_FILENAME_EXT))
-                .filter(file -> !file.getName().startsWith(CronJob.COMPARE_OUTPUT_FILENAME_PREFIX))
-                .sorted(Comparator.reverseOrder())
-                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, LinkedHashMap::new)));
-        mav.addObject("personListCmp", Stream.of(new File(personDataPath).listFiles())
-                .filter(file -> !file.isDirectory())
-                .filter(file -> file.getName().endsWith(CronJob.OUTPUT_FILENAME_EXT))
-                .filter(file -> file.getName().startsWith(CronJob.COMPARE_OUTPUT_FILENAME_PREFIX))
-                .sorted(Comparator.reverseOrder())
-                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, LinkedHashMap::new)));
-        mav.addObject("organizationList", Stream.of(new File(organizationDataPath).listFiles())
-                .filter(file -> !file.isDirectory())
-                .filter(file -> file.getName().endsWith(CronJob.OUTPUT_FILENAME_EXT))
-                .filter(file -> !file.getName().startsWith(CronJob.COMPARE_OUTPUT_FILENAME_PREFIX))
-                .sorted(Comparator.reverseOrder())
-                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, LinkedHashMap::new)));
-        mav.addObject("organizationListCmp", Stream.of(new File(organizationDataPath).listFiles())
-                .filter(file -> !file.isDirectory())
-                .filter(file -> file.getName().endsWith(CronJob.OUTPUT_FILENAME_EXT))
-                .filter(file -> file.getName().startsWith(CronJob.COMPARE_OUTPUT_FILENAME_PREFIX))
-                .sorted(Comparator.reverseOrder())
-                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, LinkedHashMap::new)));
+        mav.addObject("itemList", setToMap(itemCronJob.getOkDumpFiles(Comparator.reverseOrder())));
+        mav.addObject("itemListCmp", setToMap(itemCronJob.getCmpFiles(Comparator.reverseOrder())));
+        mav.addObject("personList", setToMap(personCronJob.getOkDumpFiles(Comparator.reverseOrder())));
+        mav.addObject("personListCmp", setToMap(personCronJob.getCmpFiles(Comparator.reverseOrder())));
+        mav.addObject("organizationList", setToMap(organizationCronJob.getOkDumpFiles(Comparator.reverseOrder())));
+        mav.addObject("organizationListCmp", setToMap(organizationCronJob.getCmpFiles(Comparator.reverseOrder())));
 
         mav.addObject("commits", gitHub.getCommits());
         mav.setViewName("download");
 
         return mav;
+    }
+
+    private Map<String, String> setToMap(Set<File> set) {
+        return set.stream()
+                .collect(Collectors.toMap(File::getName, file -> readableFileSize(file.length()), (o1, o2) -> o1, LinkedHashMap::new));
     }
 
     public static String readableFileSize(long size) {
@@ -109,5 +86,6 @@ public class DownloadController {
         final String[] units = new String[]{"byte", "KiB", "MiB", "GiB", "TiB"};
         int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
         return FORMATTER.get().format(size / Math.pow(1024, digitGroups)) + units[digitGroups];
+
     }
 }

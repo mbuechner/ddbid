@@ -15,7 +15,10 @@
  */
 package de.ddb.labs.ddbid.cronjob;
 
+import de.ddb.labs.ddbid.cronjob.interfaces.IpoInterface;
+import de.ddb.labs.ddbid.cronjob.interfaces.CronJobInterface;
 import de.ddb.labs.ddbid.model.person.PersonDoc;
+import java.io.File;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
@@ -25,10 +28,12 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Comparator;
+import java.util.Set;
 
 @Slf4j
 @Service
-public class PersonCronJob extends CronJob implements CronJobInterface {
+public class PersonCronJob extends CronJob implements CronJobInterface, IpoInterface {
 
     private static final String QUERY = "/search/index/person/select?q=*:*&wt=json&fl=id,variant_id,preferredName,type&sort=id ASC&rows=" + ENTITYCOUNT;
 
@@ -62,5 +67,30 @@ public class PersonCronJob extends CronJob implements CronJobInterface {
         } catch (IOException e) {
             log.error("{}", e.getMessage());
         }
+    }
+
+    @Override
+    public Set<File> getOkDumpFiles(Comparator comparator) {
+        return super.getOkDumpFiles(dataPath, comparator);
+    }
+    
+    @Override
+    public Set<File> getCmpFiles(Comparator comparator) {
+        return super.getCmpFiles(dataPath, comparator);
+    }
+
+    @Override
+    public void compareDumpWithPrevious(File date) {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
+
+    @Override
+    public void importCmpFileToDatabase(File file) {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
+
+    @Override
+    public void createNewDump() {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
     }
 }

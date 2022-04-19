@@ -16,11 +16,16 @@
 package de.ddb.labs.ddbid.controller;
 
 import de.ddb.labs.ddbid.cronjob.CorrectorCronJob;
+import de.ddb.labs.ddbid.cronjob.CronJob;
 import de.ddb.labs.ddbid.cronjob.DirectMigrationCronJob;
 import de.ddb.labs.ddbid.cronjob.ItemCronJob;
 import de.ddb.labs.ddbid.cronjob.OrganizationCronJob;
 import de.ddb.labs.ddbid.cronjob.PersonCronJob;
+import de.ddb.labs.ddbid.cronjobs.DataDumperItem;
+import de.ddb.labs.ddbid.cronjobs.DumpComparer;
 import de.ddb.labs.ddbid.database.Database;
+import de.ddb.labs.ddbid.model.Type;
+import java.io.File;
 import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,18 +35,22 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.scheduling.TaskScheduler;
+import org.springframework.web.bind.annotation.PathVariable;
 
 @RestController
 @RequestMapping("maintenance")
 @Slf4j
 public class MaintenanceRestController {
-    
+
     private final static String CREATE_SCHEMA = "CREATE SCHEMA IF NOT EXISTS main;";
     private final static String CREATE_ITEM_TABLE = "CREATE TABLE IF NOT EXISTS main.item (\n"
             + "\"timestamp\" TIMESTAMP NOT NULL,\n"
@@ -141,6 +150,12 @@ public class MaintenanceRestController {
     @Autowired
     private DirectMigrationCronJob directMigrationCronJob;
 
+    @Autowired
+    private DataDumperItem dataDumperItem;
+
+    @Autowired
+    private DumpComparer dumpComparer;
+
     @GetMapping
     @RequestMapping("initdb")
     public Map<String, Object> initDb() {
@@ -238,17 +253,132 @@ public class MaintenanceRestController {
         };
     }
 
+    /**
+     * Dump data from API
+     *
+     * @param type Must be ITEM, PERSON or ORGANIZATION
+     * @return
+     */
+    @GetMapping
+    @RequestMapping("dump/{type}")
+    public Map<String, String> createNewDump(@PathVariable("type") Type type) {
+        try {
+
+            switch (type) {
+                case ITEM:
+                    taskScheduler.schedule(dataDumperItem, new Date());
+                    break;
+                case ORGANIZATION:
+
+                    break;
+                case PERSON:
+
+                    break;
+                default:
+                    throw new IllegalArgumentException("No type given.");
+            }
+
+        } catch (Exception e) {
+            return new HashMap<>() {
+                {
+                    put("status", "error");
+                    put("message", e.getMessage());
+                }
+            };
+        }
+
+        return new HashMap<>() {
+            {
+                put("status", "ok");
+            }
+        };
+    }
+
+    @GetMapping
+    @RequestMapping("runcompare/{type}/{date}")
+    public Map<String, String> compareDumpWithPrevious(@PathVariable("type") Type type, @PathVariable("date") @DateTimeFormat(pattern = "yyyy-MM-dd") Date date) {
+        try {
+
+            switch (type) {
+                case ITEM:
+                    final String itemFileName = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(date.toInstant());
+                    final File itemFile = new File(dataPathItem + itemFileName + CronJob.OUTPUT_FILENAME_EXT);
+                    if (!itemFile.exists() || !itemFile.isFile()) {
+                        throw new IllegalArgumentException(itemFileName + " does not exist.");
+                    }
+                    CompletableFuture.runAsync(() -> itemCronJob.compareDumpWithPrevious(itemFile));
+                    break;
+                case ORGANIZATION:
+                    final String orgFileName = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(date.toInstant());
+                    final File orgFile = new File(dataPathOrganization + orgFileName + CronJob.OUTPUT_FILENAME_EXT);
+                    if (!orgFile.exists() || !orgFile.isFile()) {
+                        throw new IllegalArgumentException(orgFileName + " does not exist.");
+                    }
+                    CompletableFuture.runAsync(() -> organizationCronJob.compareDumpWithPrevious(orgFile));
+                    break;
+                case PERSON:
+                    final String personFileName = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(date.toInstant());
+                    final File personFile = new File(dataPathPerson + personFileName + CronJob.OUTPUT_FILENAME_EXT);
+                    if (!personFile.exists() || !personFile.isFile()) {
+                        throw new IllegalArgumentException(personFileName + " does not exist.");
+                    }
+                    personCronJob.compareDumpWithPrevious(personFile);
+                    break;
+                default:
+                    throw new IllegalArgumentException("No type given.");
+            }
+
+        } catch (Exception e) {
+            return new HashMap<>() {
+                {
+                    put("status", "error");
+                    put("message", e.getMessage());
+                }
+            };
+        }
+
+        return new HashMap<>() {
+            {
+                put("status", "ok");
+            }
+        };
+    }
+
     @GetMapping
     @RequestMapping("runcron")
     public Map<String, String> runCrons() {
 
         try {
 
-//            taskScheduler.schedule(itemCronJob, new Date());
-//            taskScheduler.schedule(personCronJob, new Date());
-//            taskScheduler.schedule(organizationCronJob, new Date());
-//            taskScheduler.schedule(correctorCronJob, new Date());
+            taskScheduler.schedule(itemCronJob, new Date());
+            taskScheduler.schedule(personCronJob, new Date());
+            taskScheduler.schedule(organizationCronJob, new Date());
+            taskScheduler.schedule(correctorCronJob, new Date());
             taskScheduler.schedule(directMigrationCronJob, new Date());
+
+        } catch (Exception e) {
+            return new HashMap<>() {
+                {
+                    put("status", "error");
+                    put("message", e.getMessage());
+                }
+            };
+        }
+
+        return new HashMap<>() {
+            {
+                put("status", "ok");
+            }
+        };
+    }
+
+    @GetMapping
+    @RequestMapping("test")
+    public Map<String, String> test() {
+
+        try {
+
+            taskScheduler.schedule(dumpComparer, new Date());
 
         } catch (Exception e) {
             return new HashMap<>() {
