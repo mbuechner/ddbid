@@ -17,9 +17,10 @@ package de.ddb.labs.ddbid.database;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.SQLException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -61,6 +62,16 @@ public class Database<T> {
             dataSource = new HikariDataSource(config);
             duckdb = new JdbcTemplate(dataSource);
         }
+    }
+    
+    /**
+     * Delete database and init an fresh one
+     * @throws java.io.IOException
+     */
+    public void delete() throws IOException {
+        close();
+        Files.deleteIfExists(Path.of(database));
+        init();
     }
 
     public JdbcTemplate getJdbcTemplate() {

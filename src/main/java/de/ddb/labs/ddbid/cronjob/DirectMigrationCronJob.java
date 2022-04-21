@@ -1,15 +1,26 @@
 /*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package de.ddb.labs.ddbid.cronjob;
 
-import de.ddb.labs.ddbid.cronjob.interfaces.CronJobInterface;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.ddb.labs.ddbid.cronjob.helpers.DDBQuery;
-import de.ddb.labs.ddbid.cronjob.helpers.DDBQuery.SECTOR;
-import de.ddb.labs.ddbid.cronjob.helpers.Facets;
+import de.ddb.labs.ddbid.Application;
+import de.ddb.labs.ddbid.cronjob.helper.DDBQuery;
+import de.ddb.labs.ddbid.cronjob.helper.DDBQuery.SECTOR;
+import de.ddb.labs.ddbid.cronjob.helper.Facets;
 import de.ddb.labs.ddbid.service.GitHubService;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -683,7 +694,7 @@ public class DirectMigrationCronJob implements CronJobInterface {
                     String provider_state = "";
                     String provider_sector = "";
 
-                    final Request request = new Request.Builder().url(CronJob.API + "/items/" + provider_id)
+                    final Request request = new Request.Builder().url(Application.API + "/items/" + provider_id)
                             .addHeader("Accept", "application/json")
                             .addHeader("Authorization", "OAuth oauth_consumer_key=\"" + apiKey + "\"")
                             .build();
@@ -702,7 +713,7 @@ public class DirectMigrationCronJob implements CronJobInterface {
 
                     log.debug("Getting Supplier (" + supplier_id + ") information...");
                     String supplier_name = "";
-                    final Request request2 = new Request.Builder().url(CronJob.API + "/items/" + supplier_id)
+                    final Request request2 = new Request.Builder().url(Application.API + "/items/" + supplier_id)
                             .addHeader("Accept", "application/json")
                             .addHeader("Authorization", "OAuth oauth_consumer_key=\"" + apiKey + "\"")
                             .build();

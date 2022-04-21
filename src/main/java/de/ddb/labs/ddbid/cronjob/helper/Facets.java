@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package de.ddb.labs.ddbid.cronjob.helpers;
+package de.ddb.labs.ddbid.cronjob.helper;
 
 import java.util.LinkedHashMap;
 import lombok.Getter;

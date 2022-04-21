@@ -1,15 +1,25 @@
 /*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-package de.ddb.labs.ddbid.cronjobs;
+package de.ddb.labs.ddbid.cronjob.objects;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import static de.ddb.labs.ddbid.cronjob.CronJob.API;
-import static de.ddb.labs.ddbid.cronjob.CronJob.ENTITYCOUNT;
-import static de.ddb.labs.ddbid.cronjob.CronJob.OK_FILENAME_EXT;
-import static de.ddb.labs.ddbid.cronjob.CronJob.OUTPUT_FILENAME_EXT;
+import static de.ddb.labs.ddbid.Application.API;
+import static de.ddb.labs.ddbid.cronjob.objects.Compare.OK_FILENAME_EXT;
+import static de.ddb.labs.ddbid.cronjob.objects.Compare.OUTPUT_FILENAME_EXT;
 import de.ddb.labs.ddbid.model.Doc;
 import de.ddb.labs.ddbid.model.item.ItemDoc;
 import de.ddb.labs.ddbid.model.organization.OrganizationDoc;
@@ -48,6 +58,7 @@ import org.springframework.stereotype.Service;
 public class Dump implements Runnable {
 
     private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(ZoneId.systemDefault());
+    public static final int ENTITYCOUNT = 100000; // count of entities per query
     private static final String QUERY_ITEM = "/search/index/search/select?q=*:*&wt=json&fl=id,provider_item_id,label,provider_id,supplier_id,dataset_id,sector_fct&sort=id ASC&rows=" + ENTITYCOUNT;
     private static final String QUERY_PERSON = "/search/index/person/select?q=*:*&wt=json&fl=id,variant_id,preferredName,type&sort=id ASC&rows=" + ENTITYCOUNT;
     private static final String QUERY_ORGANIZATION = "/search/index/organization/select?q=*:*&wt=json&fl=id,variant_id,preferredName,type&sort=id ASC&rows=" + ENTITYCOUNT;
@@ -72,10 +83,23 @@ public class Dump implements Runnable {
 
     @Override
     public void run() {
-        dumpItem();
-        dumpPerson();
-        dumpOrganization();
+        try {
+            dumpItem();
+        } catch (Exception e) {
+            log.error("{}", e.getMessage());
+        }
+        
+        try {
+            dumpPerson();
+        } catch (Exception e) {
+            log.error("{}", e.getMessage());
+        }
 
+        try {
+            dumpOrganization();
+        } catch (Exception e) {
+            log.error("{}", e.getMessage());
+        }
     }
 
     public void dumpItem() {
@@ -163,7 +187,7 @@ public class Dump implements Runnable {
                     System.gc();
                 }
                 // for testing
-                // break;
+                break;
             }
         } catch (Exception e) {
             errorOccurred = true;
@@ -172,7 +196,7 @@ public class Dump implements Runnable {
 
         if (totalCount > processedCount) {
             log.warn("Total object count is {}, but processed object count is only {}", totalCount, processedCount);
-            errorOccurred = true;
+            // errorOccurred = true;
         }
 
         if (errorOccurred) {

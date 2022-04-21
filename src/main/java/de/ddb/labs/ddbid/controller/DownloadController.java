@@ -15,9 +15,7 @@
  */
 package de.ddb.labs.ddbid.controller;
 
-import de.ddb.labs.ddbid.cronjob.ItemCronJob;
-import de.ddb.labs.ddbid.cronjob.OrganizationCronJob;
-import de.ddb.labs.ddbid.cronjob.PersonCronJob;
+import de.ddb.labs.ddbid.cronjob.helper.Helper;
 import de.ddb.labs.ddbid.service.GitHubService;
 import java.io.File;
 import java.io.IOException;
@@ -29,6 +27,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,6 +36,15 @@ import org.springframework.web.servlet.ModelAndView;
 @Controller
 @RequestMapping({"/download.html"})
 public class DownloadController {
+
+    @Value(value = "${ddbid.datapath.item}")
+    private String dataPathItem;
+
+    @Value(value = "${ddbid.datapath.person}")
+    private String dataPathPerson;
+
+    @Value(value = "${ddbid.datapath.organization}")
+    private String dataPathOrganization;
 
     private final static ThreadLocal<DecimalFormat> FORMATTER = new ThreadLocal<DecimalFormat>() {
         @Override
@@ -48,25 +56,16 @@ public class DownloadController {
     @Autowired
     private GitHubService gitHub;
 
-    @Autowired
-    private ItemCronJob itemCronJob;
-
-    @Autowired
-    private OrganizationCronJob organizationCronJob;
-
-    @Autowired
-    private PersonCronJob personCronJob;
-
     @GetMapping
     public ModelAndView main() throws IOException, GitAPIException {
 
         final ModelAndView mav = new ModelAndView();
-        mav.addObject("itemList", setToMap(itemCronJob.getOkDumpFiles(Comparator.reverseOrder())));
-        mav.addObject("itemListCmp", setToMap(itemCronJob.getCmpFiles(Comparator.reverseOrder())));
-        mav.addObject("personList", setToMap(personCronJob.getOkDumpFiles(Comparator.reverseOrder())));
-        mav.addObject("personListCmp", setToMap(personCronJob.getCmpFiles(Comparator.reverseOrder())));
-        mav.addObject("organizationList", setToMap(organizationCronJob.getOkDumpFiles(Comparator.reverseOrder())));
-        mav.addObject("organizationListCmp", setToMap(organizationCronJob.getCmpFiles(Comparator.reverseOrder())));
+        mav.addObject("itemList", setToMap(Helper.getOkDumpFiles(dataPathItem, Comparator.reverseOrder())));
+        mav.addObject("itemListCmp", setToMap(Helper.getOkCmpFiles(dataPathItem, Comparator.reverseOrder())));
+        mav.addObject("personList", setToMap(Helper.getOkDumpFiles(dataPathPerson, Comparator.reverseOrder())));
+        mav.addObject("personListCmp", setToMap(Helper.getOkCmpFiles(dataPathPerson, Comparator.reverseOrder())));
+        mav.addObject("organizationList", setToMap(Helper.getOkDumpFiles(dataPathOrganization, Comparator.reverseOrder())));
+        mav.addObject("organizationListCmp", setToMap(Helper.getOkCmpFiles(dataPathOrganization, Comparator.reverseOrder())));
 
         mav.addObject("commits", gitHub.getCommits());
         mav.setViewName("download");
