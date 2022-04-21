@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package de.ddb.labs.ddbid.cronjob.helpers;
+package de.ddb.labs.ddbid.cronjob.helper;
 
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -220,15 +220,6 @@ public class DDBQuery {
 
         final CollectionType javaType = objectMapper.getTypeFactory().constructCollectionType(List.class, Facets.class);
         this.facets = objectMapper.convertValue(branch, javaType);
-    }
-
-    private void clearZeroValues(List<Facets> facets) {
-        for (Iterator<Facets> it = facets.iterator(); it.hasNext();) {
-            Facets entry = it.next();
-            if (entry.getNumberOfFacets() == 0) {
-                it.remove();
-            }
-        }
     }
 
     public List<Facets> getFacets() {

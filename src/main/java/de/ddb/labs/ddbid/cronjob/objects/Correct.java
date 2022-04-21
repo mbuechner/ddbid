@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package de.ddb.labs.ddbid.cronjob;
+package de.ddb.labs.ddbid.cronjob.objects;
 
-import de.ddb.labs.ddbid.cronjob.interfaces.CronJobInterface;
+import de.ddb.labs.ddbid.Application;
 import de.ddb.labs.ddbid.database.Database;
 import de.ddb.labs.ddbid.model.Status;
 import de.ddb.labs.ddbid.model.Type;
@@ -39,36 +39,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.ResultSetExtractor;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-public class CorrectorCronJob implements CronJobInterface {
+public class Correct implements Runnable {
+    
+    private final static String QUERY = "SELECT \"timestamp\", id FROM {{tbl}} WHERE status = 'MISSING';";
 
     @Autowired
     private Database database;
+    
     @Value(value = "${ddbid.apikey}")
     private String apiKey;
+    
     @Autowired
     private OkHttpClient httpClient;
-
-    private final static String QUERY = "SELECT \"timestamp\", id FROM {{tbl}} WHERE status = 'MISSING';";
-
-    public CorrectorCronJob(@Value(value = "${ddbid.cron.corrector}") String scheduledPattern) {
-        log.info("{} is scheduled at {}", getClass().getName(), scheduledPattern);
-    }
-
-    @Override
-    @Scheduled(cron = "${ddbid.cron.corrector}")
-    @Retryable(value = {Exception.class}, maxAttemptsExpression = "${ddbid.cron.retry.maxAttempts}", backoff = @Backoff(delayExpression = "${ddbid.cron.retry.delay}"))
-    public void schedule() throws IOException {
-        for (Type type : Type.values()) {
-            check(type);
-        }
-    }
 
     private void check(Type type) {
 
@@ -83,21 +69,23 @@ public class CorrectorCronJob implements CronJobInterface {
             }
         });
 
+        if (mi == null) {
+            log.error("Database error. Get null as result set.");
+            return;
+        }
+
         log.info("Start checking {} MISSING {} if they're back again...", mi.entries().size(), type.getType().toLowerCase());
 
-        String api = CronJob.API;
+        String api = Application.API;
         switch (type) {
-            case ITEM:
+            case ITEM ->
                 api += "/search/index/search/select?wt=csv&fl=id&q=id:";
-                break;
-            case PERSON:
+            case PERSON ->
                 api += "/search/index/person/select?wt=csv&fl=id&q=id:";
-                break;
-            case ORGANIZATION:
+            case ORGANIZATION ->
                 api += "/search/index/organization/select?wt=csv&fl=id&q=id:";
-                break;
-            default:
-                break;
+            default -> {
+            }
         }
 
         final AtomicInteger countItem = new AtomicInteger(0);
@@ -121,7 +109,7 @@ public class CorrectorCronJob implements CronJobInterface {
                     if (response.isSuccessful()) {
                         final String body = response.body().string();
                         if (countLines(body) > 1) {
-                            log.warn("Found {} with {}, so it was re-ingested. Deleted it from DB.", i.getValue(), response.request().url().toString());
+                            log.info("Found {} with {}, so it was re-ingested. Deleted it from DB.", i.getValue(), response.request().url().toString());
                             countItem.incrementAndGet();
                             final String query = "UPDATE main.{{tbl}} SET status = ? WHERE \"timestamp\" = ? AND id = ?".replace("{{tbl}}", type.toString().toLowerCase());
                             database.getJdbcTemplate().update(query, Status.FOUND.toString(), i.getKey(), i.getValue());
@@ -141,10 +129,8 @@ public class CorrectorCronJob implements CronJobInterface {
 
     @Override
     public void run() {
-        try {
-            schedule();
-        } catch (IOException e) {
-            log.error("{}", e.getMessage());
+        for (Type type : Type.values()) {
+            check(type);
         }
     }
 }

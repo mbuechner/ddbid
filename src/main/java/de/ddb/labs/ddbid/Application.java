@@ -18,6 +18,9 @@ package de.ddb.labs.ddbid;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.ddb.labs.ddbid.database.Database;
 import de.ddb.labs.ddbid.service.GitHubService;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -29,12 +32,12 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
-import org.springframework.core.task.TaskExecutor;
+import org.springframework.context.event.EventListener;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
 @EnableScheduling
@@ -43,6 +46,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @EnableAsync
 @Slf4j
 public class Application {
+
+    public static final String API = "https://api.deutsche-digitale-bibliothek.de";
 
     @Value("${ddbid.database}")
     private String databaseName;
@@ -56,8 +61,44 @@ public class Application {
     @Autowired
     private GitHubService gitHub;
 
+    @Value(value = "${ddbid.datapath.item}")
+    private String dataPathItem;
+
+    @Value(value = "${ddbid.datapath.person}")
+    private String dataPathPerson;
+
+    @Value(value = "${ddbid.datapath.organization}")
+    private String dataPathOrganization;
+
     public static void main(String[] args) {
+
         SpringApplication.run(Application.class, args);
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void afterStartup() {
+        log.info("Creating data directories");
+        try {
+            if (!Files.exists(Path.of(dataPathItem))) {
+                Files.createDirectories(Path.of(dataPathItem));
+            }
+        } catch (IOException e) {
+            log.error("Error creating directory for ITEM. {}", e.getMessage());
+        }
+        try {
+            if (!Files.exists(Path.of(dataPathPerson))) {
+                Files.createDirectories(Path.of(dataPathPerson));
+            }
+        } catch (IOException e) {
+            log.error("Error creating directory for PERSON. {}", e.getMessage());
+        }
+        try {
+            if (!Files.exists(Path.of(dataPathOrganization))) {
+                Files.createDirectories(Path.of(dataPathOrganization));
+            }
+        } catch (IOException e) {
+            log.error("Error creating directory for ORAGNIZATION. {}", e.getMessage());
+        }
     }
 
     @PreDestroy
@@ -71,7 +112,7 @@ public class Application {
             log.error("Could not close connection to database. {}", e.getMessage());
         }
     }
-    
+
     @Bean
     public Database database() {
         if (database != null) {

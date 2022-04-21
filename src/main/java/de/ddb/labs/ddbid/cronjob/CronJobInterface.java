@@ -13,22 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package de.ddb.labs.ddbid.cronjob.interfaces;
+package de.ddb.labs.ddbid.cronjob;
 
-import java.io.File;
-import java.util.Comparator;
-import java.util.Set;
+public interface CronJobInterface extends Runnable {
 
-public interface IpoInterface {
-    
-    public Set<File> getOkDumpFiles(Comparator comparator) throws Exception;
-    
-     public Set<File> getCmpFiles(Comparator comparator) throws Exception;
-     
-     public void compareDumpWithPrevious(File date) throws Exception;
-     
-     public void importCmpFileToDatabase(File file) throws Exception;
-     
-     public void createNewDump() throws Exception;
+    public void schedule() throws Exception;
     
 }
