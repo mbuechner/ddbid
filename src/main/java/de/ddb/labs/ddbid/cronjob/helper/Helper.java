@@ -102,4 +102,25 @@ public class Helper {
         return dumpfilesSorted;
     }
 
+    public static void deleteInvalidDumps(String dataPath) {
+        final Set<File> okDumps = getOkDumpFiles(dataPath, Comparator.naturalOrder());
+
+        // dump files
+        final Pattern dumpPattern = Pattern.compile(DUMP_FILES_PATTERN);
+        final FileFilter dumpFileFilter = (File pathname) -> {
+            final String fileName = pathname.getName();
+            return dumpPattern.matcher(fileName).matches();
+        };
+        final File[] dumpfiles = new File(dataPath).listFiles(dumpFileFilter);
+        if (dumpfiles != null) {
+            for (File df : dumpfiles) {
+                if (!okDumps.contains(df)) {
+                    if (df.delete()) {
+                        df.deleteOnExit();
+                    }
+                }
+            }
+        }
+    }
+
 }

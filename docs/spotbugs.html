@@ -64,8 +64,8 @@
 <th>Errors</th>
 <th>Missing Classes</th></tr>
 <tr class="b">
-<td>67</td>
-<td>69</td>
+<td>66</td>
+<td>57</td>
 <td>0</td>
 <td>0</td></tr></table></section><section>
 <h2><a name="Files"></a>Files</h2>
@@ -74,20 +74,8 @@
 <th>Class</th>
 <th>Bugs</th></tr>
 <tr class="b">
-<td><a href="#de.ddb.labs.ddbid.Application">de.ddb.labs.ddbid.Application</a></td>
-<td>3</td></tr>
-<tr class="a">
-<td><a href="#de.ddb.labs.ddbid.controller.DownloadRestController">de.ddb.labs.ddbid.controller.DownloadRestController</a></td>
-<td>1</td></tr>
-<tr class="b">
-<td><a href="#de.ddb.labs.ddbid.controller.StatisticsController">de.ddb.labs.ddbid.controller.StatisticsController</a></td>
-<td>5</td></tr>
-<tr class="a">
-<td><a href="#de.ddb.labs.ddbid.cronjob.DirectMigrationCronJob">de.ddb.labs.ddbid.cronjob.DirectMigrationCronJob</a></td>
-<td>3</td></tr>
-<tr class="b">
 <td><a href="#de.ddb.labs.ddbid.cronjob.helper.DDBQuery">de.ddb.labs.ddbid.cronjob.helper.DDBQuery</a></td>
-<td>2</td></tr>
+<td>1</td></tr>
 <tr class="a">
 <td><a href="#de.ddb.labs.ddbid.cronjob.helper.DumpCorrector">de.ddb.labs.ddbid.cronjob.helper.DumpCorrector</a></td>
 <td>1</td></tr>
@@ -96,7 +84,7 @@
 <td>2</td></tr>
 <tr class="a">
 <td><a href="#de.ddb.labs.ddbid.cronjob.helper.Helper">de.ddb.labs.ddbid.cronjob.helper.Helper</a></td>
-<td>2</td></tr>
+<td>3</td></tr>
 <tr class="b">
 <td><a href="#de.ddb.labs.ddbid.cronjob.objects.Compare">de.ddb.labs.ddbid.cronjob.objects.Compare</a></td>
 <td>1</td></tr>
@@ -147,111 +135,7 @@
 <td>2</td></tr>
 <tr class="b">
 <td><a href="#de.ddb.labs.ddbid.service.PersonService">de.ddb.labs.ddbid.service.PersonService</a></td>
-<td>2</td></tr></table></section><a name="de.ddb.labs.ddbid.Application"></a><section>
-<h3><a name="de.ddb.labs.ddbid.Application"></a>de.ddb.labs.ddbid.Application</h3>
-<table border="0" class="bodyTable">
-<tr class="a">
-<th>Bug</th>
-<th>Category</th>
-<th>Details</th>
-<th>Line</th>
-<th>Priority</th></tr>
-<tr class="b">
-<td>de.ddb.labs.ddbid.Application.database() may expose internal representation by returning Application.database</td>
-<td>MALICIOUS_CODE</td>
-<td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#EI_EXPOSE_REP">EI_EXPOSE_REP</a></td>
-<td>119</td>
-<td>Medium</td></tr>
-<tr class="a">
-<td>de.ddb.labs.ddbid.Application.httpClient() may expose internal representation by returning Application.httpClient</td>
-<td>MALICIOUS_CODE</td>
-<td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#EI_EXPOSE_REP">EI_EXPOSE_REP</a></td>
-<td>128</td>
-<td>Medium</td></tr>
-<tr class="b">
-<td>de.ddb.labs.ddbid.Application.objectMapper() may expose internal representation by returning Application.objectMapper</td>
-<td>MALICIOUS_CODE</td>
-<td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#EI_EXPOSE_REP">EI_EXPOSE_REP</a></td>
-<td>144</td>
-<td>Medium</td></tr></table></section><a name="de.ddb.labs.ddbid.controller.DownloadRestController"></a><section>
-<h3><a name="de.ddb.labs.ddbid.controller.DownloadRestController"></a>de.ddb.labs.ddbid.controller.DownloadRestController</h3>
-<table border="0" class="bodyTable">
-<tr class="a">
-<th>Bug</th>
-<th>Category</th>
-<th>Details</th>
-<th>Line</th>
-<th>Priority</th></tr>
-<tr class="b">
-<td>de.ddb.labs.ddbid.controller.DownloadRestController.getDdbIdFile(String, String, HttpServletResponse) may fail to clean up java.io.InputStream on checked exception</td>
-<td>EXPERIMENTAL</td>
-<td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE">OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE</a></td>
-<td>70</td>
-<td>Medium</td></tr></table></section><a name="de.ddb.labs.ddbid.controller.StatisticsController"></a><section>
-<h3><a name="de.ddb.labs.ddbid.controller.StatisticsController"></a>de.ddb.labs.ddbid.controller.StatisticsController</h3>
-<table border="0" class="bodyTable">
-<tr class="a">
-<th>Bug</th>
-<th>Category</th>
-<th>Details</th>
-<th>Line</th>
-<th>Priority</th></tr>
-<tr class="b">
-<td>Possible null pointer dereference in de.ddb.labs.ddbid.controller.StatisticsController.main() due to return value of called method</td>
-<td>STYLE</td>
-<td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE">NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE</a></td>
-<td>90</td>
-<td>Medium</td></tr>
-<tr class="a">
-<td>Possible null pointer dereference in de.ddb.labs.ddbid.controller.StatisticsController.main() due to return value of called method</td>
-<td>STYLE</td>
-<td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE">NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE</a></td>
-<td>103</td>
-<td>Medium</td></tr>
-<tr class="b">
-<td>Possible null pointer dereference in de.ddb.labs.ddbid.controller.StatisticsController.main() due to return value of called method</td>
-<td>STYLE</td>
-<td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE">NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE</a></td>
-<td>117</td>
-<td>Medium</td></tr>
-<tr class="a">
-<td>Possible null pointer dereference in de.ddb.labs.ddbid.controller.StatisticsController.main() due to return value of called method</td>
-<td>STYLE</td>
-<td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE">NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE</a></td>
-<td>143</td>
-<td>Medium</td></tr>
-<tr class="b">
-<td>Possible null pointer dereference in de.ddb.labs.ddbid.controller.StatisticsController.main() due to return value of called method</td>
-<td>STYLE</td>
-<td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE">NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE</a></td>
-<td>130</td>
-<td>Medium</td></tr></table></section><a name="de.ddb.labs.ddbid.cronjob.DirectMigrationCronJob"></a><section>
-<h3><a name="de.ddb.labs.ddbid.cronjob.DirectMigrationCronJob"></a>de.ddb.labs.ddbid.cronjob.DirectMigrationCronJob</h3>
-<table border="0" class="bodyTable">
-<tr class="a">
-<th>Bug</th>
-<th>Category</th>
-<th>Details</th>
-<th>Line</th>
-<th>Priority</th></tr>
-<tr class="b">
-<td>Found reliance on default encoding in de.ddb.labs.ddbid.cronjob.DirectMigrationCronJob.calculateDdbId(String, String): new String(byte[])</td>
-<td>I18N</td>
-<td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#DM_DEFAULT_ENCODING">DM_DEFAULT_ENCODING</a></td>
-<td>793</td>
-<td>High</td></tr>
-<tr class="a">
-<td>Possible null pointer dereference in de.ddb.labs.ddbid.cronjob.DirectMigrationCronJob.schedule() due to return value of called method</td>
-<td>STYLE</td>
-<td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE">NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE</a></td>
-<td>703</td>
-<td>Medium</td></tr>
-<tr class="b">
-<td>Possible null pointer dereference in de.ddb.labs.ddbid.cronjob.DirectMigrationCronJob.schedule() due to return value of called method</td>
-<td>STYLE</td>
-<td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE">NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE</a></td>
-<td>722</td>
-<td>Medium</td></tr></table></section><a name="de.ddb.labs.ddbid.cronjob.helper.DDBQuery"></a><section>
+<td>2</td></tr></table></section><a name="de.ddb.labs.ddbid.cronjob.helper.DDBQuery"></a><section>
 <h3><a name="de.ddb.labs.ddbid.cronjob.helper.DDBQuery"></a>de.ddb.labs.ddbid.cronjob.helper.DDBQuery</h3>
 <table border="0" class="bodyTable">
 <tr class="a">
@@ -261,12 +145,6 @@
 <th>Line</th>
 <th>Priority</th></tr>
 <tr class="b">
-<td>de.ddb.labs.ddbid.cronjob.helper.DDBQuery.getFacets() may expose internal representation by returning DDBQuery.facets</td>
-<td>MALICIOUS_CODE</td>
-<td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#EI_EXPOSE_REP">EI_EXPOSE_REP</a></td>
-<td>226</td>
-<td>Medium</td></tr>
-<tr class="a">
 <td>Possible null pointer dereference in de.ddb.labs.ddbid.cronjob.helper.DDBQuery.run() due to return value of called method</td>
 <td>STYLE</td>
 <td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE">NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE</a></td>
@@ -274,13 +152,13 @@
 <td>Medium</td></tr></table></section><a name="de.ddb.labs.ddbid.cronjob.helper.DumpCorrector"></a><section>
 <h3><a name="de.ddb.labs.ddbid.cronjob.helper.DumpCorrector"></a>de.ddb.labs.ddbid.cronjob.helper.DumpCorrector</h3>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>Bug</th>
 <th>Category</th>
 <th>Details</th>
 <th>Line</th>
 <th>Priority</th></tr>
-<tr class="a">
+<tr class="b">
 <td>Hard coded reference to an absolute pathname in de.ddb.labs.ddbid.cronjob.helper.DumpCorrector.main(String[])</td>
 <td>STYLE</td>
 <td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#DMI_HARDCODED_ABSOLUTE_FILENAME">DMI_HARDCODED_ABSOLUTE_FILENAME</a></td>
@@ -288,19 +166,19 @@
 <td>Medium</td></tr></table></section><a name="de.ddb.labs.ddbid.cronjob.helper.Facets"></a><section>
 <h3><a name="de.ddb.labs.ddbid.cronjob.helper.Facets"></a>de.ddb.labs.ddbid.cronjob.helper.Facets</h3>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>Bug</th>
 <th>Category</th>
 <th>Details</th>
 <th>Line</th>
 <th>Priority</th></tr>
-<tr class="a">
+<tr class="b">
 <td>de.ddb.labs.ddbid.cronjob.helper.Facets.getFacetValues() may expose internal representation by returning Facets.facetValues</td>
 <td>MALICIOUS_CODE</td>
 <td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#EI_EXPOSE_REP">EI_EXPOSE_REP</a></td>
 <td>24</td>
 <td>Medium</td></tr>
-<tr class="b">
+<tr class="a">
 <td>new de.ddb.labs.ddbid.cronjob.helper.Facets(LinkedHashMap, int, String) may expose internal representation by storing an externally mutable object into Facets.facetValues</td>
 <td>MALICIOUS_CODE</td>
 <td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#EI_EXPOSE_REP2">EI_EXPOSE_REP2</a></td>
@@ -308,12 +186,18 @@
 <td>Medium</td></tr></table></section><a name="de.ddb.labs.ddbid.cronjob.helper.Helper"></a><section>
 <h3><a name="de.ddb.labs.ddbid.cronjob.helper.Helper"></a>de.ddb.labs.ddbid.cronjob.helper.Helper</h3>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>Bug</th>
 <th>Category</th>
 <th>Details</th>
 <th>Line</th>
 <th>Priority</th></tr>
+<tr class="a">
+<td>Possible null pointer dereference in de.ddb.labs.ddbid.cronjob.helper.Helper.deleteInvalidDumps(String) due to return value of called method</td>
+<td>STYLE</td>
+<td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE">NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE</a></td>
+<td>116</td>
+<td>Medium</td></tr>
 <tr class="b">
 <td>Possible null pointer dereference in de.ddb.labs.ddbid.cronjob.helper.Helper.getOkCmpFiles(String, Comparator) due to return value of called method</td>
 <td>STYLE</td>
@@ -366,19 +250,19 @@
 <td>de.ddb.labs.ddbid.cronjob.objects.Dump.createNewDump(String, String, Class) forces garbage collection; extremely dubious except in benchmarking code</td>
 <td>PERFORMANCE</td>
 <td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#DM_GC">DM_GC</a></td>
-<td>174</td>
+<td>205</td>
 <td>High</td></tr>
 <tr class="b">
 <td>Possible null pointer dereference in de.ddb.labs.ddbid.cronjob.objects.Dump.createNewDump(String, String, Class) due to return value of called method</td>
 <td>STYLE</td>
 <td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE">NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE</a></td>
-<td>152</td>
+<td>183</td>
 <td>Medium</td></tr>
 <tr class="a">
 <td>Exception is caught when Exception is not thrown in de.ddb.labs.ddbid.cronjob.objects.Dump.createNewDump(String, String, Class)</td>
 <td>STYLE</td>
 <td><a class="externalLink" href="https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html#REC_CATCH_EXCEPTION">REC_CATCH_EXCEPTION</a></td>
-<td>179</td>
+<td>210</td>
 <td>Medium</td></tr></table></section><a name="de.ddb.labs.ddbid.database.Database"></a><section>
 <h3><a name="de.ddb.labs.ddbid.database.Database"></a>de.ddb.labs.ddbid.database.Database</h3>
 <table border="0" class="bodyTable">

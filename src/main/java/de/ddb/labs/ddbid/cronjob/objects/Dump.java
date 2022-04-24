@@ -72,6 +72,9 @@ public class Dump implements Runnable {
     @Value(value = "${ddbid.datapath.organization}")
     private String dataPathOrganization;
 
+    @Value("${ddbid.dump.lockfile}")
+    private String lockfile;
+
     @Autowired
     private OkHttpClient httpClient;
 
@@ -83,12 +86,19 @@ public class Dump implements Runnable {
 
     @Override
     public void run() {
+
+        try {
+            //create lockfile
+            Files.write(Path.of(lockfile), List.of(dtf.format(Instant.now())), StandardCharsets.UTF_8);
+        } catch (IOException ex) {
+            log.warn("Could not wrte lockfile. {}", ex.getMessage());
+        }
         try {
             dumpItem();
         } catch (Exception e) {
             log.error("{}", e.getMessage());
         }
-        
+
         try {
             dumpPerson();
         } catch (Exception e) {
@@ -99,6 +109,12 @@ public class Dump implements Runnable {
             dumpOrganization();
         } catch (Exception e) {
             log.error("{}", e.getMessage());
+        }
+
+        try {
+            Files.delete(Path.of(lockfile));
+        } catch (IOException ex) {
+            log.warn("Could not delete lockfile. {}", ex.getMessage());
         }
     }
 
@@ -187,7 +203,7 @@ public class Dump implements Runnable {
                     System.gc();
                 }
                 // for testing
-                break;
+                // break;
             }
         } catch (Exception e) {
             errorOccurred = true;
@@ -196,7 +212,7 @@ public class Dump implements Runnable {
 
         if (totalCount > processedCount) {
             log.warn("Total object count is {}, but processed object count is only {}", totalCount, processedCount);
-            // errorOccurred = true;
+            errorOccurred = true;
         }
 
         if (errorOccurred) {

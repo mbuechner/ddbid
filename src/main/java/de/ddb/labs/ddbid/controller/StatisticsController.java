@@ -41,33 +41,38 @@ public class StatisticsController {
     @Autowired
     private Database database;
 
-    private final static String MISSING_BY_PROVIDER = "SELECT provider_id, count(id) AS MISSING FROM main.item \n"
-            + "WHERE status = 'MISSING'\n"
-            + "GROUP BY provider_id\n"
-            + "ORDER BY count(id) DESC;";
+    private final static String MISSING_BY_PROVIDER = """
+                                                      SELECT provider_id, count(id) AS MISSING FROM main.item 
+                                                      WHERE status = 'MISSING'
+                                                      GROUP BY provider_id
+                                                      ORDER BY count(id) DESC;""";
 
-    private final static String MISSING_BY_SECTOR = "SELECT sector_fct, count(id) AS MISSING FROM main.item\n"
-            + "WHERE status = 'MISSING'\n"
-            + "GROUP BY sector_fct\n"
-            + "ORDER BY count(id) DESC;";
+    private final static String MISSING_BY_SECTOR = """
+                                                    SELECT sector_fct, count(id) AS MISSING FROM main.item
+                                                    WHERE status = 'MISSING'
+                                                    GROUP BY sector_fct
+                                                    ORDER BY count(id) DESC;""";
 
-    private final static String QUERY_ITEM_MISSING = "SELECT \"timestamp\", count(id) AS COUNT\n"
-            + "FROM main.item\n"
-            + "WHERE status = 'MISSING'\n"
-            + "GROUP BY \"timestamp\"\n"
-            + "ORDER BY \"timestamp\" ASC;";
+    private final static String QUERY_ITEM_MISSING = """
+                                                     SELECT "timestamp", count(id) AS COUNT
+                                                     FROM main.item
+                                                     WHERE status = 'MISSING'
+                                                     GROUP BY "timestamp"
+                                                     ORDER BY "timestamp" ASC;""";
 
-    private final static String QUERY_PERSON_MISSING = "SELECT \"timestamp\", count(id) AS COUNT\n"
-            + "FROM main.person\n"
-            + "WHERE status = 'MISSING'\n"
-            + "GROUP BY \"timestamp\"\n"
-            + "ORDER BY \"timestamp\" ASC;";
+    private final static String QUERY_PERSON_MISSING = """
+                                                       SELECT "timestamp", count(id) AS COUNT
+                                                       FROM main.person
+                                                       WHERE status = 'MISSING'
+                                                       GROUP BY "timestamp"
+                                                       ORDER BY "timestamp" ASC;""";
 
-    private final static String QUERY_ORGANIZATION_MISSING = "SELECT \"timestamp\", count(id) AS COUNT\n"
-            + "FROM main.organization\n"
-            + "WHERE status = 'MISSING'\n"
-            + "GROUP BY \"timestamp\"\n"
-            + "ORDER BY \"timestamp\" ASC;";
+    private final static String QUERY_ORGANIZATION_MISSING = """
+                                                             SELECT "timestamp", count(id) AS COUNT
+                                                             FROM main.organization
+                                                             WHERE status = 'MISSING'
+                                                             GROUP BY "timestamp"
+                                                             ORDER BY "timestamp" ASC;""";
 
     private final Calendar cal = Calendar.getInstance(Locale.GERMANY);
     private final DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE;
@@ -87,8 +92,11 @@ public class StatisticsController {
                 return mapRet;
             }
         });
-        mav.addObject("missingByProvider_idKeys", new ArrayList<>(map.keySet()));
-        mav.addObject("missingByProvider_idValues", new ArrayList<>(map.values()));
+
+        if (map != null) {
+            mav.addObject("missingByProvider_idKeys", new ArrayList<>(map.keySet()));
+            mav.addObject("missingByProvider_idValues", new ArrayList<>(map.values()));
+        }
 
         final Map<String, Integer> mas = database.getJdbcTemplate().query(MISSING_BY_SECTOR, new ResultSetExtractor<Map>() {
             @Override
@@ -100,8 +108,12 @@ public class StatisticsController {
                 return mapRet;
             }
         });
-        mav.addObject("missingBySector_fctKeys", new ArrayList<>(mas.keySet()));
-        mav.addObject("missingBySector_fctValues", new ArrayList<>(mas.values()));
+
+        if (mas != null) {
+
+            mav.addObject("missingBySector_fctKeys", new ArrayList<>(mas.keySet()));
+            mav.addObject("missingBySector_fctValues", new ArrayList<>(mas.values()));
+        }
 
         final Map<Timestamp, Integer> mim = database.getJdbcTemplate().query(QUERY_ITEM_MISSING, new ResultSetExtractor<Map>() {
             @Override
@@ -113,8 +125,11 @@ public class StatisticsController {
                 return mapRet;
             }
         });
-        mav.addObject("itemMissingKeys", makeLabels(mim));
-        mav.addObject("itemMissingValues", new ArrayList<>(mim.values()));
+
+        if (mim != null) {
+            mav.addObject("itemMissingKeys", makeLabels(mim));
+            mav.addObject("itemMissingValues", new ArrayList<>(mim.values()));
+        }
 
         final Map<Timestamp, Integer> mpm = database.getJdbcTemplate().query(QUERY_PERSON_MISSING, new ResultSetExtractor<Map>() {
             @Override
@@ -126,8 +141,11 @@ public class StatisticsController {
                 return mapRet;
             }
         });
-        mav.addObject("personMissingKeys", makeLabels(mpm));
-        mav.addObject("personMissingValues", new ArrayList<>(mpm.values()));
+
+        if (mpm != null) {
+            mav.addObject("personMissingKeys", makeLabels(mpm));
+            mav.addObject("personMissingValues", new ArrayList<>(mpm.values()));
+        }
 
         final Map<Timestamp, Integer> mom = database.getJdbcTemplate().query(QUERY_ORGANIZATION_MISSING, new ResultSetExtractor<Map>() {
             @Override
@@ -139,8 +157,12 @@ public class StatisticsController {
                 return mapRet;
             }
         });
-        mav.addObject("organizationMissingKeys", makeLabels(mom));
-        mav.addObject("organizationMissingValues", new ArrayList<>(mom.values()));
+
+        if (mom != null) {
+
+            mav.addObject("organizationMissingKeys", makeLabels(mom));
+            mav.addObject("organizationMissingValues", new ArrayList<>(mom.values()));
+        }
 
         mav.setViewName("statistics");
         return mav;

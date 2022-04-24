@@ -223,7 +223,7 @@ public class DDBQuery {
     }
 
     public List<Facets> getFacets() {
-        return facets;
+        return new ArrayList<>(facets);
     }
 
 }

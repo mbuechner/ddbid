@@ -16,11 +16,15 @@
 package de.ddb.labs.ddbid;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import de.ddb.labs.ddbid.cronjob.ObjectsCronJob;
+import de.ddb.labs.ddbid.cronjob.helper.Helper;
 import de.ddb.labs.ddbid.database.Database;
 import de.ddb.labs.ddbid.service.GitHubService;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +40,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.EventListener;
 import org.springframework.retry.annotation.EnableRetry;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -52,14 +57,25 @@ public class Application {
     @Value("${ddbid.database}")
     private String databaseName;
 
+    @Value("${ddbid.dump.lockfile}")
+    private String lockfile;
+    
+    @Value("${ddbid.cron.objects}")
+    private String cronPatternObjects;
+
     private Database database; // for write access
 
     private OkHttpClient httpClient; // http client
 
     private ObjectMapper objectMapper; // http client
 
+    private ObjectsCronJob objectsCronJob;
+    
     @Autowired
     private GitHubService gitHub;
+
+    @Autowired
+    private TaskScheduler taskScheduler;
 
     @Value(value = "${ddbid.datapath.item}")
     private String dataPathItem;
@@ -76,7 +92,7 @@ public class Application {
     }
 
     @EventListener(ApplicationReadyEvent.class)
-    public void afterStartup() {
+    private void afterStartup() throws IOException {
         log.info("Creating data directories");
         try {
             if (!Files.exists(Path.of(dataPathItem))) {
@@ -99,10 +115,20 @@ public class Application {
         } catch (IOException e) {
             log.error("Error creating directory for ORAGNIZATION. {}", e.getMessage());
         }
+        log.info("Check for dump lockfile...");
+        if (Files.exists(Path.of(lockfile), LinkOption.NOFOLLOW_LINKS)) {
+            log.info("There was a cancled dump run. Delete it...");
+            Files.deleteIfExists(Path.of(lockfile));
+            Helper.deleteInvalidDumps(dataPathItem);
+            Helper.deleteInvalidDumps(dataPathPerson);
+            Helper.deleteInvalidDumps(dataPathOrganization);
+            log.info("Re-run Objects Cron Job...");
+            taskScheduler.schedule(objectsCronJob, new Date());
+        }
     }
 
     @PreDestroy
-    public void destroy() {
+    private void destroy() {
         log.info("Destroy callback triggered: Closing database...");
         try {
             database.close();
@@ -112,9 +138,15 @@ public class Application {
             log.error("Could not close connection to database. {}", e.getMessage());
         }
     }
+    
+    @Bean
+    protected ObjectsCronJob objectsCronJob() {
+        objectsCronJob = new ObjectsCronJob(cronPatternObjects);
+        return objectsCronJob;
+    }
 
     @Bean
-    public Database database() {
+    protected Database database() {
         if (database != null) {
             return database;
         }
@@ -123,7 +155,7 @@ public class Application {
     }
 
     @Bean
-    public OkHttpClient httpClient() {
+    protected OkHttpClient httpClient() {
         if (httpClient != null) {
             return httpClient;
         }
@@ -139,7 +171,7 @@ public class Application {
     }
 
     @Bean
-    public ObjectMapper objectMapper() {
+    protected ObjectMapper objectMapper() {
         if (objectMapper != null) {
             return objectMapper;
         }
