@@ -25,10 +25,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
 
 @Slf4j
-@Service
 public class ObjectsCronJob implements CronJobInterface {
     
     @Autowired
@@ -54,7 +52,7 @@ public class ObjectsCronJob implements CronJobInterface {
         log.info("Start to create dumps, comare them, import data and correct database items...");
         log.info("Create new dump...");
         dump.run();
-        log.info("Comare dump files...");
+        log.info("Compare dump files...");
         compare.run();
         log.info("Import data to new database...");
         importer.run();

@@ -67,13 +67,14 @@ public class DownloadRestController<T> {
                     .collect(Collectors.toSet());
             if (s.contains(filename)) {
                 final File file = new File(itemDataPath + filename);
-                final InputStream is = new FileInputStream(file);
+                try (final InputStream is = new FileInputStream(file)) {
 
-                response.setContentLengthLong(file.length());
-                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
-                response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+                    response.setContentLengthLong(file.length());
+                    response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
+                    response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
 
-                IOUtils.copyLarge(is, response.getOutputStream());
+                    IOUtils.copyLarge(is, response.getOutputStream());
+                }
             }
 
         } else if (type.equals("person")) {
@@ -84,13 +85,14 @@ public class DownloadRestController<T> {
                     .collect(Collectors.toSet());
             if (s.contains(filename)) {
                 final File file = new File(personDataPath + filename);
-                final InputStream is = new FileInputStream(file);
+                try (final InputStream is = new FileInputStream(file)) {
 
-                response.setContentLengthLong(file.length());
-                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
-                response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+                    response.setContentLengthLong(file.length());
+                    response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
+                    response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
 
-                IOUtils.copyLarge(is, response.getOutputStream());
+                    IOUtils.copyLarge(is, response.getOutputStream());
+                }
             }
         } else if (type.equals("organization")) {
             final Set s = Stream.of(new File(organizationDataPath).listFiles())
@@ -100,13 +102,14 @@ public class DownloadRestController<T> {
                     .collect(Collectors.toSet());
             if (s.contains(filename)) {
                 final File file = new File(organizationDataPath + filename);
-                final InputStream is = new FileInputStream(file);
+                try (final InputStream is = new FileInputStream(file)) {
 
-                response.setContentLengthLong(file.length());
-                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
-                response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+                    response.setContentLengthLong(file.length());
+                    response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
+                    response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
 
-                IOUtils.copyLarge(is, response.getOutputStream());
+                    IOUtils.copyLarge(is, response.getOutputStream());
+                }
             }
         } else {
 
