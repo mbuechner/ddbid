@@ -214,7 +214,7 @@ public class Compare implements Runnable {
                 }
             }
             records = null; // free memory
-            System.gc();
+            // System.gc();
         }
         if (tmpFile.delete()) {
             tmpFile.deleteOnExit();

@@ -21,7 +21,6 @@ import lombok.Setter;
 
 public class Facets {
 
-    @Getter
     private LinkedHashMap<String, Integer> facetValues;
     
     @Getter
@@ -33,7 +32,7 @@ public class Facets {
     private String field;
 
     public Facets(LinkedHashMap<String, Integer> facetValues, int numberOfFacets, String field) {
-        this.facetValues = facetValues;
+        this.facetValues = new LinkedHashMap<>(facetValues);
         this.numberOfFacets = numberOfFacets;
         this.field = field;
     }
@@ -41,6 +40,10 @@ public class Facets {
     public Facets() {
     }
                 
+    public LinkedHashMap<String, Integer> getFacetValues() {
+        return new LinkedHashMap<>(facetValues);
+    }
+    
     public void setFacetValues(LinkedHashMap[] hms) {
         if (facetValues == null) {
             facetValues = new LinkedHashMap<>();

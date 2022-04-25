@@ -46,7 +46,9 @@ public class Helper {
         };
         final File[] dumpfiles = new File(dataPath).listFiles(dumpFileFilter);
         final TreeSet<File> dumpfilesSorted = new TreeSet<>(comparator);
-        dumpfilesSorted.addAll(Arrays.asList(dumpfiles));
+        if (dumpfiles != null) {
+            dumpfilesSorted.addAll(Arrays.asList(dumpfiles));
+        }
 
         //ok files
         final Pattern okfilePattern = Pattern.compile(CMPOK_FILES_PATTERN);
@@ -79,7 +81,9 @@ public class Helper {
         };
         final File[] dumpfiles = new File(dataPath).listFiles(dumpFileFilter);
         final TreeSet<File> dumpfilesSorted = new TreeSet<>(comparator);
-        dumpfilesSorted.addAll(Arrays.asList(dumpfiles));
+        if (dumpfiles != null) {
+            dumpfilesSorted.addAll(Arrays.asList(dumpfiles));
+        }
 
         //ok files
         final Pattern okfilePattern = Pattern.compile(DUMPOK_FILES_PATTERN);

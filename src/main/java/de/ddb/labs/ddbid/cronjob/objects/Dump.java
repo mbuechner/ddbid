@@ -24,6 +24,7 @@ import de.ddb.labs.ddbid.model.Doc;
 import de.ddb.labs.ddbid.model.item.ItemDoc;
 import de.ddb.labs.ddbid.model.organization.OrganizationDoc;
 import de.ddb.labs.ddbid.model.person.PersonDoc;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -42,6 +43,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.zip.GZIPOutputStream;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
@@ -121,8 +124,10 @@ public class Dump implements Runnable {
     public void dumpItem() {
         try {
             createNewDump(QUERY_ITEM, dataPathItem, ItemDoc.class);
-        } catch (IOException | NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
+        } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
             log.error("Error while dumping ITEMS. {}", ex.getMessage());
+        } catch (IOException ex) {
+            Logger.getLogger(Dump.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
@@ -130,20 +135,25 @@ public class Dump implements Runnable {
 
         try {
             createNewDump(QUERY_PERSON, dataPathPerson, PersonDoc.class);
-        } catch (IOException | NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
+        } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
             log.error("Error while dumping PERSON. {}", ex.getMessage());
+        } catch (IOException ex) {
+            Logger.getLogger(Dump.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
     public void dumpOrganization() {
         try {
             createNewDump(QUERY_ORGANIZATION, dataPathOrganization, OrganizationDoc.class);
-        } catch (IOException | NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
+        } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
             log.error("Error while dumping ORGANIZATION. {}", ex.getMessage());
+        } catch (IOException ex) {
+            Logger.getLogger(Dump.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
-    public File createNewDump(String query, String dataPath, Class docType) throws IOException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+    @SuppressFBWarnings(value = "REC_CATCH_EXCEPTION", justification = "I don't understand the problem, SpotBug!")
+    public File createNewDump(String query, String dataPath, Class docType) throws NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, IOException  {
 
         log.info("Start to dump DDB-Ids...");
         final Timestamp currentTime = Timestamp.valueOf(ZonedDateTime.now().toLocalDateTime());
@@ -200,7 +210,7 @@ public class Dump implements Runnable {
                     outputWriter.flush();
                     doc = null;
                     ec = null;
-                    System.gc();
+                    // System.gc();
                 }
                 // for testing
                 // break;

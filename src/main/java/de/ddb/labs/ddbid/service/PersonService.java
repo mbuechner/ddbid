@@ -41,7 +41,7 @@ public class PersonService {
 
     private final Calendar cal = Calendar.getInstance(Locale.GERMANY);
     private final DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE;
-    
+
     @Autowired
     private Database database;
     @Value("${ddbid.database.table.person}")
@@ -92,6 +92,7 @@ public class PersonService {
         } else if (where.toString().endsWith("WHERE ")) {
             whereClause = whereClause.substring(0, whereClause.length() - 6);
         }
+    
         final int totalCount = database.getJdbcTemplate().queryForObject("SELECT count(*) FROM main." + tableName + " " + whereClause, Integer.class, whereValues.toArray());
         // totalCount end
 

@@ -42,11 +42,17 @@ import org.apache.commons.csv.CSVRecord;
 @Slf4j
 public class DumpCorrector {
 
-    private final static String INPUT_FILE = "D:\\GitHub\\ddbid\\data\\dumps\\item\\old\\2022-03-13.csv.gz";
-    private final static String OUTPUT_FILE = "D:\\GitHub\\ddbid\\data\\dumps\\item\\2022-03-13.csv.gz";
+    private final static String INPUT_FILE = "2022-03-13.csv.gz";
+    private final static String OUTPUT_FILE = "2022-03-13.csv_CORRECTED.gz";
 
     public static void main(String[] args) throws IOException {
-        try (final InputStream fileStream = new FileInputStream(INPUT_FILE); final InputStream gzipStream = new GZIPInputStream(fileStream); final InputStreamReader decoder = new InputStreamReader(gzipStream, StandardCharsets.UTF_8); final OutputStream os = Files.newOutputStream(Path.of(OUTPUT_FILE), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow); final CSVPrinter csvPrinter = new CSVPrinter(bw, CSVFormat.DEFAULT.withHeader("timestamp", "id", "status", "provider_item_id", "dataset_id", "label", "provider_id", "sector_fct", "supplier_id"))) {
+        try (final InputStream fileStream = new FileInputStream(INPUT_FILE);
+                final InputStream gzipStream = new GZIPInputStream(fileStream); 
+                final InputStreamReader decoder = new InputStreamReader(gzipStream, StandardCharsets.UTF_8); 
+                final OutputStream os = Files.newOutputStream(Path.of(OUTPUT_FILE), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); 
+                final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8);
+                final BufferedWriter bw = new BufferedWriter(ow);
+                final CSVPrinter csvPrinter = new CSVPrinter(bw, CSVFormat.DEFAULT.withHeader("timestamp", "id", "status", "provider_item_id", "dataset_id", "label", "provider_id", "sector_fct", "supplier_id"))) {
 
             final Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(decoder);
 

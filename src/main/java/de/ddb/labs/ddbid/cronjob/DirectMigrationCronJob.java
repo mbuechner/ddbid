@@ -789,8 +789,8 @@ public class DirectMigrationCronJob implements CronJobInterface {
     }
 
     public static String calculateDdbId(String providerID, String providerItemId) throws NoSuchAlgorithmException {
-        final byte[] input = (providerID + providerItemId).getBytes(Charset.forName("UTF-8"));
-        return new String(base32Encode(sha1Hash(input)));
+        final byte[] input = (providerID + providerItemId).getBytes(StandardCharsets.UTF_8);
+        return new String(base32Encode(sha1Hash(input)), StandardCharsets.UTF_8);
     }
 
     private static byte[] base32Encode(byte[] input) {
