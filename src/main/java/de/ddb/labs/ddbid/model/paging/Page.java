@@ -15,6 +15,7 @@
  */
 package de.ddb.labs.ddbid.model.paging;
 
+import java.util.ArrayList;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -33,7 +34,7 @@ public class Page<T> {
     private int recordsTotal;
     private int draw;
     public Page(List<T> data) {
-        this.data = data;
+        this.data = new ArrayList<>(data);
     }
 
 }

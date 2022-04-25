@@ -17,24 +17,27 @@ package de.ddb.labs.ddbid.database;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Connection;
 import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @Slf4j
 public class Database<T> {
-
+    
     private final HikariConfig config;
     private final String database;
     private JdbcTemplate duckdb;
     private HikariDataSource dataSource;
-
+    private Connection connection;
+    
     public Database(String database) {
         this.database = database;
-
+        
         config = new HikariConfig();
         config.setDriverClassName("org.duckdb.DuckDBDriver");
         config.setConnectionTestQuery("SELECT 1");
@@ -45,27 +48,33 @@ public class Database<T> {
         config.setConnectionTimeout(600000); // 10min.
         config.setJdbcUrl("jdbc:duckdb:" + database);
     }
-
+    
     public void commit() {
-        if (dataSource == null || dataSource.isClosed()) {
+        if ((dataSource == null || dataSource.isClosed())) {
             try {
-                dataSource.getConnection().commit();
-            } catch (SQLException ex) {
+                connection.commit();
+            } catch (Exception ex) {
                 log.warn("Could not commit to database. {}", ex.getMessage());
             }
         }
     }
-
+    
     public void init() {
         if (dataSource == null || dataSource.isClosed()) {
             log.info("Initialize database at {}...", database);
             dataSource = new HikariDataSource(config);
+            try {
+                connection = dataSource.getConnection();
+            } catch (SQLException ex) {
+                log.warn("Could not cloade DB connection. {}", ex.getMessage());
+            }
             duckdb = new JdbcTemplate(dataSource);
         }
     }
-    
+
     /**
      * Delete database and init an fresh one
+     *
      * @throws java.io.IOException
      */
     public void delete() throws IOException {
@@ -73,15 +82,21 @@ public class Database<T> {
         Files.deleteIfExists(Path.of(database));
         init();
     }
-
+    
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP", justification = "Like to expose intenal rep. Only one DB connection/ template available")
     public JdbcTemplate getJdbcTemplate() {
         init();
         return duckdb;
     }
-
+    
     public void close() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
+            try {
+                connection.close();
+            } catch (SQLException ex) {
+                log.warn("Could not cloade DB connection. {}", ex.getMessage());
+            }
             log.info("Database closed");
         }
     }
