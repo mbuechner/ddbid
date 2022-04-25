@@ -70,6 +70,7 @@ public class Database<T> {
             }
             duckdb = new JdbcTemplate(dataSource);
             duckdb.execute("SET memory_limit='1GB';");
+            duckdb.execute("SET threads TO 1;");
             duckdb.execute("SET checkpoint_threshold='1MB';");
         }
     }
