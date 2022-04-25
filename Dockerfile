@@ -17,6 +17,6 @@ RUN apt-get -y install wget unzip && \
      apt-get -y remove wget unzip
 COPY --from=MAVEN_CHAIN /tmp/target/ddbid.jar /home/ddbid/ddbid.jar
 WORKDIR /home/ddbid/
-CMD ["java", "-xms512M", "-xmx1G", "-xss512k", "-XX:MaxDirectMemorySize=2G","-XX:+UseShenandoahGC", "-XX:+UnlockExperimentalVMOptions", "-XX:+ShenandoahUncommit", "-XX:ShenandoahGCHeuristics=compact", "-XX:ShenandoahUncommitDelay=1000", "-XX:ShenandoahGuaranteedGCInterval=10000", "-jar", "ddbid.jar"]
+CMD ["java", "-Xms512M", "-Xmx1G", "-Xss512k", "-XX:MaxDirectMemorySize=2G","-XX:+UseShenandoahGC", "-XX:+UnlockExperimentalVMOptions", "-XX:+ShenandoahUncommit", "-XX:ShenandoahGCHeuristics=compact", "-XX:ShenandoahUncommitDelay=1000", "-XX:ShenandoahGuaranteedGCInterval=10000", "-jar", "ddbid.jar"]
 
 EXPOSE 8080
