@@ -69,6 +69,8 @@ public class Database<T> {
                 log.warn("Could not cloade DB connection. {}", ex.getMessage());
             }
             duckdb = new JdbcTemplate(dataSource);
+            duckdb.execute("SET memory_limit='1GB';");
+            duckdb.execute("SET checkpoint_threshold='1MB';");
         }
     }
 
