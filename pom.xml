@@ -259,6 +259,7 @@
                                 <jsSourceFile>htmlLegendPlugin.js</jsSourceFile>
                                 <jsSourceFile>palette.js</jsSourceFile>
                                 <jsSourceFile>statistics.js</jsSourceFile>
+                                <jsSourceFile>counter.js</jsSourceFile>
                             </jsSourceFiles>
                             <jsTargetDir>js</jsTargetDir>
                             <jsEngine>CLOSURE</jsEngine>
