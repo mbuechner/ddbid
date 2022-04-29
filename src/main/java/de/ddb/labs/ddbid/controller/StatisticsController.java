@@ -42,43 +42,45 @@ public class StatisticsController {
     private Database database;
 
     private final static String MISSING_BY_PROVIDER = """
-                                                      SELECT provider_id, count(id) AS MISSING FROM main.item 
-                                                      WHERE status = 'MISSING'
-                                                      GROUP BY provider_id
-                                                      ORDER BY count(id) DESC;""";
+                                                      SELECT "provider_id", count("id") AS MISSING FROM "item"
+                                                      WHERE "status" = 'MISSING'
+                                                      GROUP BY "provider_id"
+                                                      ORDER BY count("id") DESC;
+                                                      """;
 
     private final static String MISSING_BY_SECTOR = """
-                                                    SELECT sector_fct, count(id) AS MISSING FROM main.item
-                                                    WHERE status = 'MISSING'
-                                                    GROUP BY sector_fct
-                                                    ORDER BY count(id) DESC;""";
+                                                    SELECT "sector_fct", count("id") AS MISSING FROM "item"
+                                                    WHERE "status" = 'MISSING'
+                                                    GROUP BY "sector_fct"
+                                                    ORDER BY count("id") DESC;
+                                                    """;
 
     private final static String QUERY_ITEM_MISSING = """
-                                                     SELECT "timestamp", count(id) AS COUNT
-                                                     FROM main.item
-                                                     WHERE status = 'MISSING'
+                                                     SELECT "timestamp", count("id") AS COUNT FROM "item"
+                                                     WHERE "status" = 'MISSING'
                                                      GROUP BY "timestamp"
-                                                     ORDER BY "timestamp" ASC;""";
+                                                     ORDER BY "timestamp" ASC;
+                                                     """;
 
     private final static String QUERY_PERSON_MISSING = """
-                                                       SELECT "timestamp", count(id) AS COUNT
-                                                       FROM main.person
-                                                       WHERE status = 'MISSING'
+                                                       SELECT "timestamp", count("id") AS COUNT FROM "person"
+                                                       WHERE "status" = 'MISSING'
                                                        GROUP BY "timestamp"
-                                                       ORDER BY "timestamp" ASC;""";
+                                                       ORDER BY "timestamp" ASC;
+                                                       """;
 
     private final static String QUERY_ORGANIZATION_MISSING = """
-                                                             SELECT "timestamp", count(id) AS COUNT
-                                                             FROM main.organization
-                                                             WHERE status = 'MISSING'
+                                                             SELECT "timestamp", count("id") AS COUNT FROM "organization"
+                                                             WHERE "status" = 'MISSING'
                                                              GROUP BY "timestamp"
-                                                             ORDER BY "timestamp" ASC;""";
+                                                             ORDER BY "timestamp" ASC;
+                                                             """;
 
     private final Calendar cal = Calendar.getInstance(Locale.GERMANY);
     private final DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE;
 
     @GetMapping
-    public ModelAndView main() {
+    public ModelAndView getStatisticsData() {
 
         final ModelAndView mav = new ModelAndView();
 

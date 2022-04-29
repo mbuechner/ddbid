@@ -61,7 +61,7 @@ public class OrganizationService {
             }
         }
 
-        final StringBuilder query = new StringBuilder("SELECT * FROM main." + tableName + " ");
+        final StringBuilder query = new StringBuilder("SELECT * FROM \"" + tableName + "\" ");
 
         // WHERE (Search)
         final List<Object> whereValues = new ArrayList<>();
@@ -69,18 +69,18 @@ public class OrganizationService {
 
         // status (NEW, MISSING, ALL -> null)
         if (status != null && !status.equals("ALL")) {
-            where.append("status=? AND ");
+            where.append("\"status\"=? AND ");
             whereValues.add(status);
         }
 
         // timestamp (null -> show latest, -1 -> show all, value)
         if (pagingRequest.getTimestamp() == null) {
-            where.append("timestamp=(SELECT MAX(timestamp) FROM main.");
+            where.append("\"timestamp\"=(SELECT MAX(\"timestamp\") FROM \"");
             where.append(tableName);
-            where.append(") AND ");
+            where.append("\") AND ");
         } else if (pagingRequest.getTimestamp() == -1) {
         } else {
-            where.append("timestamp=?::TIMESTAMP AND ");
+            where.append("\"timestamp\"=? AND ");
             whereValues.add(new Timestamp(pagingRequest.getTimestamp()));
         }
 
@@ -92,7 +92,7 @@ public class OrganizationService {
         } else if (where.toString().endsWith("WHERE ")) {
             whereClause = whereClause.substring(0, whereClause.length() - 6);
         }
-        final int totalCount = database.getJdbcTemplate().queryForObject("SELECT count(*) FROM main." + tableName + " " + whereClause, Integer.class, whereValues.toArray());
+        final int totalCount = database.getJdbcTemplate().queryForObject("SELECT count(*) FROM \"" + tableName + "\" " + whereClause, Integer.class, whereValues.toArray());
         // totalCount end
 
         // with search
@@ -100,7 +100,9 @@ public class OrganizationService {
             where.append("(");
             for (String field : OrganizationDoc.getStaticHeader()) {
                 if (!field.equals("status") || !field.equals("timestamp")) {
+                    where.append('"');
                     where.append(field);
+                    where.append('"');
                     where.append(" ILIKE ? OR ");
                     whereValues.add("%" + pagingRequest.getSearch().getValue() + "%");
                 }
@@ -134,7 +136,9 @@ public class OrganizationService {
                 if (!OrganizationDoc.getStaticHeader().contains(columnName)) {
                     continue; // prevent sql injection
                 }
+                order.append('"');
                 order.append(columnName);
+                order.append('"');
                 order.append(" ");
                 order.append(o.getDir().toString());
                 order.append(", ");
@@ -176,7 +180,7 @@ public class OrganizationService {
 
     public Map<String, Timestamp> getTimestamps() {
         try {
-            final List<Timestamp> ts = database.getJdbcTemplate().queryForList("SELECT DISTINCT \"timestamp\" FROM main." + tableName, Timestamp.class);
+            final List<Timestamp> ts = database.getJdbcTemplate().queryForList("SELECT DISTINCT \"timestamp\" FROM \"" + tableName + "\"", Timestamp.class);
             final Map<String, Timestamp> m = new TreeMap<>();
             for (Timestamp t : ts) {
                 cal.setTime(t);
