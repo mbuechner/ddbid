@@ -154,7 +154,7 @@ function missingOrganizationConfig(organizationMissingKeys, organizationMissingV
 
 function missingByProvider_id(missingByProvider_idKeys, missingByProvider_idValues) {
     const missingByProvider_id = {
-        type: 'pie',
+        type: 'doughnut',
         data: {
             labels: missingByProvider_idKeys,
             datasets: [
@@ -200,7 +200,7 @@ function missingByProvider_id(missingByProvider_idKeys, missingByProvider_idValu
 
 function missingBySector_fct(missingBySector_fctKeys, missingBySector_fctValues) {
     const missingBySector_fct = {
-        type: 'pie',
+        type: 'doughnut',
         data: {
             labels: missingBySector_fctKeys,
             datasets: [

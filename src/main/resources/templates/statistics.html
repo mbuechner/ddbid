@@ -16,21 +16,33 @@
         <!-- Navigation -->
         <div th:replace="fragments/navbar.html"></div>
         <div class="container-fluid">
-             <div class="row justify-content-md-center mt-5">
+            <div class="row justify-content-md-center mt-5">
+                <div class="four col-md-3">
+                    <div class="counter-box"> <i class="far fa-thumbs-up"></i> <span class="counter" th:text="@{${newItemsCount}}">0</span>
+                        <p>NEW items since <span th:text="@{${minTimestamp}}">somewhen</span></p>
+                    </div>
+                </div>
+                <div class="four col-md-3">
+                    <div class="counter-box"> <i class="far fa-thumbs-down"></i> <span class="counter" th:text="@{${missingItemsCount}}">0</span>
+                        <p>MISSING items since <span th:text="@{${minTimestamp}}">somewhen</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="row justify-content-md-center mt-5">
                 <div class="col-xxl-6 col-md-8">
                     <canvas id="missingItemConfig"></canvas>
                 </div>
-             </div>
-             <div class="row justify-content-md-center mt-5">
+            </div>
+            <!-- <div class="row justify-content-md-center mt-5">
                 <div class="col-xxl-6 col-md-8">
                     <canvas id="missingPersonConfig"></canvas>
                 </div>
-             </div>
-             <div class="row justify-content-md-center mt-5">
+            </div> -->
+            <!-- <div class="row justify-content-md-center mt-5">
                 <div class="col-xxl-6 col-md-8">
                     <canvas id="missingOrganizationConfig"></canvas>
                 </div>
-            </div> 
+            </div> --> 
             <div class="row justify-content-md-center mt-5">
                 <div class="col-xxl-3 col-md-4">
                     <canvas id="missingByProvider" width="300" height="300"></canvas>
@@ -54,6 +66,7 @@
         <script th:src="@{js/htmlLegendPlugin.js}"></script>
         <script th:src="@{js/palette.js}"></script>
         <script th:src="@{js/statistics.js}"></script>
+        <script th:src="@{js/counter.js}"></script>
         <script th:inline="javascript">
             /*<![CDATA[*/
             $(document).ready(function () {
@@ -62,14 +75,14 @@
                 const itemMissingValues = /*[[${itemMissingValues}]]*/ null;
                 missingItemConfig(itemMissingKeys, itemMissingValues);
 
-                const personMissingKeys = /*[[${personMissingKeys}]]*/ null;
-                const personMissingValues = /*[[${personMissingValues}]]*/ null;
-                missingPersonConfig(personMissingKeys, personMissingValues);
+                // const personMissingKeys = /*[[${personMissingKeys}]]*/ null;
+                // const personMissingValues = /*[[${personMissingValues}]]*/ null;
+                // missingPersonConfig(personMissingKeys, personMissingValues);
 
-                const organizationMissingKeys = /*[[${organizationMissingKeys}]]*/ null;
-                const organizationMissingValues = /*[[${organizationMissingValues}]]*/ null;
-                missingOrganizationConfig(organizationMissingKeys, organizationMissingValues);
-
+                // const organizationMissingKeys = /*[[${organizationMissingKeys}]]*/ null;
+                // const organizationMissingValues = /*[[${organizationMissingValues}]]*/ null;
+                // missingOrganizationConfig(organizationMissingKeys, organizationMissingValues);
+        
                 const missingByProvider_idKeys = /*[[${missingByProvider_idKeys}]]*/ null;
                 const missingByProvider_idValues = /*[[${missingByProvider_idValues}]]*/ null;
                 missingByProvider_id(missingByProvider_idKeys, missingByProvider_idValues);

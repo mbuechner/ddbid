@@ -41,6 +41,20 @@ public class StatisticsController {
     @Autowired
     private Database database;
 
+    private final static String QUERY_MISSING_ITEM_COUNT = """
+                                                           SELECT count(*) FROM "item"
+                                                           WHERE "status" = 'MISSING';
+                                                           """;
+
+    private final static String QUERY_NEW_ITEM_COUNT = """
+                                                       SELECT count(*) FROM "item"
+                                                       WHERE "status" = 'NEW';
+                                                       """;
+
+    private final static String QUERY_TS_ITEM = """
+                                                SELECT MIN("timestamp") FROM "item";
+                                                """;
+
     private final static String MISSING_BY_PROVIDER = """
                                                       SELECT "provider_id", count("id") AS MISSING FROM "item"
                                                       WHERE "status" = 'MISSING'
@@ -62,6 +76,7 @@ public class StatisticsController {
                                                      ORDER BY "timestamp" ASC;
                                                      """;
 
+    /*
     private final static String QUERY_PERSON_MISSING = """
                                                        SELECT "timestamp", count("id") AS COUNT FROM "person"
                                                        WHERE "status" = 'MISSING'
@@ -75,7 +90,7 @@ public class StatisticsController {
                                                              GROUP BY "timestamp"
                                                              ORDER BY "timestamp" ASC;
                                                              """;
-
+     */
     private final Calendar cal = Calendar.getInstance(Locale.GERMANY);
     private final DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE;
 
@@ -83,6 +98,18 @@ public class StatisticsController {
     public ModelAndView getStatisticsData() {
 
         final ModelAndView mav = new ModelAndView();
+
+        final int missingItems = database.getJdbcTemplate().queryForObject(QUERY_MISSING_ITEM_COUNT, Integer.class);
+        mav.addObject("missingItemsCount", missingItems);
+
+        final int newItems = database.getJdbcTemplate().queryForObject(QUERY_NEW_ITEM_COUNT, Integer.class);
+        mav.addObject("newItemsCount", newItems);
+
+        final Timestamp minTs = database.getJdbcTemplate().queryForObject(QUERY_TS_ITEM, Timestamp.class);
+        if (minTs != null) {
+            cal.setTime(minTs);
+            mav.addObject("minTimestamp", dtf.format(minTs.toLocalDateTime()) + " (CW" + cal.get(Calendar.WEEK_OF_YEAR) + ")");
+        }
 
         final Map<String, Integer> map = database.getJdbcTemplate().query(MISSING_BY_PROVIDER, new ResultSetExtractor<Map>() {
             @Override
@@ -132,7 +159,7 @@ public class StatisticsController {
             mav.addObject("itemMissingKeys", makeLabels(mim));
             mav.addObject("itemMissingValues", new ArrayList<>(mim.values()));
         }
-
+        /*
         final Map<Timestamp, Integer> mpm = database.getJdbcTemplate().query(QUERY_PERSON_MISSING, new ResultSetExtractor<Map>() {
             @Override
             public Map extractData(ResultSet rs) throws SQLException, DataAccessException {
@@ -143,12 +170,13 @@ public class StatisticsController {
                 return mapRet;
             }
         });
-
+        
         if (mpm != null) {
             mav.addObject("personMissingKeys", makeLabels(mpm));
             mav.addObject("personMissingValues", new ArrayList<>(mpm.values()));
         }
-
+         */
+ /*
         final Map<Timestamp, Integer> mom = database.getJdbcTemplate().query(QUERY_ORGANIZATION_MISSING, new ResultSetExtractor<Map>() {
             @Override
             public Map extractData(ResultSet rs) throws SQLException, DataAccessException {
@@ -165,6 +193,7 @@ public class StatisticsController {
             mav.addObject("organizationMissingKeys", makeLabels(mom));
             mav.addObject("organizationMissingValues", new ArrayList<>(mom.values()));
         }
+         */
 
         mav.setViewName("statistics");
         return mav;

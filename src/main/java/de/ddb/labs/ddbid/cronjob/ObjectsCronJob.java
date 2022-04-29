@@ -56,7 +56,7 @@ public class ObjectsCronJob implements CronJobInterface {
         compare.run();
         log.info("Import data to new database...");
         importer.run();
-        log.info("Correct impored data...");
+        log.info("Correct imported data...");
         correct.run();
         log.info("Done");
     }
