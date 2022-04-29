@@ -18,11 +18,10 @@ package de.ddb.labs.ddbid.database;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -32,31 +31,25 @@ public class Database<T> {
     private final HikariConfig config;
     private final String database;
     private JdbcTemplate duckdb;
+    @Getter
     private HikariDataSource dataSource;
+    @Getter
     private Connection connection;
     
     public Database(String database) {
         this.database = database;
         
         config = new HikariConfig();
-        config.setDriverClassName("org.duckdb.DuckDBDriver");
+        config.setDriverClassName("org.h2.Driver");
         config.setConnectionTestQuery("SELECT 1");
-        config.addDataSourceProperty("duckdb.read_only", "false");
         config.setReadOnly(false);
         config.setMaximumPoolSize(16);
         config.setMinimumIdle(8);
         config.setConnectionTimeout(600000); // 10min.
-        config.setJdbcUrl("jdbc:duckdb:" + database);
-    }
-    
-    public void commit() {
-        if ((dataSource == null || dataSource.isClosed())) {
-            try {
-                connection.commit();
-            } catch (Exception ex) {
-                log.warn("Could not commit to database. {}", ex.getMessage());
-            }
-        }
+        config.setJdbcUrl("jdbc:h2:" + new File(database).getAbsolutePath());
+        // config.setUsername("test");
+        // config.setPassword("test");
+
     }
     
     public void init() {
@@ -69,23 +62,12 @@ public class Database<T> {
                 log.warn("Could not cloade DB connection. {}", ex.getMessage());
             }
             duckdb = new JdbcTemplate(dataSource);
-            duckdb.execute("SET memory_limit='1GB';");
-            duckdb.execute("SET threads TO 1;");
-            duckdb.execute("SET checkpoint_threshold='1MB';");
+//            duckdb.execute("SET memory_limit='1GB';");
+//            duckdb.execute("SET threads TO 1;");
+//            duckdb.execute("SET checkpoint_threshold='1MB';");
         }
     }
-
-    /**
-     * Delete database and init an fresh one
-     *
-     * @throws java.io.IOException
-     */
-    public void delete() throws IOException {
-        close();
-        Files.deleteIfExists(Path.of(database));
-        init();
-    }
-    
+   
     @SuppressFBWarnings(value = "EI_EXPOSE_REP", justification = "Like to expose intenal rep. Only one DB connection/ template available")
     public JdbcTemplate getJdbcTemplate() {
         init();
@@ -98,7 +80,7 @@ public class Database<T> {
             try {
                 connection.close();
             } catch (SQLException ex) {
-                log.warn("Could not cloade DB connection. {}", ex.getMessage());
+                log.warn("Could not close DB connection. {}", ex.getMessage());
             }
             log.info("Database closed");
         }
