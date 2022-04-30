@@ -45,7 +45,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class Correct implements Runnable {
     
-    private final static String QUERY = "SELECT \"timestamp\", id FROM {{tbl}} WHERE status = 'MISSING';";
+    private final static String QUERY = """
+                                        SELECT "timestamp", "id" FROM "{{tbl}}" WHERE "status" = 'MISSING';
+                                        """;
 
     @Autowired
     private Database database;
