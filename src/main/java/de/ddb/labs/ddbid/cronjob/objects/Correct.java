@@ -24,7 +24,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +45,7 @@ import org.springframework.stereotype.Service;
 public class Correct implements Runnable {
     
     private final static String QUERY = """
-                                        SELECT "timestamp", "id" FROM "{{tbl}}" WHERE "status" = 'MISSING';
+                                        SELECT "pkey", "id" FROM "{{tbl}}" WHERE "status" = 'MISSING';
                                         """;
 
     @Autowired
@@ -60,12 +59,12 @@ public class Correct implements Runnable {
 
     private void check(Type type) {
 
-        final MultiValuedMap<Timestamp, String> mi = database.getJdbcTemplate().query(QUERY.replace("{{tbl}}", type.getType().toLowerCase()), new ResultSetExtractor<MultiValuedMap>() {
+        final MultiValuedMap<Integer, String> mi = database.getJdbcTemplate().query(QUERY.replace("{{tbl}}", type.getType().toLowerCase()), new ResultSetExtractor<MultiValuedMap>() {
             @Override
             public MultiValuedMap extractData(ResultSet rs) throws SQLException, DataAccessException {
-                final MultiValuedMap<Timestamp, String> mapRet = new ArrayListValuedHashMap<>();
+                final MultiValuedMap<Integer, String> mapRet = new ArrayListValuedHashMap<>();
                 while (rs.next()) {
-                    mapRet.put(rs.getTimestamp("timestamp"), rs.getString("id"));
+                    mapRet.put(rs.getInt("pkey"), rs.getString("id"));
                 }
                 return mapRet;
             }
@@ -91,7 +90,7 @@ public class Correct implements Runnable {
         }
 
         final AtomicInteger countItem = new AtomicInteger(0);
-        for (Map.Entry<Timestamp, String> i : mi.entries()) {
+        for (Map.Entry<Integer, String> i : mi.entries()) {
 
             final Request request = new Request.Builder()
                     .url(api + URLEncoder.encode(i.getValue(), StandardCharsets.UTF_8))
@@ -113,8 +112,8 @@ public class Correct implements Runnable {
                         if (countLines(body) > 1) {
                             log.info("Found {} with {}, so it was re-ingested. Deleted it from DB.", i.getValue(), response.request().url().toString());
                             countItem.incrementAndGet();
-                            final String query = "UPDATE main.{{tbl}} SET status = ? WHERE \"timestamp\" = ? AND id = ?".replace("{{tbl}}", type.toString().toLowerCase());
-                            database.getJdbcTemplate().update(query, Status.FOUND.toString(), i.getKey(), i.getValue());
+                            final String query = "UPDATE \"{{tbl}}\" SET \"status\" = ? WHERE \"pkey\" = ?".replace("{{tbl}}", type.toString().toLowerCase());
+                            database.getJdbcTemplate().update(query, Status.FOUND.toString(), i.getKey());
                         }
                     }
                 }
