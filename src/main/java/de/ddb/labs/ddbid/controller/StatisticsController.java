@@ -26,9 +26,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.ResultSetExtractor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +38,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 @Controller
 @RequestMapping({"/statistics.html"})
+@Async
 public class StatisticsController {
 
     @Autowired
@@ -95,7 +98,8 @@ public class StatisticsController {
     private final DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE;
 
     @GetMapping
-    public ModelAndView getStatisticsData() {
+    @Async
+    public CompletableFuture getStatisticsData() {
 
         final ModelAndView mav = new ModelAndView();
 
@@ -196,7 +200,7 @@ public class StatisticsController {
          */
 
         mav.setViewName("statistics");
-        return mav;
+        return CompletableFuture.completedFuture(mav);
     }
 
     private List<String> makeLabels(Map<Timestamp, Integer> ts) {

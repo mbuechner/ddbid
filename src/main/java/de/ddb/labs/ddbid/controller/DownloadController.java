@@ -24,10 +24,12 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -57,7 +59,8 @@ public class DownloadController {
     private GitHubService gitHub;
 
     @GetMapping
-    public ModelAndView main() throws IOException, GitAPIException {
+    @Async
+    public CompletableFuture main() throws IOException, GitAPIException {
 
         final ModelAndView mav = new ModelAndView();
         mav.addObject("itemList", setToMap(Helper.getOkDumpFiles(dataPathItem, Comparator.reverseOrder())));
@@ -70,7 +73,7 @@ public class DownloadController {
         mav.addObject("commits", gitHub.getCommits());
         mav.setViewName("download");
 
-        return mav;
+        return CompletableFuture.completedFuture(mav);
     }
 
     private Map<String, String> setToMap(Set<File> set) {
