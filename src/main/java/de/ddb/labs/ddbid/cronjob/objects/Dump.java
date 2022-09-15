@@ -18,6 +18,7 @@ package de.ddb.labs.ddbid.cronjob.objects;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import static de.ddb.labs.ddbid.Application.API;
+import de.ddb.labs.ddbid.cronjob.helper.Helper;
 import static de.ddb.labs.ddbid.cronjob.objects.Compare.OK_FILENAME_EXT;
 import static de.ddb.labs.ddbid.cronjob.objects.Compare.OUTPUT_FILENAME_EXT;
 import de.ddb.labs.ddbid.model.Doc;
@@ -39,6 +40,7 @@ import java.nio.file.StandardOpenOption;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -62,6 +64,7 @@ public class Dump implements Runnable {
 
     private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(ZoneId.systemDefault());
     public static final int ENTITYCOUNT = 100000; // count of entities per query
+    public static final int MONTH_TO_KEEP_DUMPS = 1; // number of mont dumps shoult be kept
     private static final String QUERY_ITEM = "/search/index/search/select?q=*:*&wt=json&fl=id,provider_item_id,label,provider_id,supplier_id,dataset_id,sector_fct&sort=id ASC&rows=" + ENTITYCOUNT;
     private static final String QUERY_PERSON = "/search/index/person/select?q=*:*&wt=json&fl=id,variant_id,preferredName,type&sort=id ASC&rows=" + ENTITYCOUNT;
     private static final String QUERY_ORGANIZATION = "/search/index/organization/select?q=*:*&wt=json&fl=id,variant_id,preferredName,type&sort=id ASC&rows=" + ENTITYCOUNT;
@@ -123,6 +126,7 @@ public class Dump implements Runnable {
 
     public void dumpItem() {
         try {
+            Helper.deleteOlderDumps(dataPathItem, LocalDate.now().minusMonths(MONTH_TO_KEEP_DUMPS));
             createNewDump(QUERY_ITEM, dataPathItem, ItemDoc.class);
         } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
             log.error("Error while dumping ITEMS. {}", ex.getMessage());
@@ -134,6 +138,7 @@ public class Dump implements Runnable {
     public void dumpPerson() {
 
         try {
+            Helper.deleteOlderDumps(dataPathPerson, LocalDate.now().minusMonths(MONTH_TO_KEEP_DUMPS));
             createNewDump(QUERY_PERSON, dataPathPerson, PersonDoc.class);
         } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
             log.error("Error while dumping PERSON. {}", ex.getMessage());
@@ -144,6 +149,7 @@ public class Dump implements Runnable {
 
     public void dumpOrganization() {
         try {
+            Helper.deleteOlderDumps(dataPathOrganization, LocalDate.now().minusMonths(MONTH_TO_KEEP_DUMPS));
             createNewDump(QUERY_ORGANIZATION, dataPathOrganization, OrganizationDoc.class);
         } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
             log.error("Error while dumping ORGANIZATION. {}", ex.getMessage());

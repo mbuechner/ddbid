@@ -23,17 +23,20 @@ import static de.ddb.labs.ddbid.cronjob.objects.Compare.OK_FILENAME_EXT;
 import static de.ddb.labs.ddbid.cronjob.objects.Compare.OUTPUT_FILENAME_EXT;
 import java.io.File;
 import java.io.FileFilter;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  *
  * @author buechner
  */
+@Slf4j
 public class Helper {
 
     public static Set<File> getOkCmpFiles(String dataPath, Comparator comparator) {
@@ -106,6 +109,41 @@ public class Helper {
         return dumpfilesSorted;
     }
 
+    /**
+     * Deletes dumps older than a date, compared by filename date and NOT file
+     * date.
+     *
+     * @param dataPath
+     * @param date
+     */
+    public static void deleteOlderDumps(String dataPath, LocalDate date) {
+        log.info("Start to delete old dumps...");
+        deleteInvalidDumps(dataPath);
+
+        final Set<File> okDumps = getOkDumpFiles(dataPath, Comparator.naturalOrder());
+        for (File f : okDumps) {
+            final String d = f.getName().substring(0, 10);
+            final LocalDate ld = LocalDate.parse(d);
+            if (ld.isBefore(date)) {
+                log.info("Delete dump {}, because {} is before {}", f.getAbsoluteFile(), ld.toString(), date.toString());
+                final String cmpFileString = f.getAbsolutePath().replace(OUTPUT_FILENAME_EXT, OK_FILENAME_EXT);
+                final File cmpFile = new File(cmpFileString);
+                if (f.delete()) {
+                    f.deleteOnExit();
+                }
+                
+                if (cmpFile.delete()) {
+                    cmpFile.deleteOnExit();
+                }
+            }
+        }
+    }
+
+    /**
+     * Deletes invalid dumps
+     *
+     * @param dataPath
+     */
     public static void deleteInvalidDumps(String dataPath) {
         final Set<File> okDumps = getOkDumpFiles(dataPath, Comparator.naturalOrder());
 
