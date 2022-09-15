@@ -36,7 +36,7 @@ import org.springframework.scheduling.TaskScheduler;
 @Slf4j
 public class MaintenanceRestController {
 
-     @Autowired
+    @Autowired
     private TaskScheduler taskScheduler;
 
     @Autowired
@@ -56,7 +56,7 @@ public class MaintenanceRestController {
 
     @Autowired
     private Correct correct;
-
+    
     /**
      * Dump data from API
      *
@@ -146,7 +146,7 @@ public class MaintenanceRestController {
             }
         };
     }
-
+    
     @GetMapping
     @RequestMapping("runcron")
     public Map<String, String> runCrons() {
