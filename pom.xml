@@ -9,7 +9,7 @@
     </parent>
     <groupId>de.ddb.labs</groupId>
     <artifactId>ddbid</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.7.5</version>
     <name>ddbid</name>
     <description>DDBid</description>
     <url>https://mbuechner.github.io/ddbid/</url>
