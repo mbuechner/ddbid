@@ -41,7 +41,12 @@ final class DataTableTimestampHelper {
                     Timestamp.valueOf(date.plusDays(1).atStartOfDay()));
         }
 
-        Timestamp timestamp = normalized == null ? latestTimestamp.get() : parse(normalized);
+        Timestamp timestamp;
+        try {
+            timestamp = normalized == null ? latestTimestamp.get() : parse(normalized);
+        } catch (IllegalArgumentException e) {
+            return TimestampFilter.invalidFilter();
+        }
         return TimestampFilter.exact(timestamp);
     }
 
@@ -94,22 +99,30 @@ final class DataTableTimestampHelper {
         return value != null && value.matches("\\d{4}-\\d{2}-\\d{2}(\\s*\\(CW\\d+\\))?");
     }
 
-    record TimestampFilter(Timestamp startInclusive, Timestamp endExclusive) {
+    record TimestampFilter(Timestamp startInclusive, Timestamp endExclusive, boolean invalidValue) {
 
         static TimestampFilter inactive() {
-            return new TimestampFilter(null, null);
+            return new TimestampFilter(null, null, false);
+        }
+
+        static TimestampFilter invalidFilter() {
+            return new TimestampFilter(null, null, true);
         }
 
         static TimestampFilter exact(Timestamp timestamp) {
-            return new TimestampFilter(timestamp, null);
+            return new TimestampFilter(timestamp, null, false);
         }
 
         static TimestampFilter range(Timestamp startInclusive, Timestamp endExclusive) {
-            return new TimestampFilter(startInclusive, endExclusive);
+            return new TimestampFilter(startInclusive, endExclusive, false);
         }
 
         boolean active() {
-            return startInclusive != null;
+            return invalidValue || startInclusive != null;
+        }
+
+        boolean invalid() {
+            return invalidValue;
         }
 
         boolean range() {

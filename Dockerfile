@@ -11,15 +11,19 @@ RUN --mount=type=cache,target=/root/.m2 mvn -B -DskipTests package
 
 FROM eclipse-temurin:25-jre-alpine
 
-ENV TZ=Europe/Berlin
+ENV TZ=Europe/Berlin \
+    HOME=/app \
+    XDG_CONFIG_HOME=/app/.config \
+    JAVA_TOOL_OPTIONS="-Duser.home=/app"
 
 RUN addgroup -S ddbid \
-    && adduser -S -G ddbid ddbid \
-    && mkdir -p /app/data/dumps/item /app/data/dumps/person /app/data/dumps/organization \
-    && chown -R ddbid:ddbid /app
+    && adduser -S -G ddbid -h /app ddbid \
+    && mkdir -p /app/.config/jgit /app/data/dumps/item /app/data/dumps/person /app/data/dumps/organization \
+    && chown -R ddbid:0 /app \
+    && chmod -R g=u /app
 
 WORKDIR /app
-COPY --from=build --chown=ddbid:ddbid /workspace/target/ddbid.jar /app/ddbid.jar
+COPY --from=build --chown=ddbid:0 --chmod=0644 /workspace/target/ddbid.jar /app/ddbid.jar
 
 USER ddbid
 VOLUME ["/app/data"]

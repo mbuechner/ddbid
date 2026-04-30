@@ -137,6 +137,10 @@ final class DataTablePageQueryHelper {
         if (!timestampFilter.active()) {
             return;
         }
+        if (timestampFilter.invalid()) {
+            where.append("1=0 AND ");
+            return;
+        }
         if (timestampFilter.range()) {
             where.append("\"timestamp\">=? AND \"timestamp\"<? AND ");
             values.add(timestampFilter.startInclusive());

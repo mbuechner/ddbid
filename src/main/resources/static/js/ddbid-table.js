@@ -19,6 +19,18 @@ window.DDBID.table = (function() {
         return String(value);
     }
 
+    function isTimestampRequestValue(value) {
+        if (value === null || value === undefined) {
+            return false;
+        }
+
+        const text = String(value).trim();
+        return text === '-1'
+                || /^\d+$/.test(text)
+                || /^\d{4}-\d{2}-\d{2}(\s*\(CW\d+\))?$/.test(text)
+                || /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/.test(text);
+    }
+
     function columnFilterInput(columnIndex) {
         return $('#ddbid thead .ddbid-column-filter[data-column-index="' + columnIndex + '"]').first();
     }
@@ -243,7 +255,7 @@ window.DDBID.table = (function() {
             const timestampValue = columnFilterValue(0) || latestTimestampValue();
             d.status = columnFilterValue(2) || 'MISSING';
             if (timestampValue) {
-                d.timestamp = timestampValue;
+                d.timestamp = isTimestampRequestValue(timestampValue) ? timestampValue : '__invalid__';
             }
             applyColumnFilters(d);
             return JSON.stringify(d);
