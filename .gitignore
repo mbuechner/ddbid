@@ -41,3 +41,5 @@ build/
 .vscode/
 /nbactions.xml
 /postgres-import/
+*.sql
+*.sql.gz

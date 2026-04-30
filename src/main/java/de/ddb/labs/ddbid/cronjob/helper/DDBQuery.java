@@ -32,6 +32,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 
 @Component
 @Slf4j
@@ -45,6 +46,9 @@ public class DDBQuery {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Value(value = "${ddbid.apikey}")
+    private String apiKey;
 
     private List<String> searchValues = new ArrayList<>();
     private List<FACET> facetValues = new ArrayList<>();
@@ -68,6 +72,9 @@ public class DDBQuery {
             this.shortName = shortName;
             this.naturalName = sector;
         }
+
+        @Value(value = "${ddbid.apikey}")
+        private String apiKey;
 
         @Override
         public String toString() {
@@ -179,6 +186,7 @@ public class DDBQuery {
             log.debug("GET " + getSearchQuery());
             final Request request = new Request.Builder().url(getSearchQuery())
                     .addHeader("Accept", "application/json")
+                    .addHeader("Authorization", "OAuth oauth_consumer_key=\"" + apiKey + "\"")
                     .build();
             try (final Response response = httpClient.newCall(request).execute()) {
                 if (response.isSuccessful()) {
