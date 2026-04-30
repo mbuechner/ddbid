@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ * Copyright 2022-2026 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,22 @@
  */
 package de.ddb.labs.ddbid.security;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableWebSecurity
-public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+public class WebSecurityConfig {
 
     @Value("${ddbid.security.user}")
     private String userName;
@@ -33,25 +38,25 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Value("${ddbid.security.password}")
     private String userPassword;
 
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
+    @Bean
+    protected SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .authorizeRequests()
-                .antMatchers("/actuator/", "/actuator/*", "/maintenance/", "/maintenance/*")
-                .authenticated()
-                .anyRequest().permitAll()
-                .and()
-                .httpBasic()
-                .and()
-                .csrf()
-                .disable();
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/actuator/", "/actuator/*", "/maintenance/", "/maintenance/*")
+                        .authenticated()
+                        .anyRequest().permitAll())
+                .httpBasic(Customizer.withDefaults())
+                .csrf(AbstractHttpConfigurer::disable);
+        return http.build();
     }
 
-    @Autowired
-    public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
-        auth
-                .inMemoryAuthentication()
-                .withUser(userName).password("{noop}" + userPassword).roles("USER");
+    @Bean
+    protected UserDetailsService userDetailsService() {
+        final UserDetails user = User.withUsername(userName)
+                .password("{noop}" + userPassword)
+                .roles("USER")
+                .build();
+        return new InMemoryUserDetailsManager(user);
     }
 
 }

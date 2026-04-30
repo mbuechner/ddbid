@@ -40,3 +40,4 @@ build/
 ### VS Code ###
 .vscode/
 /nbactions.xml
+/postgres-import/

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ * Copyright 2022-2026 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import de.ddb.labs.ddbid.service.GitHubService;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -49,6 +48,7 @@ import okhttp3.Response;
 import org.apache.commons.codec.binary.Base32;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.csv.DuplicateHeaderMode;
 import org.apache.commons.csv.QuoteMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -68,9 +68,6 @@ public class DirectMigrationCronJob implements CronJobInterface {
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    @Value(value = "${ddbid.apikey}")
-    private String apiKey;
 
     @Autowired
     private GitHubService gitHub;
@@ -599,7 +596,7 @@ public class DirectMigrationCronJob implements CronJobInterface {
 
     @Override
     @Scheduled(cron = "${ddbid.cron.directmigration}")
-    @Retryable(value = {Exception.class}, maxAttemptsExpression = "${ddbid.cron.retry.maxAttempts}", backoff = @Backoff(delayExpression = "${ddbid.cron.retry.delay}"))
+    @Retryable(retryFor = {Exception.class}, maxAttemptsExpression = "${ddbid.cron.retry.max-attempts}", backoff = @Backoff(delayExpression = "${ddbid.cron.retry.delay}"))
     public void schedule() throws Exception {
 
         log.info("Start to make new direct migartion list...");
@@ -629,8 +626,8 @@ public class DirectMigrationCronJob implements CronJobInterface {
                 .setRecordSeparator("\n")
                 .setIgnoreEmptyLines(false)
                 .setAllowMissingColumnNames(true)
-                .setAllowDuplicateHeaderNames(true)
-                .build();
+                .setDuplicateHeaderMode(DuplicateHeaderMode.ALLOW_ALL)
+                .get();
 
         try (final FileOutputStream os = new FileOutputStream(outputTempFile); final CSVPrinter printer = new CSVPrinter(new OutputStreamWriter(os, StandardCharsets.UTF_8), csvFormat)) {
 
@@ -696,7 +693,6 @@ public class DirectMigrationCronJob implements CronJobInterface {
 
                     final Request request = new Request.Builder().url(Application.API + "/items/" + provider_id)
                             .addHeader("Accept", "application/json")
-                            .addHeader("Authorization", "OAuth oauth_consumer_key=\"" + apiKey + "\"")
                             .build();
                     try (final Response response = httpClient.newCall(request).execute()) {
                         if (response.isSuccessful()) {
@@ -715,7 +711,6 @@ public class DirectMigrationCronJob implements CronJobInterface {
                     String supplier_name = "";
                     final Request request2 = new Request.Builder().url(Application.API + "/items/" + supplier_id)
                             .addHeader("Accept", "application/json")
-                            .addHeader("Authorization", "OAuth oauth_consumer_key=\"" + apiKey + "\"")
                             .build();
                     try (final Response response = httpClient.newCall(request2).execute()) {
                         if (response.isSuccessful()) {

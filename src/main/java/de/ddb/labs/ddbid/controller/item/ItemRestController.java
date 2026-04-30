@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ * Copyright 2022-2026 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,14 @@ import de.ddb.labs.ddbid.model.item.Item;
 import de.ddb.labs.ddbid.model.paging.Page;
 import de.ddb.labs.ddbid.model.paging.PagingRequest;
 import de.ddb.labs.ddbid.service.ItemService;
-import org.springframework.beans.factory.annotation.Autowired;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.sql.Timestamp;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -33,7 +35,7 @@ public class ItemRestController {
 
     private final ItemService service;
 
-    @Autowired
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "Spring services are container-managed collaborators.")
     public ItemRestController(ItemService ddbIdService) {
         this.service = ddbIdService;
     }
@@ -43,9 +45,13 @@ public class ItemRestController {
         return service.getDdbIds(pagingRequest);
     }
 
-    @PostMapping
-    @RequestMapping("timestamp")
+    @GetMapping("timestamp")
     public Map<String, Timestamp> timestamps() {
         return service.getTimestamps();
+    }
+
+    @GetMapping("filter-options")
+    public Map<String, List<String>> filterOptions() {
+        return service.getFilterOptions();
     }
 }

@@ -1,0 +1,129 @@
+{
+  "properties": [
+    {
+      "name": "ddbid.cron.objects",
+      "type": "java.lang.String",
+      "description": "Cron expression for the object dump/import job."
+    },
+    {
+      "name": "ddbid.cron.directmigration",
+      "type": "java.lang.String",
+      "description": "Cron expression for the direct migration job."
+    },
+    {
+      "name": "ddbid.cron.retry.delay",
+      "type": "java.lang.Long",
+      "description": "Delay between retry attempts in milliseconds."
+    },
+    {
+      "name": "ddbid.cron.retry.max-attempts",
+      "type": "java.lang.Integer",
+      "description": "Maximum number of retry attempts for scheduled jobs."
+    },
+    {
+      "name": "ddbid.database",
+      "type": "java.lang.String",
+      "description": "Path to the local H2 database file or a JDBC URL when supported by the selected database type."
+    },
+    {
+      "name": "ddbid.database.type",
+      "type": "java.lang.String",
+      "description": "Database backend to use. Supported values are h2 and postgres."
+    },
+    {
+      "name": "ddbid.database.url",
+      "type": "java.lang.String",
+      "description": "JDBC URL for PostgreSQL, for example jdbc:postgresql://localhost:5432/ddbid."
+    },
+    {
+      "name": "ddbid.database.user",
+      "type": "java.lang.String",
+      "description": "Database user name for PostgreSQL."
+    },
+    {
+      "name": "ddbid.database.password",
+      "type": "java.lang.String",
+      "description": "Database password for PostgreSQL."
+    },
+    {
+      "name": "ddbid.database.indexes.auto",
+      "type": "java.lang.Boolean",
+      "description": "Create missing database indexes automatically on startup. Disabled by default because H2 locks large tables while indexes are created."
+    },
+    {
+      "name": "ddbid.database.table.item",
+      "type": "java.lang.String",
+      "description": "Database table name for items."
+    },
+    {
+      "name": "ddbid.database.table.organization",
+      "type": "java.lang.String",
+      "description": "Database table name for organizations."
+    },
+    {
+      "name": "ddbid.database.table.person",
+      "type": "java.lang.String",
+      "description": "Database table name for persons."
+    },
+    {
+      "name": "ddbid.statistics.cache.refresh-cron",
+      "type": "java.lang.String",
+      "description": "Cron expression for refreshing the daily statistics cache."
+    },
+    {
+      "name": "ddbid.dump.lockfile",
+      "type": "java.lang.String",
+      "description": "Path to the lock file used while a dump is running."
+    },
+    {
+      "name": "ddbid.datapath.item",
+      "type": "java.lang.String",
+      "description": "Directory for item dump files."
+    },
+    {
+      "name": "ddbid.datapath.organization",
+      "type": "java.lang.String",
+      "description": "Directory for organization dump files."
+    },
+    {
+      "name": "ddbid.datapath.person",
+      "type": "java.lang.String",
+      "description": "Directory for person dump files."
+    },
+    {
+      "name": "ddbid.security.user",
+      "type": "java.lang.String",
+      "description": "HTTP basic authentication user."
+    },
+    {
+      "name": "ddbid.security.password",
+      "type": "java.lang.String",
+      "description": "HTTP basic authentication password."
+    },
+    {
+      "name": "ddbid.git.url",
+      "type": "java.lang.String",
+      "description": "Git repository URL for migration data."
+    },
+    {
+      "name": "ddbid.git.branch",
+      "type": "java.lang.String",
+      "description": "Git branch ref for migration data."
+    },
+    {
+      "name": "ddbid.git.name",
+      "type": "java.lang.String",
+      "description": "Git user name for repository access."
+    },
+    {
+      "name": "ddbid.git.pass",
+      "type": "java.lang.String",
+      "description": "Git password or token for repository access."
+    },
+    {
+      "name": "scheduler.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable or disable scheduled jobs."
+    }
+  ]
+}

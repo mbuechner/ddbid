@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ * Copyright 2022-2026 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,8 @@ import de.ddb.labs.ddbid.model.organization.Organization;
 import de.ddb.labs.ddbid.model.paging.Page;
 import de.ddb.labs.ddbid.model.paging.PagingRequest;
 import de.ddb.labs.ddbid.service.OrganizationService;
-import org.springframework.beans.factory.annotation.Autowired;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,7 +35,7 @@ public class OrganizationRestController {
 
     private final OrganizationService service;
 
-    @Autowired
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "Spring services are container-managed collaborators.")
     public OrganizationRestController(OrganizationService ddbIdService) {
         this.service = ddbIdService;
     }
@@ -44,8 +45,7 @@ public class OrganizationRestController {
         return service.getDdbIds(pagingRequest);
     }
 
-    @PostMapping
-    @RequestMapping("timestamp")
+    @GetMapping("timestamp")
     public Map<String, Timestamp> timestamps() {
         return service.getTimestamps();
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ * Copyright 2022-2026 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 package de.ddb.labs.ddbid.cronjob.helper;
 
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -31,7 +33,7 @@ public class Facets {
     @Setter
     private String field;
 
-    public Facets(LinkedHashMap<String, Integer> facetValues, int numberOfFacets, String field) {
+    public Facets(Map<String, Integer> facetValues, int numberOfFacets, String field) {
         this.facetValues = new LinkedHashMap<>(facetValues);
         this.numberOfFacets = numberOfFacets;
         this.field = field;
@@ -41,16 +43,19 @@ public class Facets {
     }
                 
     public LinkedHashMap<String, Integer> getFacetValues() {
+        if (facetValues == null) {
+            return new LinkedHashMap<>();
+        }
         return new LinkedHashMap<>(facetValues);
     }
     
-    public void setFacetValues(LinkedHashMap[] hms) {
+    public void setFacetValues(List<Map<String, Object>> hms) {
         if (facetValues == null) {
             facetValues = new LinkedHashMap<>();
         }
-        for (LinkedHashMap hm : hms) {
+        for (Map<String, Object> hm : hms) {
             final String newKey = (String) hm.get("value");
-            final int newValue = (int) hm.get("count");
+            final int newValue = ((Number) hm.get("count")).intValue();
             facetValues.put(newKey, newValue);
         }
     }

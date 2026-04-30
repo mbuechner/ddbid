@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ * Copyright 2022-2026 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class Helper {
 
-    public static Set<File> getOkCmpFiles(String dataPath, Comparator comparator) {
+    public static Set<File> getOkCmpFiles(String dataPath, Comparator<File> comparator) {
 
         // dump files
         final Pattern dumpPattern = Pattern.compile(CMP_FILES_PATTERN);
@@ -66,7 +66,7 @@ public class Helper {
         while (dumpfilesSortedIt.hasNext()) {
             final File dump = dumpfilesSortedIt.next();
             final String dumpFileName = dump.getName().replace(OUTPUT_FILENAME_EXT, OK_FILENAME_EXT);
-            if (!Arrays.stream(okfilefiles).map(p -> p.getName()).anyMatch(dumpFileName::equals)) {
+            if (okfilefiles == null || !Arrays.stream(okfilefiles).map(File::getName).anyMatch(dumpFileName::equals)) {
                 dumpfilesSortedIt.remove();
             }
         }
@@ -74,7 +74,7 @@ public class Helper {
         return dumpfilesSorted;
     }
 
-    public static Set<File> getOkDumpFiles(String dataPath, Comparator comparator) {
+    public static Set<File> getOkDumpFiles(String dataPath, Comparator<File> comparator) {
 
         // dump files
         final Pattern dumpPattern = Pattern.compile(DUMP_FILES_PATTERN);
@@ -101,7 +101,7 @@ public class Helper {
         while (dumpfilesSortedIt.hasNext()) {
             final File dump = dumpfilesSortedIt.next();
             final String dumpFileName = dump.getName().replace(OUTPUT_FILENAME_EXT, OK_FILENAME_EXT);
-            if (!Arrays.stream(okfilefiles).map(p -> p.getName()).anyMatch(dumpFileName::equals)) {
+            if (okfilefiles == null || !Arrays.stream(okfilefiles).map(File::getName).anyMatch(dumpFileName::equals)) {
                 dumpfilesSortedIt.remove();
             }
         }

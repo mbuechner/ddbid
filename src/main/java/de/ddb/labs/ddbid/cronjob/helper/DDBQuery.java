@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ * Copyright 2022-2026 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,21 +31,20 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
 public class DDBQuery {
 
+    // This is using the _old_ API URL!
+    private final static String API = "https://api.deutsche-digitale-bibliothek.de";
+
     @Autowired
     private OkHttpClient httpClient;
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    @Value(value = "${ddbid.apikey}")
-    private String apiKey;
 
     private List<String> searchValues = new ArrayList<>();
     private List<FACET> facetValues = new ArrayList<>();
@@ -159,7 +158,8 @@ public class DDBQuery {
     public String getSearchQuery() throws UnsupportedEncodingException {
 
         final StringBuffer sb = new StringBuffer()
-                .append("https://api.deutsche-digitale-bibliothek.de/search")
+                .append(API)
+                .append("/search")
                 .append("?query=")
                 .append(URLEncoder.encode(getSearchText(), "UTF-8"))
                 .append("&rows=0")
@@ -179,7 +179,6 @@ public class DDBQuery {
             log.debug("GET " + getSearchQuery());
             final Request request = new Request.Builder().url(getSearchQuery())
                     .addHeader("Accept", "application/json")
-                    .addHeader("Authorization", "OAuth oauth_consumer_key=\"" + apiKey + "\"")
                     .build();
             try (final Response response = httpClient.newCall(request).execute()) {
                 if (response.isSuccessful()) {

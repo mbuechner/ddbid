@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ * Copyright 2022-2026 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,13 @@ public class DumpCorrector {
 
     private final static String INPUT_FILE = "2022-03-13.csv.gz";
     private final static String OUTPUT_FILE = "2022-03-13.csv_CORRECTED.gz";
+    private static final CSVFormat OUTPUT_FORMAT = CSVFormat.DEFAULT.builder()
+            .setHeader("timestamp", "id", "status", "provider_item_id", "dataset_id", "label", "provider_id", "sector_fct", "supplier_id")
+            .get();
+    private static final CSVFormat INPUT_FORMAT = CSVFormat.DEFAULT.builder()
+            .setHeader()
+            .setSkipHeaderRecord(true)
+            .get();
 
     public static void main(String[] args) throws IOException {
         try (final InputStream fileStream = new FileInputStream(INPUT_FILE);
@@ -52,9 +59,9 @@ public class DumpCorrector {
                 final OutputStream os = Files.newOutputStream(Path.of(OUTPUT_FILE), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); 
                 final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8);
                 final BufferedWriter bw = new BufferedWriter(ow);
-                final CSVPrinter csvPrinter = new CSVPrinter(bw, CSVFormat.DEFAULT.withHeader("timestamp", "id", "status", "provider_item_id", "dataset_id", "label", "provider_id", "sector_fct", "supplier_id"))) {
+                final CSVPrinter csvPrinter = new CSVPrinter(bw, OUTPUT_FORMAT)) {
 
-            final Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(decoder);
+            final Iterable<CSVRecord> records = INPUT_FORMAT.parse(decoder);
 
             for (final CSVRecord record : records) {
                 final Map<String, String> map = new LinkedHashMap<>();

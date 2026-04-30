@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ * Copyright 2022-2026 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,8 +35,6 @@ import okhttp3.Response;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Service;
 
@@ -51,17 +49,14 @@ public class Correct implements Runnable {
     @Autowired
     private Database database;
     
-    @Value(value = "${ddbid.apikey}")
-    private String apiKey;
-    
     @Autowired
     private OkHttpClient httpClient;
 
     private void check(Type type) {
 
-        final MultiValuedMap<Integer, String> mi = database.getJdbcTemplate().query(QUERY.replace("{{tbl}}", type.getType().toLowerCase()), new ResultSetExtractor<MultiValuedMap>() {
+        final MultiValuedMap<Integer, String> mi = database.getJdbcTemplate().query(QUERY.replace("{{tbl}}", type.getType().toLowerCase()), new ResultSetExtractor<MultiValuedMap<Integer, String>>() {
             @Override
-            public MultiValuedMap extractData(ResultSet rs) throws SQLException, DataAccessException {
+            public MultiValuedMap<Integer, String> extractData(ResultSet rs) throws SQLException {
                 final MultiValuedMap<Integer, String> mapRet = new ArrayListValuedHashMap<>();
                 while (rs.next()) {
                     mapRet.put(rs.getInt("pkey"), rs.getString("id"));
@@ -95,7 +90,6 @@ public class Correct implements Runnable {
             final Request request = new Request.Builder()
                     .url(api + URLEncoder.encode(i.getValue(), StandardCharsets.UTF_8))
                     .get()
-                    .addHeader("Authorization", "OAuth oauth_consumer_key=\"" + apiKey + "\"")
                     .build();
 
             httpClient.newCall(request).enqueue(new Callback() {

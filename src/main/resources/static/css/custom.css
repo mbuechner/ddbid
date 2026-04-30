@@ -1,12 +1,48 @@
 #btn-back-to-top {
     position: fixed;
     bottom: 18px;
-    left: 12px;
+    right: 12px;
     display: none;
     z-index: 10000;
 }
 table th {
     min-width: 150px;
+}
+.container-fluid,
+.dt-container,
+.dataTables_wrapper {
+    max-width: 100%;
+}
+.table-responsive {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    width: 100%;
+}
+#ddbid {
+    table-layout: fixed;
+    width: 100% !important;
+    min-width: 100%;
+    max-width: 100% !important;
+}
+#ddbid th,
+#ddbid td {
+    max-width: 320px;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+#ddbid td a {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    word-break: break-all;
+}
+#ddbid .dt-column-title,
+#ddbid .dtcc-search,
+#ddbid .dtcc-search input {
+    max-width: 100%;
 }
 .dataTables_processing {
     z-index: 1 !important;
@@ -17,8 +53,97 @@ table th {
     margin: 0 !important;
     border: 0 !important;
 }
-#missingBySectorLegend, #missingByProviderLegend {
-    font-size: 10px;
+.download-list {
+    max-height: 420px;
+    overflow: auto;
+}
+.download-entry {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+}
+.download-entry-link {
+    min-width: 0;
+}
+.download-entry-size {
+    flex: 0 0 auto;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+}
+.stat-tile {
+    min-height: 132px;
+    padding: 18px;
+    border: 1px solid #dde2e6;
+    border-radius: 6px;
+    background: #fff;
+}
+.stat-label {
+    color: #6c757d;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.stat-value {
+    margin-top: 10px;
+    color: #212529;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+.stat-context {
+    margin-top: 8px;
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+.statistics-section {
+    padding: 18px;
+    border: 1px solid #dde2e6;
+    border-radius: 6px;
+    background: #fff;
+}
+.chart-frame {
+    position: relative;
+    height: 360px;
+}
+.chart-frame-large {
+    height: 420px;
+}
+.stat-table {
+    table-layout: fixed;
+}
+.stat-table td {
+    padding-top: 6px;
+    padding-bottom: 6px;
+    border-top: 1px solid #eef1f3;
+    vertical-align: middle;
+}
+.stat-table-label {
+    width: auto;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+.stat-table-label a {
+    display: inline;
+    overflow-wrap: anywhere;
+    word-break: break-all;
+    white-space: normal;
+}
+.stat-table-value {
+    width: 132px;
+    color: #6c757d;
+    font-size: 0.8125rem;
+    text-align: right;
+    white-space: nowrap;
+}
+.column-filter-row th,
+.column-filter-row td {
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+}
+.column-filter-row .ddbid-column-filter,
+.column-filter-row .dtcc-search input {
+    min-width: 130px;
 }
 .container {
     margin-top: 100px

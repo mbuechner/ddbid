@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ * Copyright 2022-2026 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,68 +21,147 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Locale;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @Slf4j
-public class Database<T> {
+public class Database {
     
-    private final HikariConfig config;
+    private final String databaseType;
     private final String database;
-    private JdbcTemplate duckdb;
+    private final String databaseUrl;
+    private final String databaseUser;
+    private final String databasePassword;
+    private HikariConfig config;
+    private JdbcTemplate jdbcTemplate;
     @Getter
     private HikariDataSource dataSource;
-    @Getter
-    private Connection connection;
     
-    public Database(String database) {
+    public Database(String databaseType, String database, String databaseUrl, String databaseUser, String databasePassword) {
+        this.databaseType = databaseType;
         this.database = database;
-        
-        config = new HikariConfig();
-        config.setDriverClassName("org.h2.Driver");
-        config.setConnectionTestQuery("SELECT 1");
-        config.setReadOnly(false);
-        config.setMaximumPoolSize(16);
-        config.setMinimumIdle(8);
-        config.setConnectionTimeout(600000); // 10min.
-        config.setJdbcUrl("jdbc:h2:" + new File(database).getAbsolutePath());
-        // config.setUsername("test");
-        // config.setPassword("test");
-
+        this.databaseUrl = databaseUrl;
+        this.databaseUser = databaseUser;
+        this.databasePassword = databasePassword;
     }
     
     public void init() {
         if (dataSource == null || dataSource.isClosed()) {
-            log.info("Initialize database at {}...", database);
+            final DatabaseType type = DatabaseType.from(databaseType);
+            config = createConfig();
+            log.info("Initialize {} database at {}...", type.getType(), config.getJdbcUrl());
             dataSource = new HikariDataSource(config);
-            try {
-                connection = dataSource.getConnection();
-            } catch (SQLException ex) {
-                log.warn("Could not cloade DB connection. {}", ex.getMessage());
-            }
-            duckdb = new JdbcTemplate(dataSource);
-//            duckdb.execute("SET memory_limit='1GB';");
-//            duckdb.execute("SET threads TO 1;");
-//            duckdb.execute("SET checkpoint_threshold='1MB';");
+            jdbcTemplate = new JdbcTemplate(dataSource);
+        }
+    }
+
+    private HikariConfig createConfig() {
+        final DatabaseType type = DatabaseType.from(databaseType);
+        final HikariConfig hikariConfig = new HikariConfig();
+        configureDefaults(hikariConfig);
+        switch (type) {
+            case H2 -> configureH2(hikariConfig);
+            case POSTGRES -> configurePostgres(hikariConfig);
+            default -> throw new IllegalStateException("Unsupported database type: " + type);
+        }
+        return hikariConfig;
+    }
+
+    private void configureDefaults(HikariConfig hikariConfig) {
+        final int connectionTimeout = 600000; // 10min.
+        hikariConfig.setConnectionTestQuery("SELECT 1");
+        hikariConfig.setReadOnly(false);
+        hikariConfig.setMaximumPoolSize(16);
+        hikariConfig.setMinimumIdle(8);
+        hikariConfig.setConnectionTimeout(connectionTimeout);
+    }
+
+    private void configureH2(HikariConfig hikariConfig) {
+        final String databaseName = (database == null || database.isBlank()) ? "data/ddbid_duckdb_DO_NOT_DELETE_ITS_IMPORTANT.db" : database;
+        hikariConfig.setDriverClassName("org.h2.Driver");
+        if (databaseName.startsWith("jdbc:h2:")) {
+            hikariConfig.setJdbcUrl(addH2LockTimeout(databaseName));
+        } else {
+            hikariConfig.setJdbcUrl(addH2LockTimeout("jdbc:h2:" + new File(databaseName).getAbsolutePath()));
+        }
+    }
+
+    private static String addH2LockTimeout(String jdbcUrl) {
+        if (jdbcUrl.toUpperCase(Locale.ROOT).contains("LOCK_TIMEOUT=")) {
+            return jdbcUrl;
+        }
+        return jdbcUrl + ";LOCK_TIMEOUT=360000";
+    }
+
+    private void configurePostgres(HikariConfig hikariConfig) {
+        final String jdbcUrl;
+        if (databaseUrl != null && !databaseUrl.isBlank()) {
+            jdbcUrl = databaseUrl;
+        } else if (database != null && database.startsWith("jdbc:postgresql:")) {
+            jdbcUrl = database;
+        } else {
+            throw new IllegalStateException("PostgreSQL requires ddbid.database.url or DDBID_DATABASE_URL.");
+        }
+
+        hikariConfig.setDriverClassName("org.postgresql.Driver");
+        hikariConfig.setJdbcUrl(jdbcUrl);
+        if (databaseUser != null && !databaseUser.isBlank()) {
+            hikariConfig.setUsername(databaseUser);
+        }
+        if (databasePassword != null && !databasePassword.isBlank()) {
+            hikariConfig.setPassword(databasePassword);
         }
     }
    
     @SuppressFBWarnings(value = "EI_EXPOSE_REP", justification = "Like to expose intenal rep. Only one DB connection/ template available")
     public JdbcTemplate getJdbcTemplate() {
         init();
-        return duckdb;
+        return jdbcTemplate;
+    }
+
+    public Connection getConnection() throws SQLException {
+        init();
+        final Connection newConnection = dataSource.getConnection();
+        newConnection.setAutoCommit(false);
+        return newConnection;
+    }
+
+    public boolean isPostgres() {
+        return DatabaseType.from(databaseType) == DatabaseType.POSTGRES;
     }
     
     public void close() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
-            try {
-                connection.close();
-            } catch (SQLException ex) {
-                log.warn("Could not close DB connection. {}", ex.getMessage());
-            }
             log.info("Database closed");
+        }
+    }
+
+    private enum DatabaseType {
+        H2("h2"),
+        POSTGRES("postgres");
+
+        @Getter
+        private final String type;
+
+        DatabaseType(String type) {
+            this.type = type;
+        }
+
+        private static DatabaseType from(String value) {
+            if (value == null || value.isBlank()) {
+                return H2;
+            }
+            final String normalized = value.trim().toLowerCase();
+            if ("postgres".equals(normalized) || "postgresql".equals(normalized) || "pg".equals(normalized)) {
+                return POSTGRES;
+            }
+            if ("h2".equals(normalized)) {
+                return H2;
+            }
+            throw new IllegalArgumentException("Unsupported database type: " + value);
         }
     }
 }

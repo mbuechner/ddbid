@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ * Copyright 2022-2026 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,19 @@
  */
 package de.ddb.labs.ddbid.controller;
 
+import de.ddb.labs.ddbid.service.DownloadCatalogService;
+import de.ddb.labs.ddbid.service.DownloadCatalogService.DownloadCatalog;
+import de.ddb.labs.ddbid.service.DownloadCatalogService.MigrationCatalog;
 import de.ddb.labs.ddbid.service.GitHubService;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.servlet.http.HttpServletResponse;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.tomcat.util.http.fileupload.IOUtils;
+import jakarta.servlet.http.HttpServletResponse;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.errors.CorruptObjectException;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
@@ -35,13 +37,14 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.StreamUtils;
 
 @RestController
 @RequestMapping("download")
-@Slf4j
-public class DownloadRestController<T> {
+public class DownloadRestController {
 
     @Value(value = "${ddbid.datapath.item}")
     private String itemDataPath;
@@ -55,60 +58,60 @@ public class DownloadRestController<T> {
     @Autowired
     private GitHubService gitHub;
 
-    @GetMapping
-    @RequestMapping("ddbid/{type:.+}/{filename:.+}")
+    @Autowired
+    private DownloadCatalogService downloadCatalogService;
+
+    @GetMapping("catalog")
+    public DownloadCatalog catalog(@RequestParam(value = "refresh", defaultValue = "false") boolean refresh) {
+        return downloadCatalogService.getCatalog(refresh);
+    }
+
+    @GetMapping("catalog/migration")
+    public MigrationCatalog migrationCatalog(@RequestParam(value = "refresh", defaultValue = "false") boolean refresh) {
+        return downloadCatalogService.getMigrationCatalog(refresh);
+    }
+
+    @GetMapping("ddbid/{type:.+}/{filename:.+}")
     public void getDdbIdFile(@PathVariable("type") String type, @PathVariable("filename") String filename, HttpServletResponse response) throws IOException {
 
         if (type.equals("item")) {
-            final Set s = Stream.of(new File(itemDataPath).listFiles())
-                    .filter(file -> !file.isDirectory())
-                    .filter(file -> file.getName().endsWith(".gz"))
-                    .map(File::getName)
-                    .collect(Collectors.toSet());
+            final Set<String> s = getDumpFileNames(itemDataPath);
             if (s.contains(filename)) {
-                final File file = new File(itemDataPath + filename);
+                final File file = new File(itemDataPath, filename);
                 try (final InputStream is = new FileInputStream(file)) {
 
                     response.setContentLengthLong(file.length());
                     response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
                     response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
 
-                    IOUtils.copyLarge(is, response.getOutputStream());
+                    StreamUtils.copy(is, response.getOutputStream());
                 }
             }
 
         } else if (type.equals("person")) {
-            final Set s = Stream.of(new File(personDataPath).listFiles())
-                    .filter(file -> !file.isDirectory())
-                    .filter(file -> file.getName().endsWith(".gz"))
-                    .map(File::getName)
-                    .collect(Collectors.toSet());
+            final Set<String> s = getDumpFileNames(personDataPath);
             if (s.contains(filename)) {
-                final File file = new File(personDataPath + filename);
+                final File file = new File(personDataPath, filename);
                 try (final InputStream is = new FileInputStream(file)) {
 
                     response.setContentLengthLong(file.length());
                     response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
                     response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
 
-                    IOUtils.copyLarge(is, response.getOutputStream());
+                    StreamUtils.copy(is, response.getOutputStream());
                 }
             }
         } else if (type.equals("organization")) {
-            final Set s = Stream.of(new File(organizationDataPath).listFiles())
-                    .filter(file -> !file.isDirectory())
-                    .filter(file -> file.getName().endsWith(".gz"))
-                    .map(File::getName)
-                    .collect(Collectors.toSet());
+            final Set<String> s = getDumpFileNames(organizationDataPath);
             if (s.contains(filename)) {
-                final File file = new File(organizationDataPath + filename);
+                final File file = new File(organizationDataPath, filename);
                 try (final InputStream is = new FileInputStream(file)) {
 
                     response.setContentLengthLong(file.length());
                     response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
                     response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
 
-                    IOUtils.copyLarge(is, response.getOutputStream());
+                    StreamUtils.copy(is, response.getOutputStream());
                 }
             }
         } else {
@@ -117,11 +120,22 @@ public class DownloadRestController<T> {
         }
     }
 
-    @GetMapping
-    @RequestMapping("migration/{commit}/{date}")
+    @GetMapping("migration/{commit}/{date}")
     public void getMigrationFile(@PathVariable("commit") String commit, @PathVariable("date") String date, HttpServletResponse response) throws IOException, IncorrectObjectTypeException, CorruptObjectException, GitAPIException {
         response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + date + "-" + GitHubService.FILE_NAME + "\"");
         response.setContentType(MediaType.TEXT_PLAIN_VALUE);
-        IOUtils.copyLarge(gitHub.getFile(commit), response.getOutputStream());
+        StreamUtils.copy(gitHub.getFile(commit), response.getOutputStream());
+    }
+
+    private Set<String> getDumpFileNames(String dataPath) {
+        final File[] files = new File(dataPath).listFiles();
+        if (files == null) {
+            return Collections.emptySet();
+        }
+        return Stream.of(files)
+                .filter(file -> !file.isDirectory())
+                .filter(file -> file.getName().endsWith(".gz"))
+                .map(File::getName)
+                .collect(Collectors.toSet());
     }
 }

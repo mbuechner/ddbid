@@ -1,22 +1,28 @@
-FROM maven:3-openjdk-17-slim AS MAVEN_CHAIN
-COPY pom.xml /tmp/
-COPY src /tmp/src/
-WORKDIR /tmp/
-RUN mvn package
+# syntax=docker/dockerfile:1.7
+FROM maven:3-eclipse-temurin-25 AS build
 
-FROM debian:bullseye-slim
+WORKDIR /workspace
+COPY pom.xml .
+# Warm project dependencies without traversing plugin/report graphs. The broader
+# dependency:go-offline goal can trip over stale npm WebJar version ranges.
+RUN --mount=type=cache,target=/root/.m2 mvn -B -DskipTests dependency:resolve
+COPY src ./src
+RUN --mount=type=cache,target=/root/.m2 mvn -B -DskipTests package
+
+FROM eclipse-temurin:25-jre-alpine
+
 ENV TZ=Europe/Berlin
-ENV DDBID.PORT=8080
-ENV XDG_CONFIG_HOME=/tmp
-RUN apt-get -y update && apt-get -y install openjdk-17-jre nano htop && mkdir /home/ddbid
-RUN apt-get -y install wget unzip && \
-     wget "https://github.com/duckdb/duckdb/releases/download/v0.3.2/duckdb_cli-linux-amd64.zip" -O /tmp/temp.zip && \
-     unzip /tmp/temp.zip -d /usr/bin/ && \
-     chmod 755 /usr/bin/duckdb && \
-     rm /tmp/temp.zip && \
-     apt-get -y remove wget unzip
-COPY --from=MAVEN_CHAIN /tmp/target/ddbid.jar /home/ddbid/ddbid.jar
-WORKDIR /home/ddbid/
-CMD ["java", "-Xms512M", "-Xmx1G", "-Xss512k", "-XX:MaxDirectMemorySize=2G","-XX:+UseShenandoahGC", "-XX:+UnlockExperimentalVMOptions", "-XX:+ShenandoahUncommit", "-XX:ShenandoahGCHeuristics=compact", "-XX:ShenandoahUncommitDelay=1000", "-XX:ShenandoahGuaranteedGCInterval=10000", "-jar", "ddbid.jar"]
 
+RUN addgroup -S ddbid \
+    && adduser -S -G ddbid ddbid \
+    && mkdir -p /app/data/dumps/item /app/data/dumps/person /app/data/dumps/organization \
+    && chown -R ddbid:ddbid /app
+
+WORKDIR /app
+COPY --from=build --chown=ddbid:ddbid /workspace/target/ddbid.jar /app/ddbid.jar
+
+USER ddbid
+VOLUME ["/app/data"]
 EXPOSE 8080
+
+ENTRYPOINT ["java", "-Xms512M", "-Xmx1G", "-jar", "/app/ddbid.jar"]

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ * Copyright 2022-2026 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,31 +16,32 @@
 package de.ddb.labs.ddbid.service;
 
 import de.ddb.labs.ddbid.database.Database;
-import de.ddb.labs.ddbid.model.Status;
 import de.ddb.labs.ddbid.model.organization.Organization;
 import de.ddb.labs.ddbid.model.organization.OrganizationDoc;
-import de.ddb.labs.ddbid.model.paging.Column;
-import de.ddb.labs.ddbid.model.paging.Order;
 import de.ddb.labs.ddbid.model.paging.Page;
 import de.ddb.labs.ddbid.model.paging.PagingRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 public class OrganizationService {
 
+    private static final long TIMESTAMP_CACHE_TTL_MILLIS = 600_000;
+
     private final Calendar cal = Calendar.getInstance(Locale.GERMANY);
     private final DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE;
+    private volatile Timestamp latestTimestampCache;
+    private volatile long latestTimestampCacheUntil;
+    private volatile Map<String, Timestamp> timestampsCache;
+    private volatile long timestampsCacheUntil;
     
     @Autowired
     private Database database;
@@ -48,148 +49,68 @@ public class OrganizationService {
     private String tableName;
 
     public Page<Organization> getDdbIds(PagingRequest pagingRequest) {
-
-        log.debug("Request received: {}", pagingRequest.toString());
-
-        String status = null;
-        if (pagingRequest.getStatus() == null) {
-            status = "MISSING";
-        } else {
-            final List<String> s = Arrays.stream(Status.values()).map(Enum::name).collect(Collectors.toList());
-            if (s.contains(pagingRequest.getStatus()) || pagingRequest.getStatus().equals("ALL")) {
-                status = pagingRequest.getStatus();
-            }
-        }
-
-        final StringBuilder query = new StringBuilder("SELECT * FROM \"" + tableName + "\" ");
-
-        // WHERE (Search)
-        final List<Object> whereValues = new ArrayList<>();
-        final StringBuilder where = new StringBuilder("WHERE ");
-
-        // status (NEW, MISSING, ALL -> null)
-        if (status != null && !status.equals("ALL")) {
-            where.append("\"status\"=? AND ");
-            whereValues.add(status);
-        }
-
-        // timestamp (null -> show latest, -1 -> show all, value)
-        if (pagingRequest.getTimestamp() == null) {
-            where.append("\"timestamp\"=(SELECT MAX(\"timestamp\") FROM \"");
-            where.append(tableName);
-            where.append("\") AND ");
-        } else if (pagingRequest.getTimestamp() == -1) {
-        } else {
-            where.append("\"timestamp\"=? AND ");
-            whereValues.add(new Timestamp(pagingRequest.getTimestamp()));
-        }
-
-        // query for totalCount
-        String whereClause = where.toString();
-        // no where clauses? remove it
-        if (whereClause.endsWith("AND ")) {
-            whereClause = whereClause.substring(0, whereClause.length() - 4);
-        } else if (where.toString().endsWith("WHERE ")) {
-            whereClause = whereClause.substring(0, whereClause.length() - 6);
-        }
-        final int totalCount = database.getJdbcTemplate().queryForObject("SELECT count(*) FROM \"" + tableName + "\" " + whereClause, Integer.class, whereValues.toArray());
-        // totalCount end
-
-        // with search
-        if (!pagingRequest.getSearch().getValue().isEmpty()) {
-            where.append("(");
-            for (String field : OrganizationDoc.getStaticHeader()) {
-                if (!field.equals("status") || !field.equals("timestamp")) {
-                    where.append('"');
-                    where.append(field);
-                    where.append('"');
-                    where.append(" ILIKE ? OR ");
-                    whereValues.add("%" + pagingRequest.getSearch().getValue() + "%");
-                }
-            }
-            where.setLength(where.length() - 3); // remove last 'OR '
-            where.append(") "); // close )
-        }
-
-        // no where clauses? remove it
-        if (where.toString().endsWith("AND ")) {
-            where.setLength(where.length() - 4);
-        } else if (where.toString().endsWith("WHERE ")) {
-            where.setLength(where.length() - 6);
-        }
-
-        query.append(where);
-
-        if (pagingRequest.getTimestamp() != null) {
-            log.debug("Timestamp: {}", new Timestamp(pagingRequest.getTimestamp()));
-        }
-
-        final String filteredCountQuery = query.toString().replaceFirst("\\*", "count(*)");
-        final int filteredCount = database.getJdbcTemplate().queryForObject(filteredCountQuery, Integer.class, whereValues.toArray());
-
-        // ORDER BY
-        if (!pagingRequest.getOrder().isEmpty()) {
-            final StringBuilder order = new StringBuilder("ORDER BY ");
-            for (Order o : pagingRequest.getOrder()) {
-                List<Column> columns = pagingRequest.getColumns();
-                final String columnName = columns.get(o.getColumn()).getData();
-                if (!OrganizationDoc.getStaticHeader().contains(columnName)) {
-                    continue; // prevent sql injection
-                }
-                order.append('"');
-                order.append(columnName);
-                order.append('"');
-                order.append(" ");
-                order.append(o.getDir().toString());
-                order.append(", ");
-            }
-            order.setLength(order.length() - 2); // remove ', '
-            order.append(' '); //add ' '
-            query.append(order);
-        }
-
-        // LIMIT and OFFSET (Paging)
-        final List<String> limitValues = new ArrayList<>();
-        if (pagingRequest.getLength() > 0) {
-            query.append("LIMIT ? OFFSET ?");
-            limitValues.add(Integer.toString(pagingRequest.getLength())); // LIMIT
-            limitValues.add(Integer.toString(pagingRequest.getStart())); // OFFSET
-        }
-
-        //collect values
-        final List<Object> values = new ArrayList<>();
-        values.addAll(whereValues);
-        values.addAll(limitValues);
-
-        List<Organization> ddbIds;
-        if (values.isEmpty()) {
-            ddbIds = database.getJdbcTemplate().query(query.toString(), new BeanPropertyRowMapper(Organization.class));
-        } else {
-            ddbIds = database.getJdbcTemplate().query(query.toString(), new BeanPropertyRowMapper(Organization.class), values.toArray());
-        }
-
-        final Page<Organization> page = new Page<>(ddbIds);
-        ddbIds = null; // free memory
-        page.setRecordsFiltered(filteredCount);
-        page.setRecordsTotal(totalCount);
-        page.setDraw(pagingRequest.getDraw());
-
-        log.debug("Sending page: {}", page);
-        return page;
+        return DataTablePageQueryHelper.page(
+                log,
+                database,
+                "organization",
+                tableName,
+                OrganizationDoc.getStaticHeader(),
+                Organization.class,
+                pagingRequest,
+                this::latestTimestamp);
     }
 
     public Map<String, Timestamp> getTimestamps() {
         try {
-            final List<Timestamp> ts = database.getJdbcTemplate().queryForList("SELECT DISTINCT \"timestamp\" FROM \"" + tableName + "\"", Timestamp.class);
-            final Map<String, Timestamp> m = new TreeMap<>();
-            for (Timestamp t : ts) {
-                cal.setTime(t);
-                m.put(dtf.format(t.toLocalDateTime()) + " (CW" + cal.get(Calendar.WEEK_OF_YEAR) + ")", t);
-            }
-            return m;
+            return timestamps();
         } catch (EmptyResultDataAccessException e) {
             log.debug("No record found in database for timestamp", e);
             return null;
+        }
+    }
+
+    public void clearTimestampCache() {
+        latestTimestampCache = null;
+        latestTimestampCacheUntil = 0;
+        timestampsCache = null;
+        timestampsCacheUntil = 0;
+    }
+
+    private Timestamp latestTimestamp() {
+        long now = System.currentTimeMillis();
+        Timestamp cached = latestTimestampCache;
+        if (cached != null && now < latestTimestampCacheUntil) {
+            return cached;
+        }
+        synchronized (this) {
+            now = System.currentTimeMillis();
+            cached = latestTimestampCache;
+            if (cached != null && now < latestTimestampCacheUntil) {
+                return cached;
+            }
+            cached = DataTableTimestampSqlHelper.latestTimestamp(log, database, "organization", tableName);
+            latestTimestampCache = cached;
+            latestTimestampCacheUntil = now + TIMESTAMP_CACHE_TTL_MILLIS;
+            return cached;
+        }
+    }
+
+    private Map<String, Timestamp> timestamps() {
+        long now = System.currentTimeMillis();
+        Map<String, Timestamp> cached = timestampsCache;
+        if (cached != null && now < timestampsCacheUntil) {
+            return cached;
+        }
+        synchronized (this) {
+            now = System.currentTimeMillis();
+            cached = timestampsCache;
+            if (cached != null && now < timestampsCacheUntil) {
+                return cached;
+            }
+            cached = DataTableTimestampSqlHelper.timestamps(log, database, "organization", tableName, cal, dtf);
+            timestampsCache = cached;
+            timestampsCacheUntil = now + TIMESTAMP_CACHE_TTL_MILLIS;
+            return cached;
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ * Copyright 2022-2026 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,13 @@ package de.ddb.labs.ddbid.cronjob.objects;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import static de.ddb.labs.ddbid.Application.API;
+
+import de.ddb.labs.ddbid.Application;
 import de.ddb.labs.ddbid.cronjob.helper.Helper;
-import static de.ddb.labs.ddbid.cronjob.objects.Compare.OK_FILENAME_EXT;
-import static de.ddb.labs.ddbid.cronjob.objects.Compare.OUTPUT_FILENAME_EXT;
 import de.ddb.labs.ddbid.model.Doc;
 import de.ddb.labs.ddbid.model.item.ItemDoc;
 import de.ddb.labs.ddbid.model.organization.OrganizationDoc;
 import de.ddb.labs.ddbid.model.person.PersonDoc;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -86,9 +84,6 @@ public class Dump implements Runnable {
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    @Value(value = "${ddbid.apikey}")
-    private String apiKey;
 
     @Override
     public void run() {
@@ -158,15 +153,14 @@ public class Dump implements Runnable {
         }
     }
 
-    @SuppressFBWarnings(value = "REC_CATCH_EXCEPTION", justification = "I don't understand the problem, SpotBug!")
-    public File createNewDump(String query, String dataPath, Class docType) throws NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, IOException  {
+    public <T extends Doc> File createNewDump(String query, String dataPath, Class<T> docType) throws NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, IOException  {
 
         log.info("Start to dump DDB-Ids...");
         final Timestamp currentTime = Timestamp.valueOf(ZonedDateTime.now().toLocalDateTime());
         final Doc docInstance = (Doc) docType.getDeclaredConstructor().newInstance();
 
         final String outputFileNameWithoutExt = dataPath + new SimpleDateFormat("yyyy-MM-dd").format(currentTime);
-        final String outputFileName = outputFileNameWithoutExt + OUTPUT_FILENAME_EXT;
+        final String outputFileName = outputFileNameWithoutExt + Compare.OUTPUT_FILENAME_EXT;
         final File outputFile = new File(outputFileName);
         if (outputFile.exists()) {
             throw new IllegalStateException("File " + outputFileName + " already exists.");
@@ -174,7 +168,7 @@ public class Dump implements Runnable {
         int totalCount = -1;
         int processedCount = 0;
         boolean errorOccurred = false;
-        try (final OutputStream os = Files.newOutputStream(Path.of(outputFileName), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow); final CSVPrinter outputWriter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+        try (final OutputStream os = Files.newOutputStream(Path.of(outputFileName), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); final BufferedWriter bw = new BufferedWriter(ow); final CSVPrinter outputWriter = new CSVPrinter(bw, CSVFormat.DEFAULT)) {
             outputWriter.printRecord(docInstance.getHeader());
             log.info("Writing data to dump file {}", outputFileName);
             String lastCursorMark = "";
@@ -182,12 +176,12 @@ public class Dump implements Runnable {
             while (!lastCursorMark.equals(nextCursorMark) && !nextCursorMark.isBlank() && !errorOccurred) {
                 // initial request
                 final Request request = new Request.Builder()
-                        .url(API + query + "&cursorMark=" + URLEncoder.encode(nextCursorMark, StandardCharsets.UTF_8))
+                        .url(Application.API + query + "&cursorMark=" + URLEncoder.encode(nextCursorMark, StandardCharsets.UTF_8))
                         .addHeader("Accept", "application/json")
-                        .addHeader("Authorization", "OAuth oauth_consumer_key=\"" + apiKey + "\"").build();
+                        .build();
                 log.info("Execute request \"{}\"", request.url());
                 JsonNode doc;
-                List<Doc> ec;
+                List<T> ec;
                 try (final Response response = httpClient.newCall(request).execute()) {
                     if (!response.isSuccessful()) {
                         errorOccurred = true;
@@ -221,7 +215,7 @@ public class Dump implements Runnable {
                 // for testing
                 // break;
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             errorOccurred = true;
             log.error("{}", e.getMessage());
         }
@@ -237,7 +231,7 @@ public class Dump implements Runnable {
             throw new RuntimeException("An error occured while processing the dump");
         } else {
             // write OK file
-            Files.write(Path.of(outputFileNameWithoutExt + OK_FILENAME_EXT), List.of(dtf.format(Instant.now())), StandardCharsets.UTF_8);
+            Files.write(Path.of(outputFileNameWithoutExt + Compare.OK_FILENAME_EXT), List.of(dtf.format(Instant.now())), StandardCharsets.UTF_8);
             log.info("Wrote successfull data to dump file {}", outputFileName);
         }
         return outputFile;

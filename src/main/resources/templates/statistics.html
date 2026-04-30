@@ -1,97 +1,99 @@
 <!DOCTYPE HTML>
-<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
     <head>
         <meta charset="utf-8"/>
         <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
         <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport"/>
         <meta content="DDBid is a small and lightweight tool to record all DDB object IDs, compare it with previous ID dumps and show differences (new and missing items, persons and organizations)."
               name="description"/>
-        <meta content="Michael Büchner" name="author"/>
+        <meta content="Michael Buechner" name="author"/>
         <title>DDBid</title>
-        <link th:href="@{webjars/bootswatch-lux/5.0.2/bootstrap.min.css} " th:rel="stylesheet"/>
+        <link th:href="@{webjars/bootswatch-lux/5.3.3/bootstrap.min.css}" th:rel="stylesheet"/>
         <link th:href="@{css/custom.css}" th:rel="stylesheet"/>
-        <script th:src="@{webjars/font-awesome/5.15.4/js/all.min.js}" data-auto-replace-svg="nest"></script>
+        <script th:src="@{webjars/font-awesome/7.2.0/js/all.min.js}" data-auto-replace-svg="nest"></script>
     </head>
-    <body>
-        <!-- Navigation -->
-        <div th:replace="fragments/navbar.html"></div>
-        <div class="container-fluid">
-            <div class="row justify-content-md-center mt-5">
-                <div class="four col-md-3">
-                    <div class="counter-box"> <i class="far fa-thumbs-up"></i> <span class="counter" th:text="@{${newItemsCount}}">0</span>
-                        <p>NEW items since <span th:text="@{${minTimestamp}}">somewhen</span></p>
+    <body th:data-statistics-url="@{/statistics/data}">
+        <div th:replace="~{fragments/navbar.html}"></div>
+
+        <main class="container-fluid py-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div>
+                    <h1 class="h3 mb-1">Statistics</h1>
+                    <div class="text-muted small" id="statistics-status">Loading...</div>
+                </div>
+                <button class="btn btn-outline-primary btn-sm" id="statistics-refresh" type="button" title="Refresh">
+                    <i class="fas fa-rotate-right"></i>
+                </button>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="stat-tile">
+                        <div class="stat-label">MISSING total</div>
+                        <div class="stat-value" id="stat-missing-total">-</div>
+                        <div class="stat-context" id="stat-missing-range">-</div>
                     </div>
                 </div>
-                <div class="four col-md-3">
-                    <div class="counter-box"> <i class="far fa-thumbs-down"></i> <span class="counter" th:text="@{${missingItemsCount}}">0</span>
-                        <p>MISSING items since <span th:text="@{${minTimestamp}}">somewhen</span></p>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="stat-tile">
+                        <div class="stat-label">NEW total</div>
+                        <div class="stat-value" id="stat-new-total">-</div>
+                        <div class="stat-context" id="stat-new-range">-</div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="stat-tile">
+                        <div class="stat-label">MISSING latest</div>
+                        <div class="stat-value" id="stat-missing-latest">-</div>
+                        <div class="stat-context" id="stat-missing-latest-date">-</div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="stat-tile">
+                        <div class="stat-label">NEW latest</div>
+                        <div class="stat-value" id="stat-new-latest">-</div>
+                        <div class="stat-context" id="stat-new-latest-date">-</div>
                     </div>
                 </div>
             </div>
-            <div class="row justify-content-md-center mt-5">
-                <div class="col-xxl-6 col-md-8">
-                    <canvas id="missingItemConfig"></canvas>
+
+            <section class="statistics-section mb-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h2 class="h5 mb-0">Item status over time</h2>
+                    <span class="badge text-bg-secondary" id="stat-point-count">0</span>
                 </div>
+                <div class="chart-frame chart-frame-large">
+                    <canvas id="itemStatusTrend"></canvas>
+                </div>
+            </section>
+
+            <div class="row g-4">
+                <section class="col-12 col-xl-6">
+                    <div class="statistics-section h-100">
+                        <h2 class="h5 mb-3">Top provider</h2>
+                        <div class="chart-frame">
+                            <canvas id="missingByProvider"></canvas>
+                        </div>
+                        <div class="stat-list mt-3" id="missingByProviderList"></div>
+                    </div>
+                </section>
+                <section class="col-12 col-xl-6">
+                    <div class="statistics-section h-100">
+                        <h2 class="h5 mb-3">Sectors</h2>
+                        <div class="chart-frame">
+                            <canvas id="missingBySector"></canvas>
+                        </div>
+                        <div class="stat-list mt-3" id="missingBySectorList"></div>
+                    </div>
+                </section>
             </div>
-            <!-- <div class="row justify-content-md-center mt-5">
-                <div class="col-xxl-6 col-md-8">
-                    <canvas id="missingPersonConfig"></canvas>
-                </div>
-            </div> -->
-            <!-- <div class="row justify-content-md-center mt-5">
-                <div class="col-xxl-6 col-md-8">
-                    <canvas id="missingOrganizationConfig"></canvas>
-                </div>
-            </div> --> 
-            <div class="row justify-content-md-center mt-5">
-                <div class="col-xxl-3 col-md-4">
-                    <canvas id="missingByProvider" width="300" height="300"></canvas>
-                </div>
-                <div class="col-xxl-6 col-md-8">
-                    <div id="missingByProviderLegend" class="mt-5 small font-weight-light"></div>
-                </div>
-            </div>
-            <div class="row justify-content-md-center mt-5">
-                <div class="col-xxl-3 col-md-4">
-                    <canvas id="missingBySector" width="300" height="300"></canvas>
-                </div>
-                <div class="col-xxl-6 col-md-8">
-                    <div id="missingBySectorLegend" class="mt-5 small font-weight-light"></div>
-                </div>
-            </div>
-        </div>
-        <script th:src="@{webjars/jquery/jquery.min.js}"></script>
-        <script th:src="@{webjars/bootstrap/js/bootstrap.min.js}"></script>
-        <script th:src="@{webjars/chartjs/3.9.1/dist/chart.min.js}"></script>
-        <script th:src="@{js/htmlLegendPlugin.js}"></script>
-        <script th:src="@{js/palette.js}"></script>
-        <script th:src="@{js/statistics.js}"></script>
-        <script th:src="@{js/counter.js}"></script>
-        <script th:inline="javascript">
-            /*<![CDATA[*/
-            $(document).ready(function () {
+        </main>
 
-                const itemMissingKeys = /*[[${itemMissingKeys}]]*/ null;
-                const itemMissingValues = /*[[${itemMissingValues}]]*/ null;
-                missingItemConfig(itemMissingKeys, itemMissingValues);
-
-                // const personMissingKeys = /*[[${personMissingKeys}]]*/ null;
-                // const personMissingValues = /*[[${personMissingValues}]]*/ null;
-                // missingPersonConfig(personMissingKeys, personMissingValues);
-
-                // const organizationMissingKeys = /*[[${organizationMissingKeys}]]*/ null;
-                // const organizationMissingValues = /*[[${organizationMissingValues}]]*/ null;
-                // missingOrganizationConfig(organizationMissingKeys, organizationMissingValues);
-        
-                const missingByProvider_idKeys = /*[[${missingByProvider_idKeys}]]*/ null;
-                const missingByProvider_idValues = /*[[${missingByProvider_idValues}]]*/ null;
-                missingByProvider_id(missingByProvider_idKeys, missingByProvider_idValues);
-
-                const missingBySector_fctKeys = /*[[${missingBySector_fctKeys}]]*/ null;
-                const missingBySector_fctValues = /*[[${missingBySector_fctValues}]]*/ null;
-                missingBySector_fct(missingBySector_fctKeys, missingBySector_fctValues);
-            });
-            /*]]>*/
-        </script>
+        <script th:src="@{/webjars/jquery/4.0.0/jquery.min.js}"></script>
+        <script th:src="@{/webjars/bootstrap/5.3.8/js/bootstrap.bundle.min.js}"></script>
+        <script th:src="@{/webjars/chart.js/4.5.1/dist/chart.umd.min.js}"></script>
+        <script th:src="@{/js/palette.js}"></script>
+        <script th:src="@{/js/ddbid-table.js}"></script>
+        <script th:src="@{/js/statistics.js}"></script>
     </body>
 </html>

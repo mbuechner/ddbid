@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ * Copyright 2022-2026 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,12 @@
  */
 package de.ddb.labs.ddbid.model;
 
-import lombok.Data;
-
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
 import static de.ddb.labs.ddbid.model.item.ItemDoc.getStaticHeader;
 
-@Data
 public class Doc {
 
     public List<String> getHeader() {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ * Copyright 2022-2026 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ public class ObjectsCronJob implements CronJobInterface {
     
     @Override
     @Scheduled(cron = "${ddbid.cron.objects}")
-    @Retryable(value = {Exception.class}, maxAttemptsExpression = "${ddbid.cron.retry.maxAttempts}", backoff = @Backoff(delayExpression = "${ddbid.cron.retry.delay}"))
+    @Retryable(retryFor = {Exception.class}, maxAttemptsExpression = "${ddbid.cron.retry.max-attempts}", backoff = @Backoff(delayExpression = "${ddbid.cron.retry.delay}"))
     public void schedule() throws Exception {
         log.info("Start to create dumps, comare them, import data and correct database items...");
         log.info("Create new dump...");

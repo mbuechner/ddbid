@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ * Copyright 2022-2026 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,6 +66,10 @@ public class Compare implements Runnable {
     public static final String DUMPOK_FILES_PATTERN = "[0-9]{4}\\-[0-9]{2}\\-[0-9]{2}\\.txt";
     public static final String CMP_FILES_PATTERN = "CMP\\_[0-9]{4}\\-[0-9]{2}\\-[0-9]{2}\\_[0-9]{4}\\-[0-9]{2}\\-[0-9]{2}_(MISSING|NEW)\\.csv\\.gz";
     public static final String CMPOK_FILES_PATTERN = "CMP\\_[0-9]{4}\\-[0-9]{2}\\-[0-9]{2}\\_[0-9]{4}\\-[0-9]{2}\\-[0-9]{2}_(MISSING|NEW)\\.txt";
+    private static final CSVFormat CSV_WITH_FIRST_RECORD_AS_HEADER = CSVFormat.DEFAULT.builder()
+            .setHeader()
+            .setSkipHeaderRecord(true)
+            .get();
 
     @Value(value = "${ddbid.datapath.item}")
     private String dataPathItem;
@@ -173,7 +177,7 @@ public class Compare implements Runnable {
         }
 
         final File tmpFile = File.createTempFile("ddbid-", "csv.gz");
-        final Serializer<CSVRecord> csVSerializer = Serializer.csv(CSVFormat.DEFAULT.withFirstRecordAsHeader(), StandardCharsets.UTF_8);
+        final Serializer<CSVRecord> csVSerializer = Serializer.csv(CSV_WITH_FIRST_RECORD_AS_HEADER, StandardCharsets.UTF_8);
         final Comparator<CSVRecord> comparator = (x, y) -> {
             final String a = x.get("id");
             final String b = y.get("id");
@@ -181,7 +185,7 @@ public class Compare implements Runnable {
         };
         try (final InputStream fileStreamA = new FileInputStream(fileA); 
                 final GZIPInputStream gzipA = new GZIPInputStream(fileStreamA); 
-                final Reader readerA = csVSerializer.createReader(gzipA);
+                final Reader<CSVRecord> readerA = csVSerializer.createReader(gzipA);
                 final InputStream fileStreamB = new FileInputStream(fileB); 
                 final GZIPInputStream gzipB = new GZIPInputStream(fileStreamB); 
                 final Reader<CSVRecord> readerB = csVSerializer.createReader(gzipB); 
@@ -197,11 +201,11 @@ public class Compare implements Runnable {
                 final OutputStream os = Files.newOutputStream(Path.of(output.getAbsolutePath()), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); 
                 final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); 
                 final BufferedWriter bw = new BufferedWriter(ow);
-                final CSVPrinter csvPrinter = new CSVPrinter(bw, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+                final CSVPrinter csvPrinter = new CSVPrinter(bw, CSVFormat.DEFAULT)) {
             if (header != null) {
                 csvPrinter.printRecord(header);
             }
-            Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(decoder);
+            Iterable<CSVRecord> records = CSV_WITH_FIRST_RECORD_AS_HEADER.parse(decoder);
             for (CSVRecord record : records) {
                 final Map<String, String> map = record.toMap();
                 map.put("timestamp", dtf.format(dateForCsv));

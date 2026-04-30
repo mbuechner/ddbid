@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Michael Büchner, Deutsche Digitale Bibliothek
+ * Copyright 2022-2026 Michael Büchner, Deutsche Digitale Bibliothek
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,9 +24,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.util.Date;
+import java.time.Instant;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.PreDestroy;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Dispatcher;
 import okhttp3.OkHttpClient;
@@ -34,34 +34,45 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.EventListener;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.EnableAsync;
-import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
-@EnableScheduling
-@ConditionalOnProperty(name = "scheduler.enabled", matchIfMissing = true)
 @EnableRetry
 @EnableAsync
 @Slf4j
 public class Application {
 
-    public static final String API = "https://api.deutsche-digitale-bibliothek.de";
+    public static final String API = "https://api.deutsche-digitale-bibliothek.de/2";
 
     @Value("${ddbid.database}")
     private String databaseName;
+
+    @Value("${ddbid.database.type:h2}")
+    private String databaseType;
+
+    @Value("${ddbid.database.url:}")
+    private String databaseUrl;
+
+    @Value("${ddbid.database.user:}")
+    private String databaseUser;
+
+    @Value("${ddbid.database.password:}")
+    private String databasePassword;
 
     @Value("${ddbid.dump.lockfile}")
     private String lockfile;
     
     @Value("${ddbid.cron.objects}")
     private String cronPatternObjects;
+
+    @Value("${scheduler.enabled:true}")
+    private boolean schedulerEnabled;
 
     private Database database; // for write access
 
@@ -122,8 +133,12 @@ public class Application {
             Helper.deleteInvalidDumps(dataPathItem);
             Helper.deleteInvalidDumps(dataPathPerson);
             Helper.deleteInvalidDumps(dataPathOrganization);
-            log.info("Re-run Objects Cron Job...");
-            taskScheduler.schedule(objectsCronJob, new Date());
+            if (schedulerEnabled) {
+                log.info("Re-run Objects Cron Job...");
+                taskScheduler.schedule(objectsCronJob, Instant.now());
+            } else {
+                log.info("Scheduler is disabled. Skip automatic Objects Cron Job restart.");
+            }
         }
     }
 
@@ -150,7 +165,7 @@ public class Application {
         if (database != null) {
             return database;
         }
-        database = new Database(databaseName);
+        database = new Database(databaseType, databaseName, databaseUrl, databaseUser, databasePassword);
         return database;
     }
 
