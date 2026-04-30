@@ -34,9 +34,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Slf4j
 @Service
@@ -45,6 +47,7 @@ public class StatisticsService {
     private static final int PROVIDER_LIMIT = 50;
 
     private final Object cacheLock = new Object();
+    private final Object indexLock = new Object();
     private final Calendar cal = Calendar.getInstance(Locale.GERMANY);
     private final DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE;
 
@@ -159,47 +162,64 @@ public class StatisticsService {
     }
 
     public void ensureDatabaseIndexes() {
-        try {
-            log.info("Ensure database indexes...");
-            database.getJdbcTemplate().execute("""
-                                               CREATE INDEX IF NOT EXISTS "item_timestamp" ON "{{item}}"("timestamp");
-                                               CREATE INDEX IF NOT EXISTS "item_status" ON "{{item}}"("status");
-                                               CREATE INDEX IF NOT EXISTS "item_status_timestamp" ON "{{item}}"("status", "timestamp");
-                                               CREATE INDEX IF NOT EXISTS "item_status_provider" ON "{{item}}"("status", "provider_id");
-                                               CREATE INDEX IF NOT EXISTS "item_status_sector" ON "{{item}}"("status", "sector_fct");
-                                               CREATE INDEX IF NOT EXISTS "item_filter_id" ON "{{item}}"("status", "timestamp", "id");
-                                               CREATE INDEX IF NOT EXISTS "item_filter_provider_item" ON "{{item}}"("status", "timestamp", "provider_item_id");
-                                               CREATE INDEX IF NOT EXISTS "item_filter_dataset" ON "{{item}}"("status", "timestamp", "dataset_id");
-                                               CREATE INDEX IF NOT EXISTS "item_filter_provider" ON "{{item}}"("status", "timestamp", "provider_id");
-                                               CREATE INDEX IF NOT EXISTS "item_filter_sector" ON "{{item}}"("status", "timestamp", "sector_fct");
-                                               CREATE INDEX IF NOT EXISTS "item_filter_supplier" ON "{{item}}"("status", "timestamp", "supplier_id");
-                                               CREATE INDEX IF NOT EXISTS "person_timestamp" ON "{{person}}"("timestamp");
-                                               CREATE INDEX IF NOT EXISTS "person_status" ON "{{person}}"("status");
-                                               CREATE INDEX IF NOT EXISTS "person_status_timestamp" ON "{{person}}"("status", "timestamp");
-                                               CREATE INDEX IF NOT EXISTS "person_filter_id" ON "{{person}}"("status", "timestamp", "id");
-                                               CREATE INDEX IF NOT EXISTS "person_filter_variant" ON "{{person}}"("status", "timestamp", "variant_id");
-                                               CREATE INDEX IF NOT EXISTS "person_filter_type" ON "{{person}}"("status", "timestamp", "type");
-                                               CREATE INDEX IF NOT EXISTS "organization_timestamp" ON "{{organization}}"("timestamp");
-                                               CREATE INDEX IF NOT EXISTS "organization_status" ON "{{organization}}"("status");
-                                               CREATE INDEX IF NOT EXISTS "organization_status_timestamp" ON "{{organization}}"("status", "timestamp");
-                                               CREATE INDEX IF NOT EXISTS "organization_filter_id" ON "{{organization}}"("status", "timestamp", "id");
-                                               CREATE INDEX IF NOT EXISTS "organization_filter_variant" ON "{{organization}}"("status", "timestamp", "variant_id");
-                                               CREATE INDEX IF NOT EXISTS "organization_filter_type" ON "{{organization}}"("status", "timestamp", "type");
-                                               """
-                    .replace("{{item}}", itemTableName)
-                    .replace("{{person}}", personTableName)
-                    .replace("{{organization}}", organizationTableName));
-            if (database.isPostgres()) {
-                ensurePostgresSearchIndexes();
+        synchronized (indexLock) {
+            try {
+                log.info("Ensure database indexes...");
+                if (database.isPostgres()) {
+                    ensurePostgresIndexesWithLock();
+                } else {
+                    database.getJdbcTemplate().execute(commonIndexSql());
+                }
+                log.info("Database indexes are available.");
+            } catch (RuntimeException e) {
+                log.warn("Could not ensure database indexes. {}", e.getMessage());
             }
-            log.info("Database indexes are available.");
-        } catch (RuntimeException e) {
-            log.warn("Could not ensure database indexes. {}", e.getMessage());
         }
     }
 
-    private void ensurePostgresSearchIndexes() {
-        database.getJdbcTemplate().execute("""
+    private void ensurePostgresIndexesWithLock() {
+        database.getJdbcTemplate();
+        final TransactionTemplate transactionTemplate = new TransactionTemplate(new DataSourceTransactionManager(database.getDataSource()));
+        transactionTemplate.executeWithoutResult(status -> {
+            database.getJdbcTemplate().execute("SELECT pg_advisory_xact_lock(hashtext('de.ddb.labs.ddbid.ensureDatabaseIndexes'))");
+            database.getJdbcTemplate().execute(commonIndexSql());
+            database.getJdbcTemplate().execute(postgresSearchIndexSql());
+        });
+    }
+
+    private String commonIndexSql() {
+        return """
+               CREATE INDEX IF NOT EXISTS "item_timestamp" ON "{{item}}"("timestamp");
+               CREATE INDEX IF NOT EXISTS "item_status" ON "{{item}}"("status");
+               CREATE INDEX IF NOT EXISTS "item_status_timestamp" ON "{{item}}"("status", "timestamp");
+               CREATE INDEX IF NOT EXISTS "item_status_provider" ON "{{item}}"("status", "provider_id");
+               CREATE INDEX IF NOT EXISTS "item_status_sector" ON "{{item}}"("status", "sector_fct");
+               CREATE INDEX IF NOT EXISTS "item_filter_id" ON "{{item}}"("status", "timestamp", "id");
+               CREATE INDEX IF NOT EXISTS "item_filter_provider_item" ON "{{item}}"("status", "timestamp", "provider_item_id");
+               CREATE INDEX IF NOT EXISTS "item_filter_dataset" ON "{{item}}"("status", "timestamp", "dataset_id");
+               CREATE INDEX IF NOT EXISTS "item_filter_provider" ON "{{item}}"("status", "timestamp", "provider_id");
+               CREATE INDEX IF NOT EXISTS "item_filter_sector" ON "{{item}}"("status", "timestamp", "sector_fct");
+               CREATE INDEX IF NOT EXISTS "item_filter_supplier" ON "{{item}}"("status", "timestamp", "supplier_id");
+               CREATE INDEX IF NOT EXISTS "person_timestamp" ON "{{person}}"("timestamp");
+               CREATE INDEX IF NOT EXISTS "person_status" ON "{{person}}"("status");
+               CREATE INDEX IF NOT EXISTS "person_status_timestamp" ON "{{person}}"("status", "timestamp");
+               CREATE INDEX IF NOT EXISTS "person_filter_id" ON "{{person}}"("status", "timestamp", "id");
+               CREATE INDEX IF NOT EXISTS "person_filter_variant" ON "{{person}}"("status", "timestamp", "variant_id");
+               CREATE INDEX IF NOT EXISTS "person_filter_type" ON "{{person}}"("status", "timestamp", "type");
+               CREATE INDEX IF NOT EXISTS "organization_timestamp" ON "{{organization}}"("timestamp");
+               CREATE INDEX IF NOT EXISTS "organization_status" ON "{{organization}}"("status");
+               CREATE INDEX IF NOT EXISTS "organization_status_timestamp" ON "{{organization}}"("status", "timestamp");
+               CREATE INDEX IF NOT EXISTS "organization_filter_id" ON "{{organization}}"("status", "timestamp", "id");
+               CREATE INDEX IF NOT EXISTS "organization_filter_variant" ON "{{organization}}"("status", "timestamp", "variant_id");
+               CREATE INDEX IF NOT EXISTS "organization_filter_type" ON "{{organization}}"("status", "timestamp", "type");
+               """
+                .replace("{{item}}", itemTableName)
+                .replace("{{person}}", personTableName)
+                .replace("{{organization}}", organizationTableName);
+    }
+
+    private String postgresSearchIndexSql() {
+        return """
                                            CREATE EXTENSION IF NOT EXISTS pg_trgm;
                                            CREATE INDEX IF NOT EXISTS "item_trgm_id" ON "{{item}}" USING GIN ("id" gin_trgm_ops);
                                            CREATE INDEX IF NOT EXISTS "item_trgm_provider_item" ON "{{item}}" USING GIN ("provider_item_id" gin_trgm_ops);
@@ -216,7 +236,7 @@ public class StatisticsService {
                                            """
                 .replace("{{item}}", itemTableName)
                 .replace("{{person}}", personTableName)
-                .replace("{{organization}}", organizationTableName));
+                .replace("{{organization}}", organizationTableName);
     }
 
     private Map<String, Integer> queryStringIntegerMap(String label, String sql) {
