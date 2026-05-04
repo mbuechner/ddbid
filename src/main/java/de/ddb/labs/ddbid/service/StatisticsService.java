@@ -15,7 +15,12 @@
  */
 package de.ddb.labs.ddbid.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import de.ddb.labs.ddbid.Application;
 import de.ddb.labs.ddbid.database.Database;
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -24,12 +29,16 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -45,6 +54,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class StatisticsService {
 
     private static final int PROVIDER_LIMIT = 50;
+    private static final String DDB_SECTOR_FACET_URL = Application.API + "/search/index/search/select?q=*:*&rows=0&facet=on&facet.field=sector_fct";
 
     private final Object cacheLock = new Object();
     private final Object indexLock = new Object();
@@ -53,6 +63,12 @@ public class StatisticsService {
 
     @Autowired
     private Database database;
+
+    @Autowired
+    private OkHttpClient httpClient;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Value("${ddbid.database.table.item}")
     private String itemTableName;
@@ -158,7 +174,62 @@ public class StatisticsService {
         data.setMissingBySectorFctKeys(new ArrayList<>(missingBySector.keySet()));
         data.setMissingBySectorFctValues(new ArrayList<>(missingBySector.values()));
 
+        final Map<String, Long> totalBySector = queryTotalBySectorFromDdb();
+        final List<SectorLossRatio> missingBySectorLossRatios = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : missingBySector.entrySet()) {
+            final String sector = entry.getKey();
+            if (sector == null || sector.isBlank()) {
+                continue;
+            }
+            final long totalCount = totalBySector.getOrDefault(sector, 0L);
+            if (totalCount <= 0L) {
+                continue;
+            }
+            final int missingCount = entry.getValue() == null ? 0 : entry.getValue();
+            final double lossPercent = (100.0 * missingCount) / totalCount;
+            missingBySectorLossRatios.add(new SectorLossRatio(sector, missingCount, totalCount, lossPercent));
+        }
+        missingBySectorLossRatios.sort(Comparator
+                .comparingDouble(SectorLossRatio::lossPercent).reversed()
+                .thenComparing(Comparator.comparingInt(SectorLossRatio::missingCount).reversed()));
+        data.setMissingBySectorLossRatios(missingBySectorLossRatios);
+
         return data;
+    }
+
+    private Map<String, Long> queryTotalBySectorFromDdb() {
+        final Request request = new Request.Builder()
+                .url(DDB_SECTOR_FACET_URL)
+                .addHeader("Accept", "application/json")
+                .build();
+
+        try (Response response = httpClient.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                log.warn("Could not load DDB sector facet data. HTTP {}", response.code());
+                return Map.of();
+            }
+
+            final JsonNode rootNode = objectMapper.readTree(response.body().byteStream());
+            final JsonNode facetArray = rootNode.at("/facet_counts/facet_fields/sector_fct");
+            if (!facetArray.isArray()) {
+                log.warn("DDB sector facet data has unexpected format.");
+                return Map.of();
+            }
+
+            final Map<String, Long> result = new LinkedHashMap<>();
+            for (int i = 0; i + 1 < facetArray.size(); i += 2) {
+                final JsonNode keyNode = facetArray.get(i);
+                final JsonNode countNode = facetArray.get(i + 1);
+                if (keyNode == null || keyNode.isNull() || countNode == null || countNode.isNull()) {
+                    continue;
+                }
+                result.put(keyNode.asText(), countNode.asLong(0L));
+            }
+            return result;
+        } catch (IOException e) {
+            log.warn("Could not load DDB sector facet data. {}", e.getMessage());
+            return Map.of();
+        }
     }
 
     public void ensureDatabaseIndexes() {
@@ -322,6 +393,9 @@ public class StatisticsService {
     private record StatusCounts(int missing, int fresh) {
     }
 
+    public record SectorLossRatio(String sector, int missingCount, long totalCount, double lossPercent) {
+    }
+
     @Getter
     public static class StatisticsData {
 
@@ -336,6 +410,7 @@ public class StatisticsService {
         private List<Integer> missingByProviderIdValues = List.of();
         private List<String> missingBySectorFctKeys = List.of();
         private List<Integer> missingBySectorFctValues = List.of();
+        private List<SectorLossRatio> missingBySectorLossRatios = List.of();
         private List<String> itemStatusKeys = List.of();
         private List<Integer> itemMissingValues = List.of();
         private List<Integer> itemNewValues = List.of();
@@ -382,6 +457,10 @@ public class StatisticsService {
 
         private void setMissingBySectorFctValues(List<Integer> missingBySectorFctValues) {
             this.missingBySectorFctValues = missingBySectorFctValues;
+        }
+
+        private void setMissingBySectorLossRatios(List<SectorLossRatio> missingBySectorLossRatios) {
+            this.missingBySectorLossRatios = missingBySectorLossRatios;
         }
 
         private void setItemStatusKeys(List<String> itemStatusKeys) {

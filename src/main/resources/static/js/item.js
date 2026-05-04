@@ -22,13 +22,17 @@ $(document).ready(function() {
                             latestTimestampValue = value;
                         });
 
-                $.getJSON('item/filter-options', function(json) {
+                tableHelper.setColumnFiltersLoading([2, 4, 6, 7, 8], true, 'Loading suggestions...');
+                tableHelper.loadJsonWithCache('item/filter-options', function(json) {
                     json = json || {};
                     tableHelper.attachDatalist(2, 'itemStatusOptions', tableHelper.stringOptions(json.status || ['MISSING', 'NEW', 'FOUND', 'ALL']));
                     tableHelper.attachDatalist(4, 'itemDatasetOptions', tableHelper.stringOptions(json.dataset_id));
                     tableHelper.attachDatalist(6, 'itemProviderOptions', tableHelper.stringOptions(json.provider_id));
                     tableHelper.attachDatalist(7, 'itemSectorOptions', tableHelper.stringOptions(json.sector_fct));
                     tableHelper.attachDatalist(8, 'itemSupplierOptions', tableHelper.stringOptions(json.supplier_id));
+                    tableHelper.setColumnFiltersLoading([2, 4, 6, 7, 8], false);
+                }, function() {
+                    tableHelper.setColumnFiltersLoading([2, 4, 6, 7, 8], false);
                 });
             },
             [{

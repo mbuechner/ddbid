@@ -47,7 +47,7 @@ public class DDBQuery {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Value(value = "${ddbid.apikey}")
+    @Value(value = "${ddbid.apikey:}")
     private String apiKey;
 
     private List<String> searchValues = new ArrayList<>();
@@ -72,9 +72,6 @@ public class DDBQuery {
             this.shortName = shortName;
             this.naturalName = sector;
         }
-
-        @Value(value = "${ddbid.apikey}")
-        private String apiKey;
 
         @Override
         public String toString() {
@@ -183,14 +180,26 @@ public class DDBQuery {
 
     public void run() throws UnsupportedEncodingException, IOException {
         if (this.jn == null) {
-            log.debug("GET " + getSearchQuery());
-            final Request request = new Request.Builder().url(getSearchQuery())
+            final String query = getSearchQuery();
+            log.debug("GET " + query);
+            if (apiKey == null || apiKey.isBlank()) {
+                throw new IOException("Missing DDB API key. Please configure ddbid.apikey (or DDBID_APIKEY) for DDBQuery requests.");
+            }
+
+            final Request request = new Request.Builder().url(query)
                     .addHeader("Accept", "application/json")
                     .addHeader("Authorization", "OAuth oauth_consumer_key=\"" + apiKey + "\"")
                     .build();
             try (final Response response = httpClient.newCall(request).execute()) {
-                if (response.isSuccessful()) {
-                    this.jn = objectMapper.readTree(response.body().byteStream());
+                if (!response.isSuccessful()) {
+                    throw new IOException("DDBQuery request failed with HTTP " + response.code() + " for " + query);
+                }
+                if (response.body() == null) {
+                    throw new IOException("DDBQuery response body is empty for " + query);
+                }
+                this.jn = objectMapper.readTree(response.body().byteStream());
+                if (this.jn == null) {
+                    throw new IOException("DDBQuery response JSON is empty for " + query);
                 }
             }
             parseFacets();
@@ -200,6 +209,9 @@ public class DDBQuery {
     public Map<String, List<String>> getFacetValues() throws IOException {
 
         final Map<String, List<String>> resultMap = new HashMap<>();
+        if (this.facets == null) {
+            return resultMap;
+        }
 
         for (Facets f : this.facets) {
             if (facetValues.contains(FACET.forName(f.getField()))) {
@@ -214,21 +226,34 @@ public class DDBQuery {
     }
 
     public int getNumberOfResults() {
+        if (this.jn == null) {
+            return 0;
+        }
         final JsonPointer jp = JsonPointer.compile("/numberOfResults");
         final JsonNode branch = this.jn.at(jp);
         return branch.asInt();
     }
 
     private void parseFacets() {
+        if (this.jn == null) {
+            this.facets = new ArrayList<>();
+            return;
+        }
 
         final JsonPointer jp = JsonPointer.compile("/facets");
         final JsonNode branch = this.jn.at(jp);
 
         final CollectionType javaType = objectMapper.getTypeFactory().constructCollectionType(List.class, Facets.class);
         this.facets = objectMapper.convertValue(branch, javaType);
+        if (this.facets == null) {
+            this.facets = new ArrayList<>();
+        }
     }
 
     public List<Facets> getFacets() {
+        if (facets == null) {
+            return new ArrayList<>();
+        }
         return new ArrayList<>(facets);
     }
 

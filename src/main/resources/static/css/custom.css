@@ -130,11 +130,13 @@ table th {
     white-space: normal;
 }
 .stat-table-value {
-    width: 132px;
+    width: 164px;
     color: #6c757d;
     font-size: 0.8125rem;
     text-align: right;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 .column-filter-row th,
 .column-filter-row td {
@@ -144,6 +146,10 @@ table th {
 .column-filter-row .ddbid-column-filter,
 .column-filter-row .dtcc-search input {
     min-width: 130px;
+}
+.column-filter-row .ddbid-column-filter.is-loading {
+    background-color: #f8f9fa;
+    opacity: 0.85;
 }
 .container {
     margin-top: 100px

@@ -589,7 +589,7 @@ public class DirectMigrationCronJob implements CronJobInterface {
         try {
             schedule();
         } catch (Exception e) {
-            log.error("{}", e.getMessage());
+            log.error("Direct migration cron job failed.", e);
         }
 
     }
@@ -679,7 +679,10 @@ public class DirectMigrationCronJob implements CronJobInterface {
                     for (Facets f : query03.getFacets()) {
                         if (f.getField().equals(DDBQuery.FACET.LAST_UPDATE.toString())) {
                             for (Map.Entry<String, Integer> entry : f.getFacetValues().entrySet()) {
-                                sortedDates.put(parseDate(entry.getKey()), entry.getValue());
+                                final Date parsedDate = parseDate(entry.getKey());
+                                if (parsedDate != null) {
+                                    sortedDates.put(parsedDate, entry.getValue());
+                                }
                             }
                         }
                     }
@@ -700,7 +703,9 @@ public class DirectMigrationCronJob implements CronJobInterface {
                             provider_name = rootNode.get("provider-info").get("provider-name").asText("");
                             provider_local_id = rootNode.get("provider-info").get("provider-item-id").asText("");
                             provider_state = rootNode.get("provider-info").get("provider-state").asText("");
-                            provider_sector = SECTOR.forShortName(rootNode.get("view").get("cortex-institution").get("sector").asText("")).toString();
+                            final String sectorCode = rootNode.path("view").path("cortex-institution").path("sector").asText("");
+                            final SECTOR sector = SECTOR.forShortName(sectorCode);
+                            provider_sector = sector != null ? sector.toString() : sectorCode;
                         }
                     }
 

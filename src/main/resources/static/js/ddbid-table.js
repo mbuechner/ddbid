@@ -1,5 +1,7 @@
 window.DDBID = window.DDBID || {};
 window.DDBID.table = (function() {
+    const JSON_CACHE_TTL_MILLIS = 600000;
+    const JSON_CACHE_PREFIX = 'ddbid-json-cache:';
     const STATUS_OPTIONS = ['MISSING', 'NEW', 'FOUND', 'ALL'];
     const SECTOR_LABELS = {
         "sec_01": "Archive",
@@ -38,6 +40,34 @@ window.DDBID.table = (function() {
     function columnFilterValue(columnIndex) {
         const input = columnFilterInput(columnIndex);
         return input.length ? input.val() : null;
+    }
+
+    function setInputLoadingState(input, isLoading, loadingPlaceholder) {
+        if (!input || !input.length) {
+            return;
+        }
+
+        const originalPlaceholder = input.data('ddbid-original-placeholder');
+        if (isLoading) {
+            if (originalPlaceholder === undefined) {
+                input.data('ddbid-original-placeholder', input.attr('placeholder') || '');
+            }
+            input.attr('placeholder', loadingPlaceholder || 'Loading suggestions...');
+            input.addClass('is-loading');
+            input.attr('aria-busy', 'true');
+        } else {
+            if (originalPlaceholder !== undefined) {
+                input.attr('placeholder', originalPlaceholder);
+            }
+            input.removeClass('is-loading');
+            input.removeAttr('aria-busy');
+        }
+    }
+
+    function setColumnFiltersLoading(columnIndices, isLoading, loadingPlaceholder) {
+        (columnIndices || []).forEach(function(columnIndex) {
+            setInputLoadingState(columnFilterInput(columnIndex), isLoading, loadingPlaceholder);
+        });
     }
 
     function setColumnFilterValue(columnIndex, value, readOnly) {
@@ -88,6 +118,58 @@ window.DDBID.table = (function() {
     function stringOptions(values) {
         return (values || []).map(function(value) {
             return { value: value, label: value };
+        });
+    }
+
+    function cacheKeyForEndpoint(endpoint) {
+        return JSON_CACHE_PREFIX + endpoint;
+    }
+
+    function readCachedJson(endpoint, ttlMillis) {
+        try {
+            const raw = window.sessionStorage.getItem(cacheKeyForEndpoint(endpoint));
+            if (!raw) {
+                return null;
+            }
+            const payload = JSON.parse(raw);
+            if (!payload || typeof payload.expiresAt !== 'number' || !('data' in payload)) {
+                return null;
+            }
+            if (Date.now() >= payload.expiresAt) {
+                return null;
+            }
+            return payload.data;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function writeCachedJson(endpoint, data, ttlMillis) {
+        try {
+            const payload = {
+                expiresAt: Date.now() + (ttlMillis || JSON_CACHE_TTL_MILLIS),
+                data: data
+            };
+            window.sessionStorage.setItem(cacheKeyForEndpoint(endpoint), JSON.stringify(payload));
+        } catch (e) {
+            // Ignore cache write errors silently (e.g. private mode quota).
+        }
+    }
+
+    function loadJsonWithCache(endpoint, onSuccess, onError, ttlMillis) {
+        const cached = readCachedJson(endpoint, ttlMillis || JSON_CACHE_TTL_MILLIS);
+        if (cached !== null) {
+            onSuccess(cached, true);
+            return;
+        }
+
+        $.getJSON(endpoint, function(json) {
+            writeCachedJson(endpoint, json, ttlMillis || JSON_CACHE_TTL_MILLIS);
+            onSuccess(json, false);
+        }).fail(function() {
+            if (onError) {
+                onError();
+            }
         });
     }
 
@@ -263,7 +345,8 @@ window.DDBID.table = (function() {
     }
 
     function loadTimestamps(endpoint, datalistId, setLatestTimestamp, table) {
-        $.getJSON(endpoint, function(json) {
+        setColumnFiltersLoading([0], true, 'Loading timestamps...');
+        loadJsonWithCache(endpoint, function(json) {
             const entries = Object.entries(json || {});
             attachDatalist(0, datalistId, timestampOptions(entries));
             if (entries.length) {
@@ -272,6 +355,9 @@ window.DDBID.table = (function() {
                 setColumnFilterValue(0, latest, false);
                 table.ajax.reload();
             }
+            setColumnFiltersLoading([0], false);
+        }, function() {
+            setColumnFiltersLoading([0], false);
         });
     }
 
@@ -385,7 +471,9 @@ window.DDBID.table = (function() {
         installBackToTop,
         installDefaultFilters,
         installProviderTooltips,
+        loadJsonWithCache,
         renderSector,
+        setColumnFiltersLoading,
         stringOptions
     };
 })();

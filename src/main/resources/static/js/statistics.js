@@ -3,6 +3,10 @@ $(function() {
     const status = $('#statistics-status');
     const refresh = $('#statistics-refresh');
     const numberFormat = new Intl.NumberFormat('de-DE');
+    const percentFormat = new Intl.NumberFormat('de-DE', {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 2
+    });
     const tableHelper = window.DDBID.table;
     const charts = {};
     const sectorLabels = {
@@ -21,7 +25,8 @@ $(function() {
         fresh: '#2f8f5b',
         freshSoft: 'rgba(47, 143, 91, 0.18)',
         provider: '#376996',
-        sector: '#7b5d8d'
+        sector: '#7b5d8d',
+        sectorRatio: '#9c5f2d'
     };
 
     Chart.defaults.font.family = '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -34,6 +39,10 @@ $(function() {
 
     function formatNumber(value) {
         return numberFormat.format(value || 0);
+    }
+
+    function formatPercent(value) {
+        return percentFormat.format(value || 0) + '%';
     }
 
     function appendProviderLinks(cell, label) {
@@ -228,6 +237,64 @@ $(function() {
         });
     }
 
+    function renderHorizontalPercentBar(id, labels, values, label, color) {
+        destroyChart(id);
+        charts[id] = new Chart($('#' + id), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                        label: label,
+                        data: values,
+                        backgroundColor: color,
+                        borderWidth: 0,
+                        borderRadius: 3
+                    }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(items) {
+                                const text = items.length ? items[0].label : '';
+                                return sectorLabels[text] ? text + ' - ' + sectorLabels[text] : text;
+                            },
+                            label: function(context) {
+                                return formatPercent(context.parsed.x);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: formatPercent
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            autoSkip: false,
+                            callback: function(value) {
+                                const text = this.getLabelForValue(value);
+                                return text.length > 28 ? text.slice(0, 25) + '...' : text;
+                            }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     function renderRanking(target, labels, values) {
         const list = $(target);
         list.empty();
@@ -254,14 +321,50 @@ $(function() {
         list.append(table);
     }
 
+    function renderSectorLossRanking(target, entries) {
+        const list = $(target);
+        list.empty();
+        if (!entries.length) {
+            list.append($('<div>').addClass('text-muted small').text('No data'));
+            return;
+        }
+
+        const table = $('<table>').addClass('table table-sm table-borderless stat-table mb-0');
+        const body = $('<tbody>');
+        for (let i = 0; i < Math.min(entries.length, 8); i++) {
+            const entry = entries[i] || {};
+            const labelCell = $('<td>').addClass('stat-table-label');
+            appendProviderLinks(labelCell, entry.sector || '(unknown)');
+            body.append(
+                    $('<tr>').append(
+                    labelCell,
+                    $('<td>').addClass('stat-table-value').text(
+                    formatNumber(entry.missingCount) + ' / ' + formatNumber(entry.totalCount) + ' (' + formatPercent(entry.lossPercent) + ')'
+                    )
+                    ));
+        }
+        table.append(body);
+        list.append(table);
+    }
+
     function renderBreakdowns(data) {
         const provider = sliceTop(data.missingByProviderIdKeys || [], data.missingByProviderIdValues || [], 15);
         const sector = sliceTop(data.missingBySectorFctKeys || [], data.missingBySectorFctValues || [], 15);
+        const sectorLoss = (data.missingBySectorLossRatios || []).slice(0, 15);
+        const sectorLossLabels = sectorLoss.map(function(entry) {
+            return (entry && entry.sector) ? entry.sector : '(unknown)';
+        });
+        const sectorLossValues = sectorLoss.map(function(entry) {
+            return (entry && entry.lossPercent) ? entry.lossPercent : 0;
+        });
 
         renderHorizontalBar('missingByProvider', provider.labels, provider.values, 'MISSING', chartColors.provider);
         renderHorizontalBar('missingBySector', sector.labels, sector.values, 'MISSING', chartColors.sector);
+        renderHorizontalPercentBar('missingBySectorRatio', sectorLossLabels, sectorLossValues, 'Loss %', chartColors.sectorRatio);
         renderRanking('#missingByProviderList', provider.labels, provider.values);
         renderRanking('#missingBySectorList', sector.labels, sector.values);
+        renderSectorLossRanking('#missingBySectorRatioList', sectorLoss);
+
     }
 
     function renderStatistics(data) {
