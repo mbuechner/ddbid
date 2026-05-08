@@ -46,18 +46,19 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.GZIPOutputStream;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class Dump implements Runnable {
 
     private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(ZoneId.systemDefault());
@@ -79,11 +80,8 @@ public class Dump implements Runnable {
     @Value("${ddbid.dump.lockfile}")
     private String lockfile;
 
-    @Autowired
-    private OkHttpClient httpClient;
-
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final OkHttpClient httpClient;
+    private final ObjectMapper objectMapper;
 
     @Override
     public void run() {

@@ -17,8 +17,6 @@ package de.ddb.labs.ddbid.controller;
 
 import de.ddb.labs.ddbid.service.DownloadCatalogService;
 import de.ddb.labs.ddbid.service.DownloadCatalogService.DownloadCatalog;
-import de.ddb.labs.ddbid.service.DownloadCatalogService.MigrationCatalog;
-import de.ddb.labs.ddbid.service.GitHubService;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -28,13 +26,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import jakarta.servlet.http.HttpServletResponse;
-import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.errors.CorruptObjectException;
-import org.eclipse.jgit.errors.IncorrectObjectTypeException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -44,6 +39,7 @@ import org.springframework.util.StreamUtils;
 
 @RestController
 @RequestMapping("download")
+@RequiredArgsConstructor
 public class DownloadRestController {
 
     @Value(value = "${ddbid.datapath.item}")
@@ -55,20 +51,11 @@ public class DownloadRestController {
     @Value(value = "${ddbid.datapath.organization}")
     private String organizationDataPath;
 
-    @Autowired
-    private GitHubService gitHub;
-
-    @Autowired
-    private DownloadCatalogService downloadCatalogService;
+    private final DownloadCatalogService downloadCatalogService;
 
     @GetMapping("catalog")
     public DownloadCatalog catalog(@RequestParam(value = "refresh", defaultValue = "false") boolean refresh) {
         return downloadCatalogService.getCatalog(refresh);
-    }
-
-    @GetMapping("catalog/migration")
-    public MigrationCatalog migrationCatalog(@RequestParam(value = "refresh", defaultValue = "false") boolean refresh) {
-        return downloadCatalogService.getMigrationCatalog(refresh);
     }
 
     @GetMapping("ddbid/{type:.+}/{filename:.+}")
@@ -118,13 +105,6 @@ public class DownloadRestController {
 
             response.sendError(404);
         }
-    }
-
-    @GetMapping("migration/{commit}/{date}")
-    public void getMigrationFile(@PathVariable("commit") String commit, @PathVariable("date") String date, HttpServletResponse response) throws IOException, IncorrectObjectTypeException, CorruptObjectException, GitAPIException {
-        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + date + "-" + GitHubService.FILE_NAME + "\"");
-        response.setContentType(MediaType.TEXT_PLAIN_VALUE);
-        StreamUtils.copy(gitHub.getFile(commit), response.getOutputStream());
     }
 
     private Set<String> getDumpFileNames(String dataPath) {

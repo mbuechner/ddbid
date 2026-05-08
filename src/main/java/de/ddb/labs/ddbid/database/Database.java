@@ -34,17 +34,19 @@ public class Database {
     private final String databaseUrl;
     private final String databaseUser;
     private final String databasePassword;
+    private final int queryTimeoutSeconds;
     private HikariConfig config;
     private JdbcTemplate jdbcTemplate;
     @Getter
     private HikariDataSource dataSource;
     
-    public Database(String databaseType, String database, String databaseUrl, String databaseUser, String databasePassword) {
+    public Database(String databaseType, String database, String databaseUrl, String databaseUser, String databasePassword, int queryTimeoutSeconds) {
         this.databaseType = databaseType;
         this.database = database;
         this.databaseUrl = databaseUrl;
         this.databaseUser = databaseUser;
         this.databasePassword = databasePassword;
+        this.queryTimeoutSeconds = queryTimeoutSeconds;
     }
     
     public void init() {
@@ -54,6 +56,9 @@ public class Database {
             log.info("Initialize {} database at {}...", type.getType(), config.getJdbcUrl());
             dataSource = new HikariDataSource(config);
             jdbcTemplate = new JdbcTemplate(dataSource);
+            if (queryTimeoutSeconds > 0) {
+                jdbcTemplate.setQueryTimeout(queryTimeoutSeconds);
+            }
         }
     }
 

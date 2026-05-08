@@ -12,7 +12,7 @@
         <link th:href="@{css/custom.css}" th:rel="stylesheet"/>
         <script th:src="@{webjars/font-awesome/7.2.0/js/all.min.js}" data-auto-replace-svg="nest"></script>
     </head>
-    <body th:data-download-catalog-url="@{/download/catalog}" th:data-download-migration-url="@{/download/catalog/migration}">
+    <body th:data-download-catalog-url="@{/download/catalog}">
         <div th:replace="~{fragments/navbar.html}"></div>
 
         <main class="container-fluid py-4">
@@ -27,16 +27,6 @@
             </div>
 
             <div class="row g-4" id="download-groups"></div>
-
-            <hr class="my-5"/>
-
-            <section>
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h2 class="h4 mb-0">Direct migration</h2>
-                    <span class="badge text-bg-secondary" id="download-migration-count">0</span>
-                </div>
-                <div class="list-group download-list" id="download-migration"></div>
-            </section>
         </main>
 
         <script th:src="@{/webjars/jquery/4.0.0/jquery.min.js}"></script>

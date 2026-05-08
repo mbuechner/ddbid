@@ -30,6 +30,9 @@ final class DataTableTimestampHelper {
 
     static TimestampFilter filter(String value, Supplier<Timestamp> latestTimestamp) {
         String normalized = normalize(value);
+        if (normalized == null) {
+            return TimestampFilter.inactive();
+        }
         if ("-1".equals(normalized)) {
             return TimestampFilter.inactive();
         }
@@ -43,7 +46,7 @@ final class DataTableTimestampHelper {
 
         Timestamp timestamp;
         try {
-            timestamp = normalized == null ? latestTimestamp.get() : parse(normalized);
+            timestamp = parse(normalized);
         } catch (IllegalArgumentException e) {
             return TimestampFilter.invalidFilter();
         }

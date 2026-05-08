@@ -26,26 +26,24 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class DDBQuery {
 
     // This is using the _old_ API URL!
     private final static String API = "https://api.deutsche-digitale-bibliothek.de";
 
-    @Autowired
-    private OkHttpClient httpClient;
-
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final OkHttpClient httpClient;
+    private final ObjectMapper objectMapper;
 
     @Value(value = "${ddbid.apikey:}")
     private String apiKey;

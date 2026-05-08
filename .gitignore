@@ -43,3 +43,5 @@ build/
 /postgres-import/
 *.sql
 *.sql.gz
+/docs/*.md
+/docs/*.sql

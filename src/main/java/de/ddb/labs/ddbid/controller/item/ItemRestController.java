@@ -19,7 +19,7 @@ import de.ddb.labs.ddbid.model.item.Item;
 import de.ddb.labs.ddbid.model.paging.Page;
 import de.ddb.labs.ddbid.model.paging.PagingRequest;
 import de.ddb.labs.ddbid.service.ItemService;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,14 +31,10 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("item")
+@RequiredArgsConstructor
 public class ItemRestController {
 
     private final ItemService service;
-
-    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "Spring services are container-managed collaborators.")
-    public ItemRestController(ItemService ddbIdService) {
-        this.service = ddbIdService;
-    }
 
     @PostMapping
     public Page<Item> list(@RequestBody PagingRequest pagingRequest) {

@@ -16,14 +16,13 @@
 package de.ddb.labs.ddbid.controller;
 
 import de.ddb.labs.ddbid.cronjob.objects.Correct;
-import de.ddb.labs.ddbid.cronjob.DirectMigrationCronJob;
 import de.ddb.labs.ddbid.cronjob.ObjectsCronJob;
 import de.ddb.labs.ddbid.cronjob.objects.Dump;
 import de.ddb.labs.ddbid.cronjob.objects.Compare;
 import de.ddb.labs.ddbid.cronjob.objects.Import;
 import de.ddb.labs.ddbid.service.StatisticsService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,31 +33,16 @@ import org.springframework.scheduling.TaskScheduler;
 @RestController
 @RequestMapping("maintenance")
 @Slf4j
+@RequiredArgsConstructor
 public class MaintenanceRestController {
 
-    @Autowired
-    private TaskScheduler taskScheduler;
-
-    @Autowired
-    private ObjectsCronJob objectsCronJob;
-
-    @Autowired
-    private DirectMigrationCronJob directMigrationCronJob;
-
-    @Autowired
-    private Dump dump;
-
-    @Autowired
-    private Compare compare;
-
-    @Autowired
-    private Import importer;
-
-    @Autowired
-    private Correct correct;
-
-    @Autowired
-    private StatisticsService statisticsService;
+    private final TaskScheduler taskScheduler;
+    private final ObjectsCronJob objectsCronJob;
+    private final Dump dump;
+    private final Compare compare;
+    private final Import importer;
+    private final Correct correct;
+    private final StatisticsService statisticsService;
     
     /**
      * Dump data from API
@@ -127,7 +111,6 @@ public class MaintenanceRestController {
         try {
 
             taskScheduler.schedule(objectsCronJob, Instant.now());
-            taskScheduler.schedule(directMigrationCronJob, Instant.now());
         } catch (Exception e) {
             return Map.of("status", "error", "message", String.valueOf(e.getMessage()));
         }

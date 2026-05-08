@@ -23,7 +23,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,7 +36,6 @@ public class DownloadCatalogService {
     private static final Duration CACHE_DURATION = Duration.ofMinutes(5);
     private static final ThreadLocal<DecimalFormat> FORMATTER = ThreadLocal.withInitial(() -> new DecimalFormat("#,##0.#"));
 
-    private final GitHubService gitHub;
     private final Object cacheLock = new Object();
 
     @Value(value = "${ddbid.datapath.item}")
@@ -50,10 +48,8 @@ public class DownloadCatalogService {
     private String dataPathOrganization;
 
     private volatile CacheEntry cacheEntry;
-    private volatile MigrationCacheEntry migrationCacheEntry;
 
-    public DownloadCatalogService(GitHubService gitHub) {
-        this.gitHub = gitHub;
+    public DownloadCatalogService() {
     }
 
     public DownloadCatalog getCatalog(boolean refresh) {
@@ -79,34 +75,6 @@ public class DownloadCatalogService {
         }
     }
 
-    public MigrationCatalog getMigrationCatalog(boolean refresh) {
-        final Instant now = Instant.now();
-        MigrationCacheEntry current = migrationCacheEntry;
-        if (!refresh && current != null && current.isValid(now)) {
-            return current.catalog();
-        }
-
-        synchronized (cacheLock) {
-            current = migrationCacheEntry;
-            if (!refresh && current != null && current.isValid(now)) {
-                return current.catalog();
-            }
-
-            final MigrationCatalog catalog = loadMigrationCatalog(now);
-            migrationCacheEntry = new MigrationCacheEntry(now, catalog);
-            return catalog;
-        }
-    }
-
-    private MigrationCatalog loadMigrationCatalog(Instant generatedAt) {
-        try {
-            return new MigrationCatalog(generatedAt, migrationEntries(gitHub.getCommits()), null);
-        } catch (Exception e) {
-            log.warn("Could not load migration downloads. {}", e.getMessage());
-            return new MigrationCatalog(generatedAt, List.of(), "Migration downloads could not be loaded.");
-        }
-    }
-
     private DownloadGroup group(String type, String label, String path) {
         return new DownloadGroup(
                 type,
@@ -128,17 +96,6 @@ public class DownloadCatalogService {
         return entries;
     }
 
-    private static List<DownloadEntry> migrationEntries(Map<String, String> commits) {
-        final List<DownloadEntry> entries = new ArrayList<>(commits.size());
-        for (Map.Entry<String, String> commit : commits.entrySet()) {
-            entries.add(new DownloadEntry(
-                    commit.getValue() + "-" + GitHubService.FILE_NAME,
-                    null,
-                    "download/migration/" + commit.getKey() + "/" + commit.getValue()
-            ));
-        }
-        return entries;
-    }
 
     public static String readableFileSize(long size) {
         if (size <= 0) {
@@ -161,17 +118,6 @@ public class DownloadCatalogService {
         }
     }
 
-    public record MigrationCatalog(Instant generatedAt, List<DownloadEntry> entries, String error) {
-
-        public MigrationCatalog {
-            entries = List.copyOf(entries);
-        }
-
-        @Override
-        public List<DownloadEntry> entries() {
-            return List.copyOf(entries);
-        }
-    }
 
     public record DownloadGroup(String type, String label, List<DownloadEntry> dumps, List<DownloadEntry> compare) {
 
@@ -195,13 +141,6 @@ public class DownloadCatalogService {
     }
 
     private record CacheEntry(Instant createdAt, DownloadCatalog catalog) {
-
-        private boolean isValid(Instant now) {
-            return createdAt.plus(CACHE_DURATION).isAfter(now);
-        }
-    }
-
-    private record MigrationCacheEntry(Instant createdAt, MigrationCatalog catalog) {
 
         private boolean isValid(Instant now) {
             return createdAt.plus(CACHE_DURATION).isAfter(now);

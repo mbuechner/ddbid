@@ -51,7 +51,7 @@ Minimal nuetzliche `.env`:
 
 ```properties
 DDBID_DATABASE_TYPE=h2
-DDBID_DATABASE=data/ddbid_h2_DO_NOT_DELETE_ITS_IMPORTANT.db
+DDBID_DATABASE_FILE=data/ddbid_h2_DO_NOT_DELETE_ITS_IMPORTANT.db
 DDBID_SECURITY_USER=user
 DDBID_SECURITY_PASSWORD=password
 SCHEDULER_ENABLED=true
@@ -75,7 +75,7 @@ Wichtige Variablen:
 ```properties
 DDBID_PORT=8080
 DDBID_DATABASE_TYPE=h2
-DDBID_DATABASE=/app/data/ddbid_duckdb_DO_NOT_DELETE_ITS_IMPORTANT.db
+DDBID_DATABASE_FILE=/app/data/ddbid_duckdb_DO_NOT_DELETE_ITS_IMPORTANT.db
 DDBID_DUMP_LOCKFILE=/app/data/DUMP_IS_RUNNING.lock
 DDBID_DATAPATH_ITEM=/app/data/dumps/item/
 DDBID_DATAPATH_PERSON=/app/data/dumps/person/
@@ -93,7 +93,7 @@ DDBID_DATABASE_PASSWORD=change-me
 SCHEDULER_ENABLED=false
 ```
 
-Im PostgreSQL-Modus bleibt `DDBID_DATABASE` ungenutzt, solange `DDBID_DATABASE_URL` gesetzt ist. Alternativ kann `DDBID_DATABASE` direkt eine `jdbc:postgresql:...` URL enthalten.
+Im PostgreSQL-Modus bleibt `DDBID_DATABASE_FILE` ungenutzt, solange `DDBID_DATABASE_URL` gesetzt ist.
 
 ## Bestehende Daten
 
@@ -117,12 +117,11 @@ Die Anwendung liest Konfiguration aus `application.properties`, echten Umgebungs
 | `DDBID_PATHPREFIX` | `/` | Servlet Context Path, z.B. `/ddbid` hinter einem Reverse Proxy. |
 | `SCHEDULER_ENABLED` | `true` | Schaltet automatische `@Scheduled`-Jobs ein oder aus. Mit `false` startet die UI, Cron-Jobs laufen aber nicht automatisch. |
 | `DDBID_CRON_OBJECTS` | `0 0 6 * * FRI` | Cron-Ausdruck fuer den Objekt-Dump/Compare/Import-Ablauf. |
-| `DDBID_CRON_DIRECTMIGRATION` | `0 0 4 * * FRI` | Cron-Ausdruck fuer die Direct-Migration. |
 | `DDBID_CRON_RETRY_DELAY` | `600000` | Wartezeit zwischen Retry-Versuchen in Millisekunden. |
 | `DDBID_CRON_RETRY_MAX_ATTEMPTS` | `5` | Maximale Anzahl Retry-Versuche. `DDBID_CRON_RETRY_MAXATTEMPTS` wird aus Kompatibilitaetsgruenden ebenfalls noch gelesen. |
 | `DDBID_DATABASE_TYPE` | `h2` | Datenbanktyp: `h2`, `postgres`, `postgresql` oder `pg`. |
-| `DDBID_DATABASE` | `data/ddbid_DO_NOT_DELETE_ITS_IMPORTANT.db` | H2-Dateipfad. Bei Postgres optional auch eine `jdbc:postgresql:...` URL, falls `DDBID_DATABASE_URL` leer ist. |
-| `DDBID_DATABASE_URL` | leer | JDBC-URL fuer Postgres, z.B. `jdbc:postgresql://localhost:5432/ddbid`. Hat Vorrang vor `DDBID_DATABASE`. |
+| `DDBID_DATABASE_FILE` | `data/ddbid_DO_NOT_DELETE_ITS_IMPORTANT.db` | H2-Dateipfad. |
+| `DDBID_DATABASE_URL` | leer | JDBC-URL fuer Postgres, z.B. `jdbc:postgresql://localhost:5432/ddbid`. Hat Vorrang vor `DDBID_DATABASE_FILE`. |
 | `DDBID_DATABASE_USER` | leer | Datenbankbenutzer fuer Postgres. |
 | `DDBID_DATABASE_PASSWORD` | leer | Datenbankpasswort fuer Postgres. |
 | `DDBID_DATABASE_INDEXES_AUTO` | `false` | Erstellt fehlende Performance-Indizes beim Start. Bei grossen H2-Dateien besser gezielt ueber `/maintenance/indexes` ausfuehren. |
@@ -134,16 +133,12 @@ Die Anwendung liest Konfiguration aus `application.properties`, echten Umgebungs
 | `DDBID_DATAPATH_ORGANIZATION` | `data/dumps/organization/` | Verzeichnis fuer Organization-Dumps. |
 | `DDBID_SECURITY_USER` | `user` | Benutzername fuer die Web-Oberflaeche. |
 | `DDBID_SECURITY_PASSWORD` | `password` | Passwort fuer die Web-Oberflaeche. |
-| `DDBID_GIT_URL` | keiner | Git-Repository fuer Statistik-/Tooling-Daten. |
-| `DDBID_GIT_BRANCH` | `refs/heads/master` | Git-Branch bzw. Ref fuer das Repository. |
-| `DDBID_GIT_NAME` | `user` | Git-Benutzername. |
-| `DDBID_GIT_PASS` | `password` | Git-Passwort oder Token. |
 
 Beispiel fuer H2:
 
 ```properties
 DDBID_DATABASE_TYPE=h2
-DDBID_DATABASE=data/ddbid_h2_DO_NOT_DELETE_ITS_IMPORTANT.db
+DDBID_DATABASE_FILE=data/ddbid_h2_DO_NOT_DELETE_ITS_IMPORTANT.db
 DDBID_DATABASE_INDEXES_AUTO=false
 SCHEDULER_ENABLED=false
 ```

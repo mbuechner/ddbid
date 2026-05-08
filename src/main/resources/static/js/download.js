@@ -1,20 +1,13 @@
 $(function() {
     const catalogUrl = $('body').attr('data-download-catalog-url');
-    const migrationUrl = $('body').attr('data-download-migration-url');
     const status = $('#download-status');
     const refresh = $('#download-refresh');
     let loadingCatalog = false;
-    let loadingMigration = false;
 
-    function setLoading(target, isLoading) {
-        if (target === 'catalog') {
-            loadingCatalog = isLoading;
-        } else {
-            loadingMigration = isLoading;
-        }
-        const isBusy = loadingCatalog || loadingMigration;
-        refresh.prop('disabled', isBusy);
-        refresh.find('i').toggleClass('fa-spin', isBusy);
+    function setLoading(isLoading) {
+        loadingCatalog = isLoading;
+        refresh.prop('disabled', loadingCatalog);
+        refresh.find('i').toggleClass('fa-spin', loadingCatalog);
     }
 
     function renderEntry(entry) {
@@ -72,17 +65,8 @@ $(function() {
         status.text(generatedAt ? 'Updated ' + generatedAt : 'Ready');
     }
 
-    function renderMigration(catalog) {
-        renderList($('#download-migration'), catalog.entries);
-        $('#download-migration-count').text(catalog.entries ? catalog.entries.length : 0);
-
-        if (catalog.error) {
-            $('#download-migration').prepend($('<div>').addClass('list-group-item text-warning').text(catalog.error));
-        }
-    }
-
     function loadCatalog(refreshCatalog) {
-        setLoading('catalog', true);
+        setLoading(true);
         status.text(refreshCatalog ? 'Refreshing...' : 'Loading...');
 
         $.getJSON(catalogUrl, {refresh: refreshCatalog})
@@ -90,35 +74,15 @@ $(function() {
                 .fail(function() {
                     status.text('Downloads could not be loaded');
                     $('#download-groups').empty();
-                    renderList($('#download-migration'), []);
-                    $('#download-migration-count').text('0');
                 })
                 .always(function() {
-                    setLoading('catalog', false);
-                });
-    }
-
-    function loadMigration(refreshCatalog) {
-        setLoading('migration', true);
-        renderList($('#download-migration'), []);
-
-        $.getJSON(migrationUrl, {refresh: refreshCatalog})
-                .done(renderMigration)
-                .fail(function() {
-                    renderList($('#download-migration'), []);
-                    $('#download-migration').prepend($('<div>').addClass('list-group-item text-warning').text('Migration downloads could not be loaded'));
-                    $('#download-migration-count').text('0');
-                })
-                .always(function() {
-                    setLoading('migration', false);
+                    setLoading(false);
                 });
     }
 
     refresh.on('click', function() {
         loadCatalog(true);
-        loadMigration(true);
     });
 
     loadCatalog(false);
-    loadMigration(false);
 });

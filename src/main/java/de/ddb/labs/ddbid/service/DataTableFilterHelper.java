@@ -16,8 +16,11 @@
 package de.ddb.labs.ddbid.service;
 
 import de.ddb.labs.ddbid.model.paging.Column;
+import de.ddb.labs.ddbid.model.paging.ColumnControl;
+import de.ddb.labs.ddbid.model.paging.ColumnControlSearch;
 import de.ddb.labs.ddbid.model.paging.PagingRequest;
 import de.ddb.labs.ddbid.model.paging.Search;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -43,7 +46,7 @@ final class DataTableFilterHelper {
             }
 
             appendAnd(where);
-            appendCondition(where, column.getData(), filter.value(), values);
+            appendCondition(where, column.getData(), filter, values);
             active = true;
         }
         return active;
@@ -54,17 +57,37 @@ final class DataTableFilterHelper {
     }
 
     private static ColumnFilter columnFilter(Column column) {
+        ColumnControl columnControl = column.getColumnControl();
+        if (columnControl != null && columnControl.getSearch() != null) {
+            ColumnControlSearch search = columnControl.getSearch();
+            return new ColumnFilter(search.getValue(), normalizedMode(search.getLogic()));
+        }
+
         Search search = column.getSearch();
         if (search != null) {
-            return new ColumnFilter(search.getValue());
+            return new ColumnFilter(search.getValue(), search.getMode());
         }
         return null;
     }
 
-    private static void appendCondition(StringBuilder where, String field, String value, List<Object> values) {
-        String expression = expression(field);
-        where.append(expression).append(" ILIKE ? ESCAPE '\\' AND ");
-        values.add("%" + escapeLike(value) + "%");
+    private static String normalizedMode(String logic) {
+        if (logic == null) {
+            return "";
+        }
+
+        if ("equal".equalsIgnoreCase(logic)) {
+            return "exact";
+        }
+        if ("contains".equalsIgnoreCase(logic)) {
+            return "contains";
+        }
+        return logic;
+    }
+
+    private static void appendCondition(StringBuilder where, String field, ColumnFilter filter, List<Object> values) {
+        FilterCondition condition = condition(field, filter.value(), filter.mode());
+        where.append(condition.sql()).append(" AND ");
+        values.addAll(condition.values());
     }
 
     private static void appendAnd(StringBuilder where) {
@@ -86,6 +109,41 @@ final class DataTableFilterHelper {
         return column;
     }
 
+    private static FilterCondition condition(String field, String value, String mode) {
+        String trimmed = value == null ? "" : value.trim();
+        String expression = expression(field);
+        if (isExactMode(mode, field, trimmed)) {
+            return new FilterCondition(expression + "=?", List.of(trimmed));
+        }
+        return new FilterCondition(
+                expression + " ILIKE ? ESCAPE '\\'",
+                List.of("%" + escapeLike(trimmed) + "%"));
+    }
+
+    private static boolean isExactMode(String mode, String field, String value) {
+        if ("exact".equalsIgnoreCase(mode)) {
+            return true;
+        }
+        if ("contains".equalsIgnoreCase(mode)) {
+            return false;
+        }
+        return isLegacyExactMatchField(field) && looksLikeIdentifier(value);
+    }
+
+    private static boolean isLegacyExactMatchField(String field) {
+        return "id".equals(field)
+                || "provider_item_id".equals(field)
+                || "dataset_id".equals(field)
+                || "provider_id".equals(field)
+                || "supplier_id".equals(field)
+                || "variant_id".equals(field)
+                || "type".equals(field);
+    }
+
+    private static boolean looksLikeIdentifier(String value) {
+        return !value.isBlank() && value.matches("[\\p{Alnum}_:./\\-]{3,}");
+    }
+
     private static String escapeLike(String value) {
         return value
                 .replace("\\", "\\\\")
@@ -93,7 +151,14 @@ final class DataTableFilterHelper {
                 .replace("_", "\\_");
     }
 
-    private record ColumnFilter(String value) {
+    private record FilterCondition(String sql, List<Object> values) {
+
+        private FilterCondition {
+            values = List.copyOf(new ArrayList<>(values));
+        }
+    }
+
+    private record ColumnFilter(String value, String mode) {
 
         boolean hasCondition() {
             return value != null && !value.isBlank();
@@ -102,6 +167,11 @@ final class DataTableFilterHelper {
         @Override
         public String value() {
             return value == null ? "" : value;
+        }
+
+        @Override
+        public String mode() {
+            return mode == null ? "" : mode;
         }
     }
 }

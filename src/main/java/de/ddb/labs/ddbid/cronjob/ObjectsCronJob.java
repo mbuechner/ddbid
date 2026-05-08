@@ -20,7 +20,6 @@ import de.ddb.labs.ddbid.cronjob.objects.Correct;
 import de.ddb.labs.ddbid.cronjob.objects.Dump;
 import de.ddb.labs.ddbid.cronjob.objects.Import;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -28,20 +27,22 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 @Slf4j
 public class ObjectsCronJob implements CronJobInterface {
-    
-    @Autowired
-    private Dump dump;
-    
-    @Autowired
-    private Compare compare;
-    
-    @Autowired
-    private Import importer;
-    
-    @Autowired
-    private Correct correct;
-    
-    public ObjectsCronJob(@Value(value = "${ddbid.cron.objects}") String scheduledPattern) {
+
+    private final Dump dump;
+    private final Compare compare;
+    private final Import importer;
+    private final Correct correct;
+
+    public ObjectsCronJob(
+            @Value(value = "${ddbid.cron.objects}") String scheduledPattern,
+            Dump dump,
+            Compare compare,
+            Import importer,
+            Correct correct) {
+        this.dump = dump;
+        this.compare = compare;
+        this.importer = importer;
+        this.correct = correct;
         log.info("{} is scheduled at {}", getClass().getName(), scheduledPattern);
     }
     

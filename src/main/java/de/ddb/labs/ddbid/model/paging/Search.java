@@ -28,4 +28,5 @@ public class Search {
 
     private String value;
     private String regex;
+    private String mode;
 }

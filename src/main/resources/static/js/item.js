@@ -1,89 +1,15 @@
 $(document).ready(function() {
-    let latestTimestampValue = null;
     const tableHelper = window.DDBID.table;
 
-    tableHelper.createColumnFilters();
-    tableHelper.installProviderTooltips(document.getElementById('ddbid'));
-    $("#ddbid_processing").addClass("alert alert-secondary");
-
-    $('#ddbid').DataTable(tableHelper.baseDataTableOptions(
-            'item',
-            function() {
-                return latestTimestampValue;
-            },
-            function() {
-                const table = this.api();
-                tableHelper.installDefaultFilters(
-                        table,
-                        'item/timestamp',
-                        'itemTimestampOptions',
-                        'itemStatusOptions',
-                        function(value) {
-                            latestTimestampValue = value;
-                        });
-
-                tableHelper.setColumnFiltersLoading([2, 4, 6, 7, 8], true, 'Loading suggestions...');
-                tableHelper.loadJsonWithCache('item/filter-options', function(json) {
-                    json = json || {};
-                    tableHelper.attachDatalist(2, 'itemStatusOptions', tableHelper.stringOptions(json.status || ['MISSING', 'NEW', 'FOUND', 'ALL']));
-                    tableHelper.attachDatalist(4, 'itemDatasetOptions', tableHelper.stringOptions(json.dataset_id));
-                    tableHelper.attachDatalist(6, 'itemProviderOptions', tableHelper.stringOptions(json.provider_id));
-                    tableHelper.attachDatalist(7, 'itemSectorOptions', tableHelper.stringOptions(json.sector_fct));
-                    tableHelper.attachDatalist(8, 'itemSupplierOptions', tableHelper.stringOptions(json.supplier_id));
-                    tableHelper.setColumnFiltersLoading([2, 4, 6, 7, 8], false);
-                }, function() {
-                    tableHelper.setColumnFiltersLoading([2, 4, 6, 7, 8], false);
-                });
-            },
-            [{
-                    "data": "timestamp",
-                    "className": "text-nowrap"
-                },
-                {
-                    "data": "id",
-                    "className": "text-nowrap",
-                    "render": function(data, type) {
-                        return type === 'display' && data ? tableHelper.ddbItemLink(data) : data;
-                    }
-                },
-                {
-                    "data": "status",
-                    "className": "text-nowrap"
-                },
-                {
-                    "data": "provider_item_id",
-                    "className": "text-nowrap"
-                },
-                {
-                    "data": "dataset_id",
-                    "className": "text-wrap"
-                },
-                {
-                    "data": "label",
-                    "className": "text-wrap"
-                },
-                {
-                    "data": "provider_id",
-                    "className": "text-wrap",
-                    "render": function(data, type) {
-                        if (type === 'display' && data) {
-                            return data.replace(/([A-Z0-9]{32})/g, function(match, providerId) {
-                                return tableHelper.ddbProviderLink(providerId);
-                            });
-                        }
-                        return data;
-                    }
-                },
-                {
-                    "data": "sector_fct",
-                    "className": "text-nowrap",
-                    "render": tableHelper.renderSector
-                },
-                {
-                    "data": "supplier_id",
-                    "className": "text-wrap"
-                }
-            ]));
-
-    tableHelper.installBackToTop();
+    tableHelper.initEntityTable({
+        entity: 'item',
+        providerTooltips: true,
+        filterOptions: tableHelper.entityFilterOptions('item', [
+            { columnIndex: 4, datalistSuffix: 'DatasetOptions', optionKey: 'dataset_id' },
+            { columnIndex: 6, datalistSuffix: 'ProviderOptions', optionKey: 'provider_id' },
+            { columnIndex: 7, datalistSuffix: 'SectorOptions', optionKey: 'sector_fct' },
+            { columnIndex: 8, datalistSuffix: 'SupplierOptions', optionKey: 'supplier_id' }
+        ]),
+        columns: tableHelper.itemColumns()
+    });
 });

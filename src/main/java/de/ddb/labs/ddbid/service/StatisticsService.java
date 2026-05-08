@@ -35,11 +35,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -51,6 +51,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class StatisticsService {
 
     private static final int PROVIDER_LIMIT = 50;
@@ -61,14 +62,9 @@ public class StatisticsService {
     private final Calendar cal = Calendar.getInstance(Locale.GERMANY);
     private final DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE;
 
-    @Autowired
-    private Database database;
-
-    @Autowired
-    private OkHttpClient httpClient;
-
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final Database database;
+    private final OkHttpClient httpClient;
+    private final ObjectMapper objectMapper;
 
     @Value("${ddbid.database.table.item}")
     private String itemTableName;
@@ -255,6 +251,11 @@ public class StatisticsService {
             database.getJdbcTemplate().execute("SELECT pg_advisory_xact_lock(hashtext('de.ddb.labs.ddbid.ensureDatabaseIndexes'))");
             database.getJdbcTemplate().execute(commonIndexSql());
             database.getJdbcTemplate().execute(postgresSearchIndexSql());
+            try {
+                database.getJdbcTemplate().execute(postgresAdvancedIndexSql());
+            } catch (RuntimeException e) {
+                log.info("PostgreSQL advanced indexes (covering indexes) not available. This is OK for PostgreSQL < 11. Message: {}", e.getMessage());
+            }
         });
     }
 
@@ -304,6 +305,44 @@ public class StatisticsService {
                                            CREATE INDEX IF NOT EXISTS "organization_trgm_id" ON "{{organization}}" USING GIN ("id" gin_trgm_ops);
                                            CREATE INDEX IF NOT EXISTS "organization_trgm_variant" ON "{{organization}}" USING GIN ("variant_id" gin_trgm_ops);
                                            CREATE INDEX IF NOT EXISTS "organization_trgm_name" ON "{{organization}}" USING GIN ("preferredName" gin_trgm_ops);
+                                           """
+                .replace("{{item}}", itemTableName)
+                .replace("{{person}}", personTableName)
+                .replace("{{organization}}", organizationTableName);
+    }
+
+    private String postgresAdvancedIndexSql() {
+        // Advanced indexes for PostgreSQL 11+: covering indexes (INCLUDE)
+        // INCLUDE clause adds columns to index without affecting filtering performance
+        // Enables index-only scans for faster pagination queries
+        return """
+                                           ANALYZE "{{item}}";
+                                           ANALYZE "{{person}}";
+                                           ANALYZE "{{organization}}";
+                                           DROP INDEX IF EXISTS "item_filter_id" CASCADE;
+                                           DROP INDEX IF EXISTS "item_filter_provider_item" CASCADE;
+                                           DROP INDEX IF EXISTS "item_filter_dataset" CASCADE;
+                                           DROP INDEX IF EXISTS "item_filter_provider" CASCADE;
+                                           DROP INDEX IF EXISTS "item_filter_sector" CASCADE;
+                                           DROP INDEX IF EXISTS "item_filter_supplier" CASCADE;
+                                           CREATE INDEX IF NOT EXISTS "item_filter_id" ON "{{item}}"("status", "timestamp", "id") INCLUDE ("label", "provider_id", "dataset_id", "supplier_id", "sector_fct");
+                                           CREATE INDEX IF NOT EXISTS "item_filter_provider_item" ON "{{item}}"("status", "timestamp", "provider_item_id") INCLUDE ("id", "label", "provider_id", "dataset_id", "sector_fct");
+                                           CREATE INDEX IF NOT EXISTS "item_filter_dataset" ON "{{item}}"("status", "timestamp", "dataset_id") INCLUDE ("id", "label", "provider_id", "supplier_id", "sector_fct");
+                                           CREATE INDEX IF NOT EXISTS "item_filter_provider" ON "{{item}}"("status", "timestamp", "provider_id") INCLUDE ("id", "label", "dataset_id", "supplier_id", "sector_fct");
+                                           CREATE INDEX IF NOT EXISTS "item_filter_sector" ON "{{item}}"("status", "timestamp", "sector_fct") INCLUDE ("id", "label", "provider_id", "dataset_id");
+                                           CREATE INDEX IF NOT EXISTS "item_filter_supplier" ON "{{item}}"("status", "timestamp", "supplier_id") INCLUDE ("id", "label", "provider_id", "dataset_id");
+                                           DROP INDEX IF EXISTS "person_filter_id" CASCADE;
+                                           DROP INDEX IF EXISTS "person_filter_variant" CASCADE;
+                                           DROP INDEX IF EXISTS "person_filter_type" CASCADE;
+                                           CREATE INDEX IF NOT EXISTS "person_filter_id" ON "{{person}}"("status", "timestamp", "id") INCLUDE ("preferredName", "variant_id", "type");
+                                           CREATE INDEX IF NOT EXISTS "person_filter_variant" ON "{{person}}"("status", "timestamp", "variant_id") INCLUDE ("id", "preferredName", "type");
+                                           CREATE INDEX IF NOT EXISTS "person_filter_type" ON "{{person}}"("status", "timestamp", "type") INCLUDE ("id", "preferredName", "variant_id");
+                                           DROP INDEX IF EXISTS "organization_filter_id" CASCADE;
+                                           DROP INDEX IF EXISTS "organization_filter_variant" CASCADE;
+                                           DROP INDEX IF EXISTS "organization_filter_type" CASCADE;
+                                           CREATE INDEX IF NOT EXISTS "organization_filter_id" ON "{{organization}}"("status", "timestamp", "id") INCLUDE ("preferredName", "variant_id", "type");
+                                           CREATE INDEX IF NOT EXISTS "organization_filter_variant" ON "{{organization}}"("status", "timestamp", "variant_id") INCLUDE ("id", "preferredName", "type");
+                                           CREATE INDEX IF NOT EXISTS "organization_filter_type" ON "{{organization}}"("status", "timestamp", "type") INCLUDE ("id", "preferredName", "variant_id");
                                            """
                 .replace("{{item}}", itemTableName)
                 .replace("{{person}}", personTableName)

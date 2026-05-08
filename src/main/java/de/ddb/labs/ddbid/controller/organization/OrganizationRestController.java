@@ -19,7 +19,7 @@ import de.ddb.labs.ddbid.model.organization.Organization;
 import de.ddb.labs.ddbid.model.paging.Page;
 import de.ddb.labs.ddbid.model.paging.PagingRequest;
 import de.ddb.labs.ddbid.service.OrganizationService;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,18 +27,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.sql.Timestamp;
+import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("organization")
+@RequiredArgsConstructor
 public class OrganizationRestController {
 
     private final OrganizationService service;
-
-    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "Spring services are container-managed collaborators.")
-    public OrganizationRestController(OrganizationService ddbIdService) {
-        this.service = ddbIdService;
-    }
 
     @PostMapping
     public Page<Organization> list(@RequestBody PagingRequest pagingRequest) {
@@ -48,5 +45,10 @@ public class OrganizationRestController {
     @GetMapping("timestamp")
     public Map<String, Timestamp> timestamps() {
         return service.getTimestamps();
+    }
+
+    @GetMapping("filter-options")
+    public Map<String, List<String>> filterOptions() {
+        return service.getFilterOptions();
     }
 }

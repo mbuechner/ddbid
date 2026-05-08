@@ -18,6 +18,7 @@ table th {
     overflow-x: auto;
     overflow-y: visible;
     width: 100%;
+    -webkit-overflow-scrolling: touch;
 }
 #ddbid {
     table-layout: fixed;
@@ -44,6 +45,17 @@ table th {
 #ddbid .dtcc-search input {
     max-width: 100%;
 }
+#ddbid .dtcc-search {
+    display: flex;
+    align-items: stretch;
+}
+#ddbid .dtcc-search select {
+    flex: 0 0 96px;
+}
+#ddbid .dtcc-search input {
+    min-width: 0;
+    flex: 1 1 auto;
+}
 .dataTables_processing {
     z-index: 1 !important;
     width: 100% !important;
@@ -52,6 +64,10 @@ table th {
     left: auto !important;
     margin: 0 !important;
     border: 0 !important;
+}
+.dataTables_processing:before,
+.dataTables_processing:after {
+    display: none !important;
 }
 .download-list {
     max-height: 420px;
@@ -142,14 +158,73 @@ table th {
 .column-filter-row td {
     padding-top: 0.35rem;
     padding-bottom: 0.35rem;
+    vertical-align: middle;
 }
-.column-filter-row .ddbid-column-filter,
+.column-filter-row .ddbid-filter-group {
+    min-width: 150px;
+    width: 100%;
+}
 .column-filter-row .dtcc-search input {
     min-width: 130px;
+    border-right-width: 0;
 }
-.column-filter-row .ddbid-column-filter.is-loading {
+.column-filter-row .dtcc-search input.is-loading {
     background-color: #f8f9fa;
     opacity: 0.85;
+}
+.ddbid-query-status {
+    display: none;
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    right: 0.75rem;
+    z-index: 20;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0;
+    border: 1px solid #d4dee6;
+    background: linear-gradient(180deg, #f8fbfd 0%, #f2f6f9 100%);
+    pointer-events: none;
+}
+.ddbid-query-status.is-visible {
+    display: flex;
+}
+.ddbid-table-shell {
+    position: relative;
+}
+.ddbid-query-status-message {
+    font-weight: 600;
+    color: #2d3a45;
+}
+.ddbid-query-status-detail {
+    font-size: 0.875rem;
+    color: #5f6b76;
+}
+@media (max-width: 768px) {
+    .table-responsive {
+        overflow-x: auto;
+        overflow-y: visible;
+    }
+
+    #ddbid {
+        width: max-content !important;
+        min-width: 1100px;
+        table-layout: auto;
+    }
+
+    #ddbid th,
+    #ddbid td,
+    #ddbid td a {
+        max-width: none;
+        white-space: nowrap;
+        overflow-wrap: normal;
+        word-break: normal;
+    }
+
+    .ddbid-query-status {
+        left: 0.5rem;
+        right: 0.5rem;
+    }
 }
 .container {
     margin-top: 100px

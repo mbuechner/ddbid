@@ -18,8 +18,11 @@ package de.ddb.labs.ddbid;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.ddb.labs.ddbid.cronjob.ObjectsCronJob;
 import de.ddb.labs.ddbid.cronjob.helper.Helper;
+import de.ddb.labs.ddbid.cronjob.objects.Compare;
+import de.ddb.labs.ddbid.cronjob.objects.Correct;
+import de.ddb.labs.ddbid.cronjob.objects.Dump;
+import de.ddb.labs.ddbid.cronjob.objects.Import;
 import de.ddb.labs.ddbid.database.Database;
-import de.ddb.labs.ddbid.service.GitHubService;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -27,10 +30,10 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import jakarta.annotation.PreDestroy;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Dispatcher;
 import okhttp3.OkHttpClient;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -46,11 +49,12 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EnableRetry
 @EnableAsync
 @Slf4j
+@RequiredArgsConstructor
 public class Application {
 
     public static final String API = "https://api.deutsche-digitale-bibliothek.de/2";
 
-    @Value("${ddbid.database}")
+    @Value("${ddbid.database.file}")
     private String databaseName;
 
     @Value("${ddbid.database.type:h2}")
@@ -64,6 +68,9 @@ public class Application {
 
     @Value("${ddbid.database.password:}")
     private String databasePassword;
+
+    @Value("${ddbid.database.query-timeout-seconds:300}")
+    private int databaseQueryTimeoutSeconds;
 
     @Value("${ddbid.dump.lockfile}")
     private String lockfile;
@@ -81,12 +88,8 @@ public class Application {
     private ObjectMapper objectMapper; // http client
 
     private ObjectsCronJob objectsCronJob;
-    
-    @Autowired
-    private GitHubService gitHub;
 
-    @Autowired
-    private TaskScheduler taskScheduler;
+    private final TaskScheduler taskScheduler;
 
     @Value(value = "${ddbid.datapath.item}")
     private String dataPathItem;
@@ -147,7 +150,6 @@ public class Application {
         log.info("Destroy callback triggered: Closing database...");
         try {
             database.close();
-            gitHub.close();
             httpClient.dispatcher().cancelAll();
         } catch (Exception e) {
             log.error("Could not close connection to database. {}", e.getMessage());
@@ -155,8 +157,8 @@ public class Application {
     }
     
     @Bean
-    protected ObjectsCronJob objectsCronJob() {
-        objectsCronJob = new ObjectsCronJob(cronPatternObjects);
+    protected ObjectsCronJob objectsCronJob(Dump dump, Compare compare, Import importer, Correct correct) {
+        objectsCronJob = new ObjectsCronJob(cronPatternObjects, dump, compare, importer, correct);
         return objectsCronJob;
     }
 
@@ -165,7 +167,7 @@ public class Application {
         if (database != null) {
             return database;
         }
-        database = new Database(databaseType, databaseName, databaseUrl, databaseUser, databasePassword);
+        database = new Database(databaseType, databaseName, databaseUrl, databaseUser, databasePassword, databaseQueryTimeoutSeconds);
         return database;
     }
 

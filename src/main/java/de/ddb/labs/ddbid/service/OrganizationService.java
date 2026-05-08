@@ -18,99 +18,56 @@ package de.ddb.labs.ddbid.service;
 import de.ddb.labs.ddbid.database.Database;
 import de.ddb.labs.ddbid.model.organization.Organization;
 import de.ddb.labs.ddbid.model.organization.OrganizationDoc;
-import de.ddb.labs.ddbid.model.paging.Page;
-import de.ddb.labs.ddbid.model.paging.PagingRequest;
+import java.util.List;
+import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.EmptyResultDataAccessException;
+import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
-
-import java.sql.Timestamp;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
 
 @Slf4j
 @Service
-public class OrganizationService {
+@RequiredArgsConstructor
+public class OrganizationService extends AbstractDataTableEntityService<Organization> {
 
-    private static final long TIMESTAMP_CACHE_TTL_MILLIS = 600_000;
+    private final Database database;
 
-    private final Calendar cal = Calendar.getInstance(Locale.GERMANY);
-    private final DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE;
-    private volatile Timestamp latestTimestampCache;
-    private volatile long latestTimestampCacheUntil;
-    private volatile Map<String, Timestamp> timestampsCache;
-    private volatile long timestampsCacheUntil;
-    
-    @Autowired
-    private Database database;
     @Value("${ddbid.database.table.organization}")
     private String tableName;
 
-    public Page<Organization> getDdbIds(PagingRequest pagingRequest) {
-        return DataTablePageQueryHelper.page(
-                log,
-                database,
-                "organization",
-                tableName,
-                OrganizationDoc.getStaticHeader(),
-                Organization.class,
-                pagingRequest,
-                this::latestTimestamp);
+    @Override
+    protected Logger logger() {
+        return log;
     }
 
-    public Map<String, Timestamp> getTimestamps() {
-        try {
-            return timestamps();
-        } catch (EmptyResultDataAccessException e) {
-            log.debug("No record found in database for timestamp", e);
-            return null;
-        }
+    @Override
+    protected Database database() {
+        return database;
     }
 
-    public void clearTimestampCache() {
-        latestTimestampCache = null;
-        latestTimestampCacheUntil = 0;
-        timestampsCache = null;
-        timestampsCacheUntil = 0;
+    @Override
+    protected String entityLabel() {
+        return "organization";
     }
 
-    private Timestamp latestTimestamp() {
-        long now = System.currentTimeMillis();
-        Timestamp cached = latestTimestampCache;
-        if (cached != null && now < latestTimestampCacheUntil) {
-            return cached;
-        }
-        synchronized (this) {
-            now = System.currentTimeMillis();
-            cached = latestTimestampCache;
-            if (cached != null && now < latestTimestampCacheUntil) {
-                return cached;
-            }
-            cached = DataTableTimestampSqlHelper.latestTimestamp(log, database, "organization", tableName);
-            latestTimestampCache = cached;
-            latestTimestampCacheUntil = now + TIMESTAMP_CACHE_TTL_MILLIS;
-            return cached;
-        }
+    @Override
+    protected String tableName() {
+        return tableName;
     }
 
-    private Map<String, Timestamp> timestamps() {
-        long now = System.currentTimeMillis();
-        Map<String, Timestamp> cached = timestampsCache;
-        if (cached != null && now < timestampsCacheUntil) {
-            return cached;
-        }
-        synchronized (this) {
-            now = System.currentTimeMillis();
-            cached = timestampsCache;
-            if (cached != null && now < timestampsCacheUntil) {
-                return cached;
-            }
-            cached = DataTableTimestampSqlHelper.timestamps(log, database, "organization", tableName, cal, dtf);
-            timestampsCache = cached;
-            timestampsCacheUntil = now + TIMESTAMP_CACHE_TTL_MILLIS;
-            return cached;
-        }
+    @Override
+    protected List<String> fields() {
+        return OrganizationDoc.getStaticHeader();
+    }
+
+    @Override
+    protected Class<Organization> rowType() {
+        return Organization.class;
+    }
+
+    @Override
+    protected Map<String, List<String>> loadFilterOptions() {
+        return DataTableFilterOptionsHelper.organizationOptions(log, database, tableName);
     }
 }

@@ -40,17 +40,18 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class Import implements Runnable {
 
     private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(ZoneId.systemDefault());
@@ -158,20 +159,11 @@ public class Import implements Runnable {
                                                        VALUES (?,?,?,?,?,?);
                                                        """;
 
-    @Autowired
-    private Database database;
-
-    @Autowired
-    private StatisticsService statisticsService;
-
-    @Autowired
-    private ItemService itemService;
-
-    @Autowired
-    private PersonService personService;
-
-    @Autowired
-    private OrganizationService organizationService;
+    private final Database database;
+    private final StatisticsService statisticsService;
+    private final ItemService itemService;
+    private final PersonService personService;
+    private final OrganizationService organizationService;
 
     @Value("${ddbid.datapath.item}")
     private String dataPathItem;

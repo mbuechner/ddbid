@@ -26,6 +26,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -34,23 +35,20 @@ import okhttp3.Request;
 import okhttp3.Response;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class Correct implements Runnable {
     
     private final static String QUERY = """
                                         SELECT "pkey", "id" FROM "{{tbl}}" WHERE "status" = 'MISSING';
                                         """;
 
-    @Autowired
-    private Database database;
-    
-    @Autowired
-    private OkHttpClient httpClient;
+    private final Database database;
+    private final OkHttpClient httpClient;
 
     private void check(Type type) {
 

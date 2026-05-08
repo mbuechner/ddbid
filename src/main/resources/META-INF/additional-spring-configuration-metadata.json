@@ -21,9 +21,14 @@
       "description": "Maximum number of retry attempts for scheduled jobs."
     },
     {
-      "name": "ddbid.database",
+      "name": "ddbid.database.file",
       "type": "java.lang.String",
       "description": "Path to the local H2 database file or a JDBC URL when supported by the selected database type."
+    },
+    {
+      "name": "ddbid.database.query-timeout-seconds",
+      "type": "java.lang.Integer",
+      "description": "Query timeout in seconds for database operations."
     },
     {
       "name": "ddbid.apikey",
