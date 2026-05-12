@@ -67,7 +67,7 @@ public class ItemService extends AbstractDataTableEntityService<Item> {
     }
 
     @Override
-    protected Map<String, List<String>> loadFilterOptions() {
-        return DataTableFilterOptionsHelper.itemOptions(log, database, tableName);
+    protected Map<String, List<String>> loadFilterOptions(java.sql.Timestamp latestTimestamp) {
+        return DataTableFilterOptionsHelper.itemOptions(log, database, tableName, latestTimestamp);
     }
 }

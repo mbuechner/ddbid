@@ -291,19 +291,19 @@ public class StatisticsService {
     }
 
     private String postgresSearchIndexSql() {
+        // Trigram (GIN) indexes are large. Only create them for columns that are
+        // actually used for free-text / wildcard search:
+        //  - item: "id" (DDB item IDs) and "label" (title)
+        //  - person/organization: "id" and "preferredName"
+        // Identifier fields (provider_id, dataset_id, supplier_id, variant_id …)
+        // are covered by B-tree filter indexes and use exact-match logic.
         return """
                                            CREATE EXTENSION IF NOT EXISTS pg_trgm;
                                            CREATE INDEX IF NOT EXISTS "item_trgm_id" ON "{{item}}" USING GIN ("id" gin_trgm_ops);
-                                           CREATE INDEX IF NOT EXISTS "item_trgm_provider_item" ON "{{item}}" USING GIN ("provider_item_id" gin_trgm_ops);
-                                           CREATE INDEX IF NOT EXISTS "item_trgm_dataset" ON "{{item}}" USING GIN ("dataset_id" gin_trgm_ops);
                                            CREATE INDEX IF NOT EXISTS "item_trgm_label" ON "{{item}}" USING GIN ("label" gin_trgm_ops);
-                                           CREATE INDEX IF NOT EXISTS "item_trgm_provider" ON "{{item}}" USING GIN ("provider_id" gin_trgm_ops);
-                                           CREATE INDEX IF NOT EXISTS "item_trgm_supplier" ON "{{item}}" USING GIN ("supplier_id" gin_trgm_ops);
                                            CREATE INDEX IF NOT EXISTS "person_trgm_id" ON "{{person}}" USING GIN ("id" gin_trgm_ops);
-                                           CREATE INDEX IF NOT EXISTS "person_trgm_variant" ON "{{person}}" USING GIN ("variant_id" gin_trgm_ops);
                                            CREATE INDEX IF NOT EXISTS "person_trgm_name" ON "{{person}}" USING GIN ("preferredName" gin_trgm_ops);
                                            CREATE INDEX IF NOT EXISTS "organization_trgm_id" ON "{{organization}}" USING GIN ("id" gin_trgm_ops);
-                                           CREATE INDEX IF NOT EXISTS "organization_trgm_variant" ON "{{organization}}" USING GIN ("variant_id" gin_trgm_ops);
                                            CREATE INDEX IF NOT EXISTS "organization_trgm_name" ON "{{organization}}" USING GIN ("preferredName" gin_trgm_ops);
                                            """
                 .replace("{{item}}", itemTableName)
@@ -312,37 +312,54 @@ public class StatisticsService {
     }
 
     private String postgresAdvancedIndexSql() {
-        // Advanced indexes for PostgreSQL 11+: covering indexes (INCLUDE)
-        // INCLUDE clause adds columns to index without affecting filtering performance
-        // Enables index-only scans for faster pagination queries
+        // PostgreSQL 11+: covering indexes (INCLUDE) for index-only scans.
+        //
+        // Strategy: one primary covering index per entity on the default sort key
+        // (status, timestamp, id) with the short identifier columns in INCLUDE.
+        // The potentially-long "label"/"preferredName" column is intentionally
+        // excluded from INCLUDE — 25 heap-fetches per page are negligible, but
+        // including it would double the index size.
+        //
+        // All secondary filter indexes are plain B-tree (no INCLUDE) to keep
+        // their footprint small; they are only needed for WHERE filtering, not
+        // for covering the full SELECT list.
+        //
+        // Also drops the over-broad GIN trigram indexes that were created by
+        // older code versions on identifier columns.
         return """
                                            ANALYZE "{{item}}";
                                            ANALYZE "{{person}}";
                                            ANALYZE "{{organization}}";
+                                           DROP INDEX IF EXISTS "item_trgm_provider_item";
+                                           DROP INDEX IF EXISTS "item_trgm_dataset";
+                                           DROP INDEX IF EXISTS "item_trgm_provider";
+                                           DROP INDEX IF EXISTS "item_trgm_supplier";
+                                           DROP INDEX IF EXISTS "person_trgm_variant";
+                                           DROP INDEX IF EXISTS "organization_trgm_variant";
                                            DROP INDEX IF EXISTS "item_filter_id" CASCADE;
                                            DROP INDEX IF EXISTS "item_filter_provider_item" CASCADE;
                                            DROP INDEX IF EXISTS "item_filter_dataset" CASCADE;
                                            DROP INDEX IF EXISTS "item_filter_provider" CASCADE;
                                            DROP INDEX IF EXISTS "item_filter_sector" CASCADE;
                                            DROP INDEX IF EXISTS "item_filter_supplier" CASCADE;
-                                           CREATE INDEX IF NOT EXISTS "item_filter_id" ON "{{item}}"("status", "timestamp", "id") INCLUDE ("label", "provider_id", "dataset_id", "supplier_id", "sector_fct");
-                                           CREATE INDEX IF NOT EXISTS "item_filter_provider_item" ON "{{item}}"("status", "timestamp", "provider_item_id") INCLUDE ("id", "label", "provider_id", "dataset_id", "sector_fct");
-                                           CREATE INDEX IF NOT EXISTS "item_filter_dataset" ON "{{item}}"("status", "timestamp", "dataset_id") INCLUDE ("id", "label", "provider_id", "supplier_id", "sector_fct");
-                                           CREATE INDEX IF NOT EXISTS "item_filter_provider" ON "{{item}}"("status", "timestamp", "provider_id") INCLUDE ("id", "label", "dataset_id", "supplier_id", "sector_fct");
-                                           CREATE INDEX IF NOT EXISTS "item_filter_sector" ON "{{item}}"("status", "timestamp", "sector_fct") INCLUDE ("id", "label", "provider_id", "dataset_id");
-                                           CREATE INDEX IF NOT EXISTS "item_filter_supplier" ON "{{item}}"("status", "timestamp", "supplier_id") INCLUDE ("id", "label", "provider_id", "dataset_id");
+                                           CREATE INDEX IF NOT EXISTS "item_filter_id" ON "{{item}}"("status", "timestamp", "id") INCLUDE ("provider_item_id", "provider_id", "dataset_id", "supplier_id", "sector_fct");
+                                           CREATE INDEX IF NOT EXISTS "item_filter_provider_item" ON "{{item}}"("status", "timestamp", "provider_item_id");
+                                           CREATE INDEX IF NOT EXISTS "item_filter_dataset" ON "{{item}}"("status", "timestamp", "dataset_id");
+                                           CREATE INDEX IF NOT EXISTS "item_filter_provider" ON "{{item}}"("status", "timestamp", "provider_id");
+                                           CREATE INDEX IF NOT EXISTS "item_filter_sector" ON "{{item}}"("status", "timestamp", "sector_fct");
+                                           CREATE INDEX IF NOT EXISTS "item_filter_supplier" ON "{{item}}"("status", "timestamp", "supplier_id");
                                            DROP INDEX IF EXISTS "person_filter_id" CASCADE;
                                            DROP INDEX IF EXISTS "person_filter_variant" CASCADE;
                                            DROP INDEX IF EXISTS "person_filter_type" CASCADE;
-                                           CREATE INDEX IF NOT EXISTS "person_filter_id" ON "{{person}}"("status", "timestamp", "id") INCLUDE ("preferredName", "variant_id", "type");
-                                           CREATE INDEX IF NOT EXISTS "person_filter_variant" ON "{{person}}"("status", "timestamp", "variant_id") INCLUDE ("id", "preferredName", "type");
-                                           CREATE INDEX IF NOT EXISTS "person_filter_type" ON "{{person}}"("status", "timestamp", "type") INCLUDE ("id", "preferredName", "variant_id");
+                                           CREATE INDEX IF NOT EXISTS "person_filter_id" ON "{{person}}"("status", "timestamp", "id") INCLUDE ("variant_id", "type");
+                                           CREATE INDEX IF NOT EXISTS "person_filter_variant" ON "{{person}}"("status", "timestamp", "variant_id");
+                                           CREATE INDEX IF NOT EXISTS "person_filter_type" ON "{{person}}"("status", "timestamp", "type");
                                            DROP INDEX IF EXISTS "organization_filter_id" CASCADE;
                                            DROP INDEX IF EXISTS "organization_filter_variant" CASCADE;
                                            DROP INDEX IF EXISTS "organization_filter_type" CASCADE;
-                                           CREATE INDEX IF NOT EXISTS "organization_filter_id" ON "{{organization}}"("status", "timestamp", "id") INCLUDE ("preferredName", "variant_id", "type");
-                                           CREATE INDEX IF NOT EXISTS "organization_filter_variant" ON "{{organization}}"("status", "timestamp", "variant_id") INCLUDE ("id", "preferredName", "type");
-                                           CREATE INDEX IF NOT EXISTS "organization_filter_type" ON "{{organization}}"("status", "timestamp", "type") INCLUDE ("id", "preferredName", "variant_id");
+                                           CREATE INDEX IF NOT EXISTS "organization_filter_id" ON "{{organization}}"("status", "timestamp", "id") INCLUDE ("variant_id", "type");
+                                           CREATE INDEX IF NOT EXISTS "organization_filter_variant" ON "{{organization}}"("status", "timestamp", "variant_id");
+                                           CREATE INDEX IF NOT EXISTS "organization_filter_type" ON "{{organization}}"("status", "timestamp", "type");
                                            """
                 .replace("{{item}}", itemTableName)
                 .replace("{{person}}", personTableName)

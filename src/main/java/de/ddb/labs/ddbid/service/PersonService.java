@@ -67,7 +67,7 @@ public class PersonService extends AbstractDataTableEntityService<Person> {
     }
 
     @Override
-    protected Map<String, List<String>> loadFilterOptions() {
-        return DataTableFilterOptionsHelper.personOptions(log, database, tableName);
+    protected Map<String, List<String>> loadFilterOptions(java.sql.Timestamp latestTimestamp) {
+        return DataTableFilterOptionsHelper.personOptions(log, database, tableName, latestTimestamp);
     }
 }

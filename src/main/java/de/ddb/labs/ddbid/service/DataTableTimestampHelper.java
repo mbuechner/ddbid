@@ -31,9 +31,13 @@ final class DataTableTimestampHelper {
     static TimestampFilter filter(String value, Supplier<Timestamp> latestTimestamp) {
         String normalized = normalize(value);
         if (normalized == null) {
-            return TimestampFilter.inactive();
+            // No timestamp requested: default to the latest available timestamp so that
+            // every query carries a WHERE clause and avoids a full-table scan.
+            Timestamp latest = latestTimestamp != null ? latestTimestamp.get() : null;
+            return latest != null ? TimestampFilter.exact(latest) : TimestampFilter.inactive();
         }
         if ("-1".equals(normalized)) {
+            // Explicit sentinel value: caller wants all timestamps (no filter).
             return TimestampFilter.inactive();
         }
 

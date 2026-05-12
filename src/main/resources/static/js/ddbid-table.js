@@ -517,7 +517,7 @@ window.DDBID.table = (function() {
     }
 
     function timestampOptions(entries) {
-        const options = [];
+        const options = [{ value: '-1', label: 'All timestamps' }];
         entries.forEach(function(entry) {
             const dateMatch = String(entry[0]).match(/^\d{4}-\d{2}-\d{2}/);
             options.push({

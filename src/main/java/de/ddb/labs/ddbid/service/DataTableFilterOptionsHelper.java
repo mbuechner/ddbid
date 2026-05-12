@@ -16,6 +16,8 @@
 package de.ddb.labs.ddbid.service;
 
 import de.ddb.labs.ddbid.database.Database;
+import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,48 +29,55 @@ final class DataTableFilterOptionsHelper {
 
     private static final int MAX_OPTIONS = 5000;
 
-    static Map<String, List<String>> itemOptions(Logger log, Database database, String tableName) {
+    static Map<String, List<String>> itemOptions(Logger log, Database database, String tableName, Timestamp latestTimestamp) {
         return options(log, database, tableName, "item", Map.of(
                 "dataset_id", "dataset_id",
                 "provider_id", "provider_id",
                 "sector_fct", "sector_fct",
-                "supplier_id", "supplier_id"));
+                "supplier_id", "supplier_id"), latestTimestamp);
     }
 
-    static Map<String, List<String>> personOptions(Logger log, Database database, String tableName) {
+    static Map<String, List<String>> personOptions(Logger log, Database database, String tableName, Timestamp latestTimestamp) {
         return options(log, database, tableName, "person", Map.of(
                 "variant_id", "variant_id",
-                "type", "type"));
+                "type", "type"), latestTimestamp);
     }
 
-    static Map<String, List<String>> organizationOptions(Logger log, Database database, String tableName) {
+    static Map<String, List<String>> organizationOptions(Logger log, Database database, String tableName, Timestamp latestTimestamp) {
         return options(log, database, tableName, "organization", Map.of(
                 "variant_id", "variant_id",
-                "type", "type"));
+                "type", "type"), latestTimestamp);
     }
 
-    private static Map<String, List<String>> options(Logger log, Database database, String tableName, String label, Map<String, String> fields) {
+    private static Map<String, List<String>> options(Logger log, Database database, String tableName, String label, Map<String, String> fields, Timestamp latestTimestamp) {
         Map<String, List<String>> result = new LinkedHashMap<>();
         result.put("status", List.of("MISSING", "NEW", "FOUND", "ALL"));
         fields.forEach((optionKey, columnName) -> {
-            result.put(optionKey, distinctValues(log, database, label, tableName, columnName));
+            result.put(optionKey, distinctValues(log, database, label, tableName, columnName, latestTimestamp));
         });
         return result;
     }
 
-    private static List<String> distinctValues(Logger log, Database database, String label, String tableName, String columnName) {
-        String sql = "SELECT \"" + columnName + "\" FROM \"" + tableName + "\" "
-                + "WHERE \"" + columnName + "\" IS NOT NULL AND \"" + columnName + "\"<>'' "
-                + "GROUP BY \"" + columnName + "\" "
-                + "ORDER BY \"" + columnName + "\" "
-                + "LIMIT ?";
+    private static List<String> distinctValues(Logger log, Database database, String label, String tableName, String columnName, Timestamp latestTimestamp) {
+        final StringBuilder sql = new StringBuilder()
+                .append("SELECT \"").append(columnName).append("\" FROM \"").append(tableName).append("\" ")
+                .append("WHERE \"").append(columnName).append("\" IS NOT NULL AND \"").append(columnName).append("\"<>'' ");
+        final List<Object> params = new ArrayList<>();
+        if (latestTimestamp != null) {
+            sql.append("AND \"timestamp\" = ? ");
+            params.add(latestTimestamp);
+        }
+        sql.append("GROUP BY \"").append(columnName).append("\" ")
+                .append("ORDER BY \"").append(columnName).append("\" ")
+                .append("LIMIT ?");
+        params.add(MAX_OPTIONS);
         return JdbcQueryTimer.queryForList(
                 log,
                 database.getJdbcTemplate(),
                 label + ".filterOptions." + columnName,
-                sql,
+                sql.toString(),
                 String.class,
-                MAX_OPTIONS);
+                params.toArray());
     }
 
     static Map<String, List<String>> copyOptions(Map<String, List<String>> filterOptions) {

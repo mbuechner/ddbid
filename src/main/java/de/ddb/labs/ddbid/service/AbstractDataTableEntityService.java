@@ -83,7 +83,7 @@ abstract class AbstractDataTableEntityService<T> {
             if (cached != null && now < filterOptionsCacheUntil) {
                 return DataTableFilterOptionsHelper.copyOptions(cached);
             }
-            cached = loadFilterOptions();
+            cached = loadFilterOptions(latestTimestamp());
             filterOptionsCache = DataTableFilterOptionsHelper.copyOptions(cached);
             filterOptionsCacheUntil = now + CACHE_TTL_MILLIS;
             return DataTableFilterOptionsHelper.copyOptions(filterOptionsCache);
@@ -102,7 +102,7 @@ abstract class AbstractDataTableEntityService<T> {
 
     protected abstract Class<T> rowType();
 
-    protected abstract Map<String, List<String>> loadFilterOptions();
+    protected abstract Map<String, List<String>> loadFilterOptions(Timestamp latestTimestamp);
 
     private Timestamp latestTimestamp() {
         long now = System.currentTimeMillis();

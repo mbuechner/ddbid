@@ -67,7 +67,7 @@ public class OrganizationService extends AbstractDataTableEntityService<Organiza
     }
 
     @Override
-    protected Map<String, List<String>> loadFilterOptions() {
-        return DataTableFilterOptionsHelper.organizationOptions(log, database, tableName);
+    protected Map<String, List<String>> loadFilterOptions(java.sql.Timestamp latestTimestamp) {
+        return DataTableFilterOptionsHelper.organizationOptions(log, database, tableName, latestTimestamp);
     }
 }
