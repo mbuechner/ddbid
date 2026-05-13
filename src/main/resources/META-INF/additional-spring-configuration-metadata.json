@@ -6,11 +6,6 @@
       "description": "Cron expression for the object dump/import job."
     },
     {
-      "name": "ddbid.cron.directmigration",
-      "type": "java.lang.String",
-      "description": "Cron expression for the direct migration job."
-    },
-    {
       "name": "ddbid.cron.retry.delay",
       "type": "java.lang.Long",
       "description": "Delay between retry attempts in milliseconds."
@@ -34,11 +29,6 @@
       "name": "ddbid.cache.refresh-cron",
       "type": "java.lang.String",
       "description": "Cron expression for refreshing the cache."
-    },
-    {
-      "name": "ddbid.apikey",
-      "type": "java.lang.String",
-      "description": "API key for accessing the Deutsche Digitale Bibliothek API."
     },
     {
       "name": "ddbid.database.type",

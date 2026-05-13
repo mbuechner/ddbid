@@ -9,7 +9,7 @@ DDBid ist ein kleines Spring-Boot-Tool fuer DDB-IDs: Dumps ziehen, alte und neue
 - `ITEM`, `PERSON` und `ORGANIZATION` werden als komprimierte Dumps verarbeitet.
 - Die Daten landen in einer lokalen H2-Datei.
 - Die UI zeigt Tabellen, Downloads und Statistiken.
-- Die Statistikseite cached aggregierte Werte fuer 15 Minuten.
+- Die Statistikseite cached aggregierte Werte; Cache-Refresh alle 4 Stunden.
 - Bestehende Daten werden beim normalen Start nicht geloescht. Achtung: Der Import/Cron baut Tabellen neu auf; fuer reine Bestandsdaten also `SCHEDULER_ENABLED=false` setzen.
 
 ## Lokal starten
@@ -125,7 +125,9 @@ Die Anwendung liest Konfiguration aus `application.properties`, echten Umgebungs
 | `DDBID_DATABASE_USER` | leer | Datenbankbenutzer fuer Postgres. |
 | `DDBID_DATABASE_PASSWORD` | leer | Datenbankpasswort fuer Postgres. |
 | `DDBID_DATABASE_INDEXES_AUTO` | `false` | Erstellt fehlende Performance-Indizes beim Start. Bei grossen H2-Dateien besser gezielt ueber `/maintenance/indexes` ausfuehren. |
-| `DDBID_STATISTICS_CACHE_REFRESH_CRON` | `0 15 2 * * *` | Cron-Ausdruck fuer den taeglichen Statistik-Cache-Refresh. |
+| `DDBID_DATABASE_QUERY_TIMEOUT_SECONDS` | `300` | Maximale Laufzeit einer einzelnen Datenbankabfrage in Sekunden. |
+| `DDBID_CACHE_REFRESH_CRON` | `0 0 */4 * * *` | Cron-Ausdruck fuer den regelmaessigen Entity-Cache-Refresh (Items, Personen, Organisationen). |
+| `DDBID_STATISTICS_CACHE_REFRESH_CRON` | `0 0 */4 * * *` | Cron-Ausdruck fuer den regelmaessigen Statistik-Cache-Refresh. |
 | `DDBID_SERVICE_LOG_LEVEL` | `INFO` | Log-Level fuer Services. Mit `DEBUG` werden SQL, Parameter und Abfragezeiten geloggt. |
 | `DDBID_DUMP_LOCKFILE` | `data/DUMP_IS_RUNNING.lock` | Lock-Datei, die parallele Dump-Laeufe verhindert. |
 | `DDBID_DATAPATH_ITEM` | `data/dumps/item/` | Verzeichnis fuer Item-Dumps. |

@@ -23,6 +23,7 @@ import de.ddb.labs.ddbid.cronjob.objects.Correct;
 import de.ddb.labs.ddbid.cronjob.objects.Dump;
 import de.ddb.labs.ddbid.cronjob.objects.Import;
 import de.ddb.labs.ddbid.database.Database;
+import de.ddb.labs.ddbid.service.JdbcQueryTimer;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -168,6 +169,7 @@ public class Application {
             return database;
         }
         database = new Database(databaseType, databaseName, databaseUrl, databaseUser, databasePassword, databaseQueryTimeoutSeconds);
+        JdbcQueryTimer.configure(databaseQueryTimeoutSeconds);
         return database;
     }
 

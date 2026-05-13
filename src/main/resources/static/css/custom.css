@@ -57,19 +57,6 @@ table th {
     min-width: 0;
     flex: 1 1 auto;
 }
-.dataTables_processing {
-    z-index: 1 !important;
-    width: 100% !important;
-    height: 100% !important;
-    top: auto !important;
-    left: auto !important;
-    margin: 0 !important;
-    border: 0 !important;
-}
-.dataTables_processing:before,
-.dataTables_processing:after {
-    display: none !important;
-}
 .download-list {
     max-height: 420px;
     overflow: auto;
@@ -213,6 +200,11 @@ table th {
         table-layout: auto;
     }
 
+    .ddbid-query-status {
+        left: 0.5rem;
+        right: 0.5rem;
+    }
+
     #ddbid th,
     #ddbid td,
     #ddbid td a {
@@ -222,10 +214,6 @@ table th {
         word-break: normal;
     }
 
-    .ddbid-query-status {
-        left: 0.5rem;
-        right: 0.5rem;
-    }
 }
 .container {
     margin-top: 100px

@@ -493,11 +493,6 @@ window.DDBID.table = (function() {
     }
 
     function installProcessingFeedback(table) {
-        const processing = $('#ddbid_processing');
-        if (processing.length) {
-            processing.html('<div class="ddbid-processing-indicator">Filtering database...</div>');
-        }
-
         $(table.table().node()).on('processing.dt', function(e, settings, isProcessing) {
             if (!isProcessing) {
                 setQueryStatus(table, false, '', '');
@@ -508,7 +503,7 @@ window.DDBID.table = (function() {
             const detailText = details.length
                     ? details.join(' | ') + (hasContainsFilter(details) ? ' | Contains searches may take up to 5 minutes.' : '')
                     : 'Loading results...';
-            setQueryStatus(table, true, 'Filtering database...', detailText);
+            setQueryStatus(table, true, 'Filtering database\u2026', detailText);
         });
 
         $(table.table().node()).on('xhr.dt error.dt', function() {
@@ -875,8 +870,6 @@ window.DDBID.table = (function() {
         if (config.providerTooltips) {
             installProviderTooltips(document.getElementById('ddbid'));
         }
-
-        $('#ddbid_processing').addClass('alert alert-secondary');
 
         installDefaultFilters(
                 table,
