@@ -65,6 +65,9 @@ public class StatisticsService {
     private final Database database;
     private final OkHttpClient httpClient;
     private final ObjectMapper objectMapper;
+    private final ItemService itemService;
+    private final PersonService personService;
+    private final OrganizationService organizationService;
 
     @Value("${ddbid.database.table.item}")
     private String itemTableName;
@@ -110,10 +113,34 @@ public class StatisticsService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void afterStartup() {
+        // Step 1: force DB connection on the main thread so HikariPool is created exactly once
+        // before any other code touches the database.
+        try {
+            database.getJdbcTemplate().queryForObject("SELECT 1", Integer.class);
+            log.info("Database connection established.");
+        } catch (RuntimeException e) {
+            log.warn("Could not establish database connection on startup: {}", e.getMessage());
+        }
+
+        // Step 2: ensure indexes (optional, controlled by property)
         if (autoEnsureIndexes) {
             ensureDatabaseIndexes();
         } else {
             log.info("Automatic database index creation is disabled. Use /maintenance/indexes to create missing indexes.");
+        }
+
+        // Step 3: warm up entity caches sequentially on this thread
+        itemService.warmUp();
+        personService.warmUp();
+        organizationService.warmUp();
+
+        // Step 4: warm up statistics
+        try {
+            log.info("Warming up statistics cache ...");
+            getStatisticsData(true);
+            log.info("Statistics cache warmed up.");
+        } catch (RuntimeException e) {
+            log.warn("Could not warm up statistics cache on startup: {}", e.getMessage());
         }
     }
 

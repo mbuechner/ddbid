@@ -49,7 +49,7 @@ public class Database {
         this.queryTimeoutSeconds = queryTimeoutSeconds;
     }
     
-    public void init() {
+    public synchronized void init() {
         if (dataSource == null || dataSource.isClosed()) {
             final DatabaseType type = DatabaseType.from(databaseType);
             config = createConfig();

@@ -64,17 +64,14 @@ abstract class AbstractDataTableEntityService<T> {
         }
     }
 
-    // Runs once at startup (after initialDelay), then effectively never again.
-    // Long.MAX_VALUE ms ≈ 292 million years between re-runs.
-    @Scheduled(initialDelayString = "${ddbid.cache.warmup-delay-millis:15000}", fixedDelay = Long.MAX_VALUE)
-    public final void warmupCachesOnStartup() {
+    public final void warmUp() {
         try {
             logger().info("Warming up {} caches ...", entityLabel());
             getTimestamps();
             getFilterOptions();
             logger().info("{} caches warmed up.", entityLabel());
         } catch (RuntimeException e) {
-            logger().warn("Could not warm up {} caches on startup: {}", entityLabel(), e.getMessage());
+            logger().warn("Could not warm up {} caches: {}", entityLabel(), e.getMessage());
         }
     }
 
