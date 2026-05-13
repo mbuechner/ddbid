@@ -53,7 +53,7 @@ public class MaintenanceRestController {
     public Map<String, String> dump() {
         try {
             taskScheduler.schedule(dump, Instant.now());
-
+            log.info("Dump job successfully scheduled.");
         } catch (Exception e) {
             return Map.of("status", "error", "message", String.valueOf(e.getMessage()));
         }
@@ -65,6 +65,7 @@ public class MaintenanceRestController {
     public Map<String, String> compare() {
         try {
             taskScheduler.schedule(compare, Instant.now());
+            log.info("Compare job successfully scheduled.");
         } catch (Exception e) {
             return Map.of("status", "error", "message", String.valueOf(e.getMessage()));
         }
@@ -76,6 +77,7 @@ public class MaintenanceRestController {
     public Map<String, String> importer() {
         try {
             taskScheduler.schedule(importer, Instant.now());
+            log.info("Import job successfully scheduled.");
         } catch (Exception e) {
             return Map.of("status", "error", "message", String.valueOf(e.getMessage()));
         }
@@ -87,6 +89,7 @@ public class MaintenanceRestController {
     public Map<String, String> correct() {
         try {
             taskScheduler.schedule(correct, Instant.now());
+            log.info("Correct job successfully scheduled.");
         } catch (Exception e) {
             return Map.of("status", "error", "message", String.valueOf(e.getMessage()));
         }
@@ -98,6 +101,7 @@ public class MaintenanceRestController {
     public Map<String, String> indexes() {
         try {
             taskScheduler.schedule(statisticsService::ensureDatabaseIndexes, Instant.now());
+            log.info("Index creation job successfully scheduled.");
         } catch (Exception e) {
             return Map.of("status", "error", "message", String.valueOf(e.getMessage()));
         }
@@ -111,6 +115,7 @@ public class MaintenanceRestController {
         try {
 
             taskScheduler.schedule(objectsCronJob, Instant.now());
+            log.info("Objects Cron Job successfully scheduled.");
         } catch (Exception e) {
             return Map.of("status", "error", "message", String.valueOf(e.getMessage()));
         }
