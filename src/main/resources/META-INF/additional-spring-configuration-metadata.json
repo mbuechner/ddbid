@@ -31,6 +31,11 @@
       "description": "Query timeout in seconds for database operations."
     },
     {
+      "name": "ddbid.cache.refresh-cron",
+      "type": "java.lang.String",
+      "description": "Cron expression for refreshing the cache."
+    },
+    {
       "name": "ddbid.apikey",
       "type": "java.lang.String",
       "description": "API key for accessing the Deutsche Digitale Bibliothek API."

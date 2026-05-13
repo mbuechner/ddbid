@@ -25,11 +25,15 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.slf4j.Logger;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.scheduling.annotation.Scheduled;
 
 abstract class AbstractDataTableEntityService<T> {
 
-    private static final long CACHE_TTL_MILLIS = 600_000;
+    // 25 hours – caches survive between daily refreshes and are never stale for more than one day
+    private static final long CACHE_TTL_MILLIS = 90_000_000;
 
     private final Calendar calendar = Calendar.getInstance(Locale.GERMANY);
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ISO_DATE;
@@ -59,6 +63,31 @@ abstract class AbstractDataTableEntityService<T> {
         } catch (EmptyResultDataAccessException e) {
             logger().debug("No record found in database for timestamp", e);
             return null;
+        }
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public final void onApplicationReady() {
+        try {
+            logger().info("Warming up {} caches ...", entityLabel());
+            getTimestamps();
+            getFilterOptions();
+            logger().info("{} caches warmed up.", entityLabel());
+        } catch (RuntimeException e) {
+            logger().warn("Could not warm up {} caches on startup: {}", entityLabel(), e.getMessage());
+        }
+    }
+
+    @Scheduled(cron = "${ddbid.cache.refresh-cron:0 30 2 * * *}")
+    public final void refreshDailyCaches() {
+        try {
+            logger().info("Refreshing {} caches ...", entityLabel());
+            clearTimestampCache();
+            getTimestamps();
+            getFilterOptions();
+            logger().info("{} caches refreshed.", entityLabel());
+        } catch (RuntimeException e) {
+            logger().warn("Could not refresh {} caches: {}", entityLabel(), e.getMessage());
         }
     }
 

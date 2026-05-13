@@ -31,9 +31,10 @@ table th {
     max-width: 320px;
     overflow: visible;
     text-overflow: clip;
-    white-space: normal;
+    white-space: normal !important;
     overflow-wrap: anywhere;
-    word-break: break-word;
+    word-break: break-all;
+    font-size: 0.875rem;
 }
 #ddbid td a {
     white-space: normal !important;
@@ -216,7 +217,7 @@ table th {
     #ddbid td,
     #ddbid td a {
         max-width: none;
-        white-space: nowrap;
+        white-space: nowrap !important;
         overflow-wrap: normal;
         word-break: normal;
     }
