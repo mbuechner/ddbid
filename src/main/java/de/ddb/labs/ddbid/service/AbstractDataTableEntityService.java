@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.slf4j.Logger;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.scheduling.annotation.Scheduled;
 
@@ -66,8 +64,10 @@ abstract class AbstractDataTableEntityService<T> {
         }
     }
 
-    @EventListener(ApplicationReadyEvent.class)
-    public final void onApplicationReady() {
+    // Runs once at startup (after initialDelay), then effectively never again.
+    // Long.MAX_VALUE ms ≈ 292 million years between re-runs.
+    @Scheduled(initialDelayString = "${ddbid.cache.warmup-delay-millis:15000}", fixedDelay = Long.MAX_VALUE)
+    public final void warmupCachesOnStartup() {
         try {
             logger().info("Warming up {} caches ...", entityLabel());
             getTimestamps();
