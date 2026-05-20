@@ -22,8 +22,11 @@ import de.ddb.labs.ddbid.model.Type;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.RequiredArgsConstructor;
@@ -75,6 +78,7 @@ public class Correct implements Runnable {
             }
 
             final CountDownLatch latch = new CountDownLatch(batch.size());
+            final Queue<Integer> foundPkeys = new ConcurrentLinkedQueue<>();
 
             for (final Map.Entry<Integer, String> entry : batch) {
                 final Request request = new Request.Builder()
@@ -95,11 +99,8 @@ public class Correct implements Runnable {
                             if (response.isSuccessful() && response.body() != null) {
                                 final String body = response.body().string();
                                 if (countLines(body) > 1) {
-                                    log.info("Re-ingested: {} – updating status to FOUND.", entry.getValue());
-                                    countFound.incrementAndGet();
-                                    database.getJdbcTemplate().update(
-                                            "UPDATE \"" + tableName + "\" SET \"status\" = ? WHERE \"pkey\" = ?",
-                                            Status.FOUND.toString(), entry.getKey());
+                                    log.info("Re-ingested: {} - queuing status update to FOUND.", entry.getValue());
+                                    foundPkeys.add(entry.getKey());
                                 }
                             }
                         } finally {
@@ -119,6 +120,17 @@ public class Correct implements Runnable {
 
             totalChecked.addAndGet(batch.size());
             lastPkey = batch.get(batch.size() - 1).getKey();
+
+            if (!foundPkeys.isEmpty()) {
+                countFound.addAndGet(foundPkeys.size());
+                final List<Object[]> updateArgs = new ArrayList<>(foundPkeys.size());
+                for (final Integer pkey : foundPkeys) {
+                    updateArgs.add(new Object[]{Status.FOUND.toString(), pkey});
+                }
+                database.getJdbcTemplate().batchUpdate(
+                        "UPDATE \"" + tableName + "\" SET \"status\" = ? WHERE \"pkey\" = ?", updateArgs);
+                log.info("Batch-updated {} {} entries to FOUND.", foundPkeys.size(), tableName);
+            }
         }
 
         log.info("Done checking {} MISSING {}. {} are back again.", totalChecked.get(), tableName, countFound.get());
