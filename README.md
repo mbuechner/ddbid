@@ -162,3 +162,27 @@ DDBID_SERVICE_LOG_LEVEL=DEBUG
 ```
 
 Dann erscheinen DataTable- und Statistik-Abfragen inklusive Parametern und Laufzeit im Log.
+
+## Suchspalten und Suchmodus
+
+Jede Spalte in den Tabellen unterstuetzt entweder nur exakte Suche (`=`) oder zusaetzlich Teilstringsuche (`ILIKE '%…%'`). Kein Raten, kein automatisches Umschalten – der Suchmodus ist pro Spalte fest definiert.
+
+| Entitaet | Spalte | Exact | Contains |
+|---|---|---|---|
+| item | id | ✓ | – |
+| item | provider\_item\_id | ✓ | ✓ |
+| item | dataset\_id | ✓ | – |
+| item | label | ✓ | ✓ |
+| item | provider\_id | ✓ | ✓ |
+| item | sector\_fct | ✓ | – |
+| item | supplier\_id | ✓ | – |
+| person | id | ✓ | – |
+| person | variant\_id | ✓ | ✓ |
+| person | preferredName | ✓ | ✓ |
+| person | type | ✓ | – |
+| organization | id | ✓ | – |
+| organization | variant\_id | ✓ | ✓ |
+| organization | preferredName | ✓ | ✓ |
+| organization | type | ✓ | – |
+
+Fuer Spalten mit Contains-Suche existieren GIN-Trigram-Indizes (`pg_trgm`), damit `ILIKE '%...%'` auch auf grossen Tabellen schnell bleibt. Exact-only-Spalten nutzen ausschliesslich B-Tree-Indizes. Das Suchmodus-Dropdown in der UI zeigt "Contains" nur dann an, wenn die Spalte es unterstuetzt.

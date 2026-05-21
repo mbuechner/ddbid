@@ -5,6 +5,8 @@ window.DDBID.table = (function() {
     const STATUS_OPTIONS = ['MISSING', 'NEW', 'FOUND', 'ALL'];
     const FILTER_MODE_DEFAULT = 'equal';
     const FILTER_MODE_ALLOWED = new Set(['equal', 'contains']);
+    const FILTER_MODE_EXACT_ONLY = new Set(['equal']);
+    const columnModeConfig = new Map();
     const REQUEST_DRAW_DELAY_MILLIS = 350;
     const pendingDatalists = new Map();
     const pendingFilterState = new Map();
@@ -431,10 +433,11 @@ window.DDBID.table = (function() {
             return;
         }
 
+        const allowed = columnModeConfig.get(columnIndex) || FILTER_MODE_ALLOWED;
         input.find('option').each(function() {
             const option = $(this);
             const value = option.attr('value') || '';
-            if (!FILTER_MODE_ALLOWED.has(value)) {
+            if (!allowed.has(value)) {
                 option.remove();
             } else if (value === 'equal') {
                 option.text('Equals');
@@ -448,6 +451,12 @@ window.DDBID.table = (function() {
         }
 
         updateColumnFilterModeIcon(columnIndex);
+    }
+
+    function configureColumnModes(exactOnlyIndices) {
+        (exactOnlyIndices || []).forEach(function(index) {
+            columnModeConfig.set(index, FILTER_MODE_EXACT_ONLY);
+        });
     }
 
     function setupColumnControlSearchModes(columnCount) {
@@ -864,6 +873,7 @@ window.DDBID.table = (function() {
     }
 
     function initEntityTable(config) {
+        configureColumnModes(config.exactOnlyColumns);
         const entity = config.entity;
         const table = $('#ddbid').DataTable(baseDataTableOptions(entity, config.columns, config.order));
 
