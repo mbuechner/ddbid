@@ -318,19 +318,22 @@ public class StatisticsService {
     }
 
     private String postgresSearchIndexSql() {
-        // Trigram (GIN) indexes are large. Only create them for columns that are
-        // actually used for free-text / wildcard search:
-        //  - item: "id" (DDB item IDs) and "label" (title)
+        // Trigram (GIN) indexes enable fast ILIKE '%…%' (contains) searches.
+        // Created for all columns that users can filter with "contains" mode:
+        //  - item: free-text ("id", "label") + identifier columns where contains is
+        //    useful ("provider_id", "dataset_id", "supplier_id")
         //  - person/organization: "id" and "preferredName"
-        // Identifier fields (provider_id, dataset_id, supplier_id, variant_id …)
-        // are covered by B-tree filter indexes and use exact-match logic.
+        // Short-value columns (sector_fct, type, variant_id) keep plain B-tree indexes.
         return """
                                            CREATE EXTENSION IF NOT EXISTS pg_trgm;
-                                           CREATE INDEX IF NOT EXISTS "item_trgm_id" ON "{{item}}" USING GIN ("id" gin_trgm_ops);
-                                           CREATE INDEX IF NOT EXISTS "item_trgm_label" ON "{{item}}" USING GIN ("label" gin_trgm_ops);
-                                           CREATE INDEX IF NOT EXISTS "person_trgm_id" ON "{{person}}" USING GIN ("id" gin_trgm_ops);
-                                           CREATE INDEX IF NOT EXISTS "person_trgm_name" ON "{{person}}" USING GIN ("preferredName" gin_trgm_ops);
-                                           CREATE INDEX IF NOT EXISTS "organization_trgm_id" ON "{{organization}}" USING GIN ("id" gin_trgm_ops);
+                                           CREATE INDEX IF NOT EXISTS "item_trgm_id"          ON "{{item}}" USING GIN ("id"          gin_trgm_ops);
+                                           CREATE INDEX IF NOT EXISTS "item_trgm_label"        ON "{{item}}" USING GIN ("label"        gin_trgm_ops);
+                                           CREATE INDEX IF NOT EXISTS "item_trgm_provider_id"  ON "{{item}}" USING GIN ("provider_id"  gin_trgm_ops);
+                                           CREATE INDEX IF NOT EXISTS "item_trgm_dataset_id"   ON "{{item}}" USING GIN ("dataset_id"   gin_trgm_ops);
+                                           CREATE INDEX IF NOT EXISTS "item_trgm_supplier_id"  ON "{{item}}" USING GIN ("supplier_id"  gin_trgm_ops);
+                                           CREATE INDEX IF NOT EXISTS "person_trgm_id"         ON "{{person}}" USING GIN ("id"            gin_trgm_ops);
+                                           CREATE INDEX IF NOT EXISTS "person_trgm_name"       ON "{{person}}" USING GIN ("preferredName" gin_trgm_ops);
+                                           CREATE INDEX IF NOT EXISTS "organization_trgm_id"   ON "{{organization}}" USING GIN ("id"            gin_trgm_ops);
                                            CREATE INDEX IF NOT EXISTS "organization_trgm_name" ON "{{organization}}" USING GIN ("preferredName" gin_trgm_ops);
                                            """
                 .replace("{{item}}", itemTableName)

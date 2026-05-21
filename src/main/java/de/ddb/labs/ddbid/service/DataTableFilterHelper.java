@@ -112,36 +112,12 @@ final class DataTableFilterHelper {
     private static FilterCondition condition(String field, String value, String mode) {
         String trimmed = value == null ? "" : value.trim();
         String expression = expression(field);
-        if (isExactMode(mode, field, trimmed)) {
+        if ("exact".equalsIgnoreCase(mode)) {
             return new FilterCondition(expression + "=?", List.of(trimmed));
         }
         return new FilterCondition(
                 expression + " ILIKE ? ESCAPE '\\'",
                 List.of("%" + escapeLike(trimmed) + "%"));
-    }
-
-    private static boolean isExactMode(String mode, String field, String value) {
-        if ("exact".equalsIgnoreCase(mode)) {
-            return true;
-        }
-        if ("contains".equalsIgnoreCase(mode)) {
-            return false;
-        }
-        return isLegacyExactMatchField(field) && looksLikeIdentifier(value);
-    }
-
-    private static boolean isLegacyExactMatchField(String field) {
-        return "id".equals(field)
-                || "provider_item_id".equals(field)
-                || "dataset_id".equals(field)
-                || "provider_id".equals(field)
-                || "supplier_id".equals(field)
-                || "variant_id".equals(field)
-                || "type".equals(field);
-    }
-
-    private static boolean looksLikeIdentifier(String value) {
-        return !value.isBlank() && value.matches("[\\p{Alnum}_:./\\-]{3,}");
     }
 
     private static String escapeLike(String value) {
