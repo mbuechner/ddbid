@@ -3,7 +3,7 @@ $(document).ready(function() {
 
     tableHelper.initEntityTable({
         entity: 'person',
-        exactOnlyColumns: [1, 5],
+        exactOnlyColumns: [0, 1, 2, 5],
         filterOptions: tableHelper.entityFilterOptions('person', [
             { columnIndex: 3, datalistSuffix: 'VariantOptions', optionKey: 'variant_id' },
             { columnIndex: 5, datalistSuffix: 'TypeOptions', optionKey: 'type' }

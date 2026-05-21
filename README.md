@@ -169,18 +169,24 @@ Jede Spalte in den Tabellen unterstuetzt entweder nur exakte Suche (`=`) oder zu
 
 | Entitaet | Spalte | Exact | Contains |
 |---|---|---|---|
+| item | timestamp | ✓ | – |
 | item | id | ✓ | – |
+| item | status | ✓ | – |
 | item | provider\_item\_id | ✓ | ✓ |
 | item | dataset\_id | ✓ | – |
 | item | label | ✓ | ✓ |
 | item | provider\_id | ✓ | ✓ |
 | item | sector\_fct | ✓ | – |
 | item | supplier\_id | ✓ | – |
+| person | timestamp | ✓ | – |
 | person | id | ✓ | – |
+| person | status | ✓ | – |
 | person | variant\_id | ✓ | ✓ |
 | person | preferredName | ✓ | ✓ |
 | person | type | ✓ | – |
+| organization | timestamp | ✓ | – |
 | organization | id | ✓ | – |
+| organization | status | ✓ | – |
 | organization | variant\_id | ✓ | ✓ |
 | organization | preferredName | ✓ | ✓ |
 | organization | type | ✓ | – |

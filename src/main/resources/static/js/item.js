@@ -4,7 +4,7 @@ $(document).ready(function() {
     tableHelper.initEntityTable({
         entity: 'item',
         providerTooltips: true,
-        exactOnlyColumns: [1, 4, 7, 8],
+        exactOnlyColumns: [0, 1, 2, 4, 7, 8],
         filterOptions: tableHelper.entityFilterOptions('item', [
             { columnIndex: 4, datalistSuffix: 'DatasetOptions', optionKey: 'dataset_id' },
             { columnIndex: 6, datalistSuffix: 'ProviderOptions', optionKey: 'provider_id' },
