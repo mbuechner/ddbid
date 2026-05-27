@@ -35,16 +35,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.zip.GZIPOutputStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,11 +57,9 @@ import org.springframework.stereotype.Service;
 public class Dump implements Runnable {
 
     private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(ZoneId.systemDefault());
-    public static final int ENTITYCOUNT = 100000; // count of entities per query
-    public static final int MONTH_TO_KEEP_DUMPS = 1; // number of mont dumps shoult be kept
-    private static final String QUERY_ITEM = "/search/index/search/select?q=*:*&wt=json&fl=id,provider_item_id,label,provider_id,supplier_id,dataset_id,sector_fct&sort=id ASC&rows=" + ENTITYCOUNT;
-    private static final String QUERY_PERSON = "/search/index/person/select?q=*:*&wt=json&fl=id,variant_id,preferredName,type&sort=id ASC&rows=" + ENTITYCOUNT;
-    private static final String QUERY_ORGANIZATION = "/search/index/organization/select?q=*:*&wt=json&fl=id,variant_id,preferredName,type&sort=id ASC&rows=" + ENTITYCOUNT;
+    private static final String QUERY_ITEM = "/search/index/search/select?q=*:*&wt=json&fl=id,provider_item_id,label,provider_id,supplier_id,dataset_id,sector_fct&sort=id ASC";
+    private static final String QUERY_PERSON = "/search/index/person/select?q=*:*&wt=json&fl=id,variant_id,preferredName,type&sort=id ASC";
+    private static final String QUERY_ORGANIZATION = "/search/index/organization/select?q=*:*&wt=json&fl=id,variant_id,preferredName,type&sort=id ASC";
 
     @Value(value = "${ddbid.datapath.item}")
     private String dataPathItem;
@@ -80,6 +73,12 @@ public class Dump implements Runnable {
     @Value("${ddbid.dump.lockfile}")
     private String lockfile;
 
+    @Value("${ddbid.dump.entity-count:50000}")
+    private int entityCount;
+
+    @Value("${ddbid.dump.months-to-keep:1}")
+    private int monthsToKeepDumps;
+
     private final OkHttpClient httpClient;
     private final ObjectMapper objectMapper;
 
@@ -90,24 +89,24 @@ public class Dump implements Runnable {
             //create lockfile
             Files.write(Path.of(lockfile), List.of(dtf.format(Instant.now())), StandardCharsets.UTF_8);
         } catch (IOException ex) {
-            log.warn("Could not wrte lockfile. {}", ex.getMessage());
+            log.warn("Could not write lockfile. {}", ex.getMessage());
         }
         try {
             dumpItem();
         } catch (Exception e) {
-            log.error("{}", e.getMessage());
+            log.error("Dump of items failed", e);
         }
 
         try {
             dumpPerson();
         } catch (Exception e) {
-            log.error("{}", e.getMessage());
+            log.error("Dump of persons failed", e);
         }
 
         try {
             dumpOrganization();
         } catch (Exception e) {
-            log.error("{}", e.getMessage());
+            log.error("Dump of organizations failed", e);
         }
 
         try {
@@ -119,45 +118,44 @@ public class Dump implements Runnable {
 
     public void dumpItem() {
         try {
-            Helper.deleteOlderDumps(dataPathItem, LocalDate.now().minusMonths(MONTH_TO_KEEP_DUMPS));
+            Helper.deleteOlderDumps(dataPathItem, LocalDate.now().minusMonths(monthsToKeepDumps));
             createNewDump(QUERY_ITEM, dataPathItem, ItemDoc.class);
         } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
             log.error("Error while dumping ITEMS. {}", ex.getMessage());
         } catch (IOException ex) {
-            Logger.getLogger(Dump.class.getName()).log(Level.SEVERE, null, ex);
+            log.error("Error while dumping ITEMS.", ex);
         }
     }
 
     public void dumpPerson() {
 
         try {
-            Helper.deleteOlderDumps(dataPathPerson, LocalDate.now().minusMonths(MONTH_TO_KEEP_DUMPS));
+            Helper.deleteOlderDumps(dataPathPerson, LocalDate.now().minusMonths(monthsToKeepDumps));
             createNewDump(QUERY_PERSON, dataPathPerson, PersonDoc.class);
         } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
             log.error("Error while dumping PERSON. {}", ex.getMessage());
         } catch (IOException ex) {
-            Logger.getLogger(Dump.class.getName()).log(Level.SEVERE, null, ex);
+            log.error("Error while dumping PERSON.", ex);
         }
     }
 
     public void dumpOrganization() {
         try {
-            Helper.deleteOlderDumps(dataPathOrganization, LocalDate.now().minusMonths(MONTH_TO_KEEP_DUMPS));
+            Helper.deleteOlderDumps(dataPathOrganization, LocalDate.now().minusMonths(monthsToKeepDumps));
             createNewDump(QUERY_ORGANIZATION, dataPathOrganization, OrganizationDoc.class);
         } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
             log.error("Error while dumping ORGANIZATION. {}", ex.getMessage());
         } catch (IOException ex) {
-            Logger.getLogger(Dump.class.getName()).log(Level.SEVERE, null, ex);
+            log.error("Error while dumping ORGANIZATION.", ex);
         }
     }
 
     public <T extends Doc> File createNewDump(String query, String dataPath, Class<T> docType) throws NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, IOException  {
 
         log.info("Start to dump DDB-Ids...");
-        final Timestamp currentTime = Timestamp.valueOf(ZonedDateTime.now().toLocalDateTime());
         final Doc docInstance = (Doc) docType.getDeclaredConstructor().newInstance();
 
-        final String outputFileNameWithoutExt = dataPath + new SimpleDateFormat("yyyy-MM-dd").format(currentTime);
+        final String outputFileNameWithoutExt = dataPath + LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
         final String outputFileName = outputFileNameWithoutExt + Compare.OUTPUT_FILENAME_EXT;
         final File outputFile = new File(outputFileName);
         if (outputFile.exists()) {
@@ -174,7 +172,7 @@ public class Dump implements Runnable {
             while (!lastCursorMark.equals(nextCursorMark) && !nextCursorMark.isBlank() && !errorOccurred) {
                 // initial request
                 final Request request = new Request.Builder()
-                        .url(Application.API + query + "&cursorMark=" + URLEncoder.encode(nextCursorMark, StandardCharsets.UTF_8))
+                        .url(Application.API + query + "&rows=" + entityCount + "&cursorMark=" + URLEncoder.encode(nextCursorMark, StandardCharsets.UTF_8))
                         .addHeader("Accept", "application/json")
                         .build();
                 log.info("Execute request \"{}\"", request.url());
@@ -183,10 +181,16 @@ public class Dump implements Runnable {
                 try (final Response response = httpClient.newCall(request).execute()) {
                     if (!response.isSuccessful()) {
                         errorOccurred = true;
-                        log.warn("API respose code {} for {}", response.code(), response);
+                        log.warn("API response code {} for {}", response.code(), response);
                         break;
                     }
-                    doc = objectMapper.readTree(response.body().byteStream());
+                    final var body = response.body();
+                    if (body == null) {
+                        errorOccurred = true;
+                        log.warn("Empty response body for {}", request.url());
+                        break;
+                    }
+                    doc = objectMapper.readTree(body.byteStream());
                     if (totalCount == -1) {
                         totalCount = doc.get("response").get("numFound").asInt(0);
                     }
@@ -204,11 +208,7 @@ public class Dump implements Runnable {
                     processedCount += ec.size();
                     log.info("{} of {} processed...", processedCount, totalCount);
                 } finally {
-                    // free memory
                     outputWriter.flush();
-                    doc = null;
-                    ec = null;
-                    // System.gc();
                 }
                 // for testing
                 // break;
@@ -225,12 +225,12 @@ public class Dump implements Runnable {
 
         if (errorOccurred) {
             Files.delete(Path.of(outputFileName));
-            log.warn("An error occured and the process was stopped. Corrupt dump {} was deleted, too.", outputFileName);
-            throw new RuntimeException("An error occured while processing the dump");
+            log.warn("An error occurred and the process was stopped. Corrupt dump {} was deleted, too.", outputFileName);
+            throw new RuntimeException("An error occurred while processing the dump");
         } else {
             // write OK file
             Files.write(Path.of(outputFileNameWithoutExt + Compare.OK_FILENAME_EXT), List.of(dtf.format(Instant.now())), StandardCharsets.UTF_8);
-            log.info("Wrote successfull data to dump file {}", outputFileName);
+            log.info("Wrote successful data to dump file {}", outputFileName);
         }
         return outputFile;
     }

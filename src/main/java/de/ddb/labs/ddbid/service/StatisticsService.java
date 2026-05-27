@@ -255,6 +255,18 @@ public class StatisticsService {
         }
     }
 
+    public void dropDatabaseIndexes() {
+        synchronized (indexLock) {
+            try {
+                log.info("Dropping database indexes...");
+                database.getJdbcTemplate().execute(dropCurrentIndexesSql());
+                log.info("Database indexes dropped.");
+            } catch (RuntimeException e) {
+                log.warn("Could not drop database indexes. {}", e.getMessage());
+            }
+        }
+    }
+
     public void ensureDatabaseIndexes() {
         synchronized (indexLock) {
             try {
@@ -272,18 +284,43 @@ public class StatisticsService {
     }
 
     private void ensurePostgresIndexesWithLock() {
-        database.getJdbcTemplate();
         final TransactionTemplate transactionTemplate = new TransactionTemplate(new DataSourceTransactionManager(database.getDataSource()));
         transactionTemplate.executeWithoutResult(status -> {
             database.getJdbcTemplate().execute("SELECT pg_advisory_xact_lock(hashtext('de.ddb.labs.ddbid.ensureDatabaseIndexes'))");
-            database.getJdbcTemplate().execute(commonIndexSql());
-            database.getJdbcTemplate().execute(postgresSearchIndexSql());
-            try {
-                database.getJdbcTemplate().execute(postgresAdvancedIndexSql());
-            } catch (RuntimeException e) {
-                log.info("PostgreSQL advanced indexes (covering indexes) not available. This is OK for PostgreSQL < 11. Message: {}", e.getMessage());
-            }
+            database.getJdbcTemplate().execute(postgresIndexSql());
         });
+    }
+
+    private static String dropCurrentIndexesSql() {
+        return """
+               DROP INDEX IF EXISTS "item_timestamp";
+               DROP INDEX IF EXISTS "item_status_timestamp";
+               DROP INDEX IF EXISTS "item_status_provider";
+               DROP INDEX IF EXISTS "item_status_sector";
+               DROP INDEX IF EXISTS "item_filter_id";
+               DROP INDEX IF EXISTS "item_filter_provider_item";
+               DROP INDEX IF EXISTS "item_filter_dataset";
+               DROP INDEX IF EXISTS "item_filter_provider";
+               DROP INDEX IF EXISTS "item_filter_sector";
+               DROP INDEX IF EXISTS "item_filter_supplier";
+               DROP INDEX IF EXISTS "item_trgm_label";
+               DROP INDEX IF EXISTS "item_trgm_provider_item_id";
+               DROP INDEX IF EXISTS "item_trgm_provider_id";
+               DROP INDEX IF EXISTS "person_timestamp";
+               DROP INDEX IF EXISTS "person_status_timestamp";
+               DROP INDEX IF EXISTS "person_filter_id";
+               DROP INDEX IF EXISTS "person_filter_variant";
+               DROP INDEX IF EXISTS "person_filter_type";
+               DROP INDEX IF EXISTS "person_trgm_variant_id";
+               DROP INDEX IF EXISTS "person_trgm_name";
+               DROP INDEX IF EXISTS "organization_timestamp";
+               DROP INDEX IF EXISTS "organization_status_timestamp";
+               DROP INDEX IF EXISTS "organization_filter_id";
+               DROP INDEX IF EXISTS "organization_filter_variant";
+               DROP INDEX IF EXISTS "organization_filter_type";
+               DROP INDEX IF EXISTS "organization_trgm_variant_id";
+               DROP INDEX IF EXISTS "organization_trgm_name";
+               """;
     }
 
     private String commonIndexSql() {
@@ -314,109 +351,92 @@ public class StatisticsService {
                 .replace("{{organization}}", organizationTableName);
     }
 
-    private String postgresSearchIndexSql() {
-        // Trigram (GIN) indexes enable fast ILIKE '%…%' (contains) searches.
-        // Only created for columns that explicitly support the "contains" search mode:
-        //   item        : label, provider_item_id, provider_id
-        //   person/org  : variant_id, preferredName
+    private String postgresIndexSql() {
+        // Drops all known indexes unconditionally (via dropCurrentIndexesSql()) so
+        // that any definition drift (wrong column order, stale name, etc.) is fixed
+        // on every call to ensureDatabaseIndexes().  commonIndexSql() ran first as a
+        // safety net; this block enforces the canonical definitions for all indexes.
+        //
+        // All B-tree indexes are plain — no INCLUDE clauses.  INCLUDE only enables an
+        // index-only scan when ALL selected columns are covered; since "label" (item)
+        // and "preferredName" (person/organization) are kept out of every index (they
+        // are large and would roughly double index size), PostgreSQL always heap-fetches
+        // anyway, making INCLUDE columns a pure waste of space.
+        //
+        // GIN (pg_trgm) indexes cover only the columns that support "contains" search:
+        //   item       : label, provider_item_id, provider_id
+        //   person/org : variant_id, preferredName
         // All other columns are exact-only and rely solely on B-tree indexes.
-        return """
-                                           CREATE EXTENSION IF NOT EXISTS pg_trgm;
-                                           CREATE INDEX IF NOT EXISTS "item_trgm_label"              ON "{{item}}"         USING GIN ("label"            gin_trgm_ops);
-                                           CREATE INDEX IF NOT EXISTS "item_trgm_provider_item_id"   ON "{{item}}"         USING GIN ("provider_item_id" gin_trgm_ops);
-                                           CREATE INDEX IF NOT EXISTS "item_trgm_provider_id"        ON "{{item}}"         USING GIN ("provider_id"      gin_trgm_ops);
-                                           CREATE INDEX IF NOT EXISTS "person_trgm_variant_id"       ON "{{person}}"       USING GIN ("variant_id"       gin_trgm_ops);
-                                           CREATE INDEX IF NOT EXISTS "person_trgm_name"             ON "{{person}}"       USING GIN ("preferredName"    gin_trgm_ops);
-                                           CREATE INDEX IF NOT EXISTS "organization_trgm_variant_id" ON "{{organization}}" USING GIN ("variant_id"       gin_trgm_ops);
-                                           CREATE INDEX IF NOT EXISTS "organization_trgm_name"       ON "{{organization}}" USING GIN ("preferredName"    gin_trgm_ops);
-                                           """
+        //
+        // Legacy index names from older code versions are also cleaned up here.
+        final String analyze = """
+                ANALYZE "{{item}}";
+                ANALYZE "{{person}}";
+                ANALYZE "{{organization}}";
+                """
                 .replace("{{item}}", itemTableName)
                 .replace("{{person}}", personTableName)
                 .replace("{{organization}}", organizationTableName);
-    }
 
-    private String postgresAdvancedIndexSql() {
-        // PostgreSQL 11+: covering indexes (INCLUDE) for index-only scans.
-        //
-        // Strategy: one primary covering index per entity on the default sort key
-        // (status, timestamp, id) with the short identifier columns in INCLUDE.
-        // The potentially-long "label"/"preferredName" column is intentionally
-        // excluded from INCLUDE — 25 heap-fetches per page are negligible, but
-        // including it would double the index size.
-        //
-        // All secondary filter indexes are plain B-tree (no INCLUDE) to keep
-        // their footprint small; they are only needed for WHERE filtering, not
-        // for covering the full SELECT list.
-        //
-        // Also drops the over-broad GIN trigram indexes that were created by
-        // older code versions on identifier columns.
-        // Drop ALL known indexes unconditionally so that any definition drift
-        // (wrong column order, missing INCLUDE, stale name, etc.) is fixed on
-        // every call to ensureDatabaseIndexes().  commonIndexSql() ran first and
-        // created missing ones with IF NOT EXISTS; this block overrides them all
-        // with the canonical definitions.
-        return """
-                                           ANALYZE "{{item}}";
-                                           ANALYZE "{{person}}";
-                                           ANALYZE "{{organization}}";
-                                           DROP INDEX IF EXISTS "item_trgm_provider_item";
-                                           DROP INDEX IF EXISTS "item_trgm_dataset";
-                                           DROP INDEX IF EXISTS "item_trgm_provider";
-                                           DROP INDEX IF EXISTS "item_trgm_supplier";
-                                           DROP INDEX IF EXISTS "person_trgm_variant";
-                                           DROP INDEX IF EXISTS "organization_trgm_variant";
-                                           DROP INDEX IF EXISTS "item_trgm_id";
-                                           DROP INDEX IF EXISTS "item_trgm_dataset_id";
-                                           DROP INDEX IF EXISTS "item_trgm_supplier_id";
-                                           DROP INDEX IF EXISTS "person_trgm_id";
-                                           DROP INDEX IF EXISTS "organization_trgm_id";
-                                           DROP INDEX IF EXISTS "item_status";
-                                           DROP INDEX IF EXISTS "person_status";
-                                           DROP INDEX IF EXISTS "organization_status";
-                                           DROP INDEX IF EXISTS "item_timestamp";
-                                           DROP INDEX IF EXISTS "item_status_timestamp";
-                                           DROP INDEX IF EXISTS "item_status_provider";
-                                           DROP INDEX IF EXISTS "item_status_sector";
-                                           DROP INDEX IF EXISTS "item_filter_id" CASCADE;
-                                           DROP INDEX IF EXISTS "item_filter_provider_item";
-                                           DROP INDEX IF EXISTS "item_filter_dataset";
-                                           DROP INDEX IF EXISTS "item_filter_provider";
-                                           DROP INDEX IF EXISTS "item_filter_sector";
-                                           DROP INDEX IF EXISTS "item_filter_supplier";
-                                           DROP INDEX IF EXISTS "person_timestamp";
-                                           DROP INDEX IF EXISTS "person_status_timestamp";
-                                           DROP INDEX IF EXISTS "person_filter_id" CASCADE;
-                                           DROP INDEX IF EXISTS "person_filter_variant";
-                                           DROP INDEX IF EXISTS "person_filter_type";
-                                           DROP INDEX IF EXISTS "organization_timestamp";
-                                           DROP INDEX IF EXISTS "organization_status_timestamp";
-                                           DROP INDEX IF EXISTS "organization_filter_id" CASCADE;
-                                           DROP INDEX IF EXISTS "organization_filter_variant";
-                                           DROP INDEX IF EXISTS "organization_filter_type";
-                                           CREATE INDEX "item_timestamp"        ON "{{item}}"("timestamp");
-                                           CREATE INDEX "item_status_timestamp" ON "{{item}}"("status", "timestamp");
-                                           CREATE INDEX "item_status_provider"  ON "{{item}}"("status", "provider_id");
-                                           CREATE INDEX "item_status_sector"    ON "{{item}}"("status", "sector_fct");
-                                           CREATE INDEX "item_filter_id"           ON "{{item}}"("status", "timestamp", "id") INCLUDE ("provider_item_id", "provider_id", "dataset_id", "supplier_id", "sector_fct");
-                                           CREATE INDEX "item_filter_provider_item" ON "{{item}}"("status", "timestamp", "provider_item_id");
-                                           CREATE INDEX "item_filter_dataset"       ON "{{item}}"("status", "timestamp", "dataset_id");
-                                           CREATE INDEX "item_filter_provider"      ON "{{item}}"("status", "timestamp", "provider_id");
-                                           CREATE INDEX "item_filter_sector"        ON "{{item}}"("status", "timestamp", "sector_fct");
-                                           CREATE INDEX "item_filter_supplier"      ON "{{item}}"("status", "timestamp", "supplier_id");
-                                           CREATE INDEX "person_timestamp"        ON "{{person}}"("timestamp");
-                                           CREATE INDEX "person_status_timestamp" ON "{{person}}"("status", "timestamp");
-                                           CREATE INDEX "person_filter_id"      ON "{{person}}"("status", "timestamp", "id") INCLUDE ("variant_id", "type");
-                                           CREATE INDEX "person_filter_variant" ON "{{person}}"("status", "timestamp", "variant_id");
-                                           CREATE INDEX "person_filter_type"    ON "{{person}}"("status", "timestamp", "type");
-                                           CREATE INDEX "organization_timestamp"        ON "{{organization}}"("timestamp");
-                                           CREATE INDEX "organization_status_timestamp" ON "{{organization}}"("status", "timestamp");
-                                           CREATE INDEX "organization_filter_id"      ON "{{organization}}"("status", "timestamp", "id") INCLUDE ("variant_id", "type");
-                                           CREATE INDEX "organization_filter_variant" ON "{{organization}}"("status", "timestamp", "variant_id");
-                                           CREATE INDEX "organization_filter_type"    ON "{{organization}}"("status", "timestamp", "type");
-                                           """
+        // Names from older code versions that no longer exist in the canonical set.
+        final String legacyDrops = """
+                DROP INDEX IF EXISTS "item_trgm_provider_item";
+                DROP INDEX IF EXISTS "item_trgm_dataset";
+                DROP INDEX IF EXISTS "item_trgm_provider";
+                DROP INDEX IF EXISTS "item_trgm_supplier";
+                DROP INDEX IF EXISTS "person_trgm_variant";
+                DROP INDEX IF EXISTS "organization_trgm_variant";
+                DROP INDEX IF EXISTS "item_trgm_id";
+                DROP INDEX IF EXISTS "item_trgm_dataset_id";
+                DROP INDEX IF EXISTS "item_trgm_supplier_id";
+                DROP INDEX IF EXISTS "person_trgm_id";
+                DROP INDEX IF EXISTS "organization_trgm_id";
+                DROP INDEX IF EXISTS "item_status";
+                DROP INDEX IF EXISTS "person_status";
+                DROP INDEX IF EXISTS "organization_status";
+                """;
+
+        final String createGin = """
+                CREATE EXTENSION IF NOT EXISTS pg_trgm;
+                CREATE INDEX "item_trgm_label"              ON "{{item}}"         USING GIN ("label"            gin_trgm_ops);
+                CREATE INDEX "item_trgm_provider_item_id"   ON "{{item}}"         USING GIN ("provider_item_id" gin_trgm_ops);
+                CREATE INDEX "item_trgm_provider_id"        ON "{{item}}"         USING GIN ("provider_id"      gin_trgm_ops);
+                CREATE INDEX "person_trgm_variant_id"       ON "{{person}}"       USING GIN ("variant_id"       gin_trgm_ops);
+                CREATE INDEX "person_trgm_name"             ON "{{person}}"       USING GIN ("preferredName"    gin_trgm_ops);
+                CREATE INDEX "organization_trgm_variant_id" ON "{{organization}}" USING GIN ("variant_id"       gin_trgm_ops);
+                CREATE INDEX "organization_trgm_name"       ON "{{organization}}" USING GIN ("preferredName"    gin_trgm_ops);
+                """
                 .replace("{{item}}", itemTableName)
                 .replace("{{person}}", personTableName)
                 .replace("{{organization}}", organizationTableName);
+
+        final String createBTree = """
+                CREATE INDEX "item_timestamp"        ON "{{item}}"("timestamp");
+                CREATE INDEX "item_status_timestamp" ON "{{item}}"("status", "timestamp");
+                CREATE INDEX "item_status_provider"  ON "{{item}}"("status", "provider_id");
+                CREATE INDEX "item_status_sector"    ON "{{item}}"("status", "sector_fct");
+                CREATE INDEX "item_filter_id"             ON "{{item}}"("status", "timestamp", "id");
+                CREATE INDEX "item_filter_provider_item"  ON "{{item}}"("status", "timestamp", "provider_item_id");
+                CREATE INDEX "item_filter_dataset"        ON "{{item}}"("status", "timestamp", "dataset_id");
+                CREATE INDEX "item_filter_provider"       ON "{{item}}"("status", "timestamp", "provider_id");
+                CREATE INDEX "item_filter_sector"         ON "{{item}}"("status", "timestamp", "sector_fct");
+                CREATE INDEX "item_filter_supplier"       ON "{{item}}"("status", "timestamp", "supplier_id");
+                CREATE INDEX "person_timestamp"        ON "{{person}}"("timestamp");
+                CREATE INDEX "person_status_timestamp" ON "{{person}}"("status", "timestamp");
+                CREATE INDEX "person_filter_id"      ON "{{person}}"("status", "timestamp", "id");
+                CREATE INDEX "person_filter_variant" ON "{{person}}"("status", "timestamp", "variant_id");
+                CREATE INDEX "person_filter_type"    ON "{{person}}"("status", "timestamp", "type");
+                CREATE INDEX "organization_timestamp"        ON "{{organization}}"("timestamp");
+                CREATE INDEX "organization_status_timestamp" ON "{{organization}}"("status", "timestamp");
+                CREATE INDEX "organization_filter_id"      ON "{{organization}}"("status", "timestamp", "id");
+                CREATE INDEX "organization_filter_variant" ON "{{organization}}"("status", "timestamp", "variant_id");
+                CREATE INDEX "organization_filter_type"    ON "{{organization}}"("status", "timestamp", "type");
+                """
+                .replace("{{item}}", itemTableName)
+                .replace("{{person}}", personTableName)
+                .replace("{{organization}}", organizationTableName);
+
+        return analyze + legacyDrops + dropCurrentIndexesSql() + createGin + createBTree;
     }
 
     private Map<String, Integer> queryStringIntegerMap(String label, String sql) {

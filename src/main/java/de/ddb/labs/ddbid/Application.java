@@ -75,7 +75,13 @@ public class Application {
 
     @Value("${ddbid.dump.lockfile}")
     private String lockfile;
-    
+
+    @Value("${ddbid.http.connect-timeout-seconds:30}")
+    private int httpConnectTimeoutSeconds;
+
+    @Value("${ddbid.http.read-timeout-seconds:600}")
+    private int httpReadTimeoutSeconds;
+
     @Value("${ddbid.cron.objects}")
     private String cronPatternObjects;
 
@@ -182,8 +188,8 @@ public class Application {
         dispatcher.setMaxRequests(64);
         dispatcher.setMaxRequestsPerHost(8);
         httpClient = new OkHttpClient.Builder()
-                .connectTimeout(0, TimeUnit.SECONDS)
-                .readTimeout(0, TimeUnit.SECONDS)
+                .connectTimeout(httpConnectTimeoutSeconds, TimeUnit.SECONDS)
+                .readTimeout(httpReadTimeoutSeconds, TimeUnit.SECONDS)
                 .dispatcher(dispatcher)
                 .build();
         return httpClient;

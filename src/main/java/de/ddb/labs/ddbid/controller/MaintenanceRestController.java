@@ -23,6 +23,7 @@ import de.ddb.labs.ddbid.cronjob.objects.Import;
 import de.ddb.labs.ddbid.service.StatisticsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -107,6 +108,18 @@ public class MaintenanceRestController {
         }
 
         return Map.of("status", "ok", "message", "Index creation scheduled. H2 may lock tables while indexes are created.");
+    }
+
+    @DeleteMapping("indexes")
+    public Map<String, String> dropIndexes() {
+        try {
+            taskScheduler.schedule(statisticsService::dropDatabaseIndexes, Instant.now());
+            log.info("Index drop job successfully scheduled.");
+        } catch (Exception e) {
+            return Map.of("status", "error", "message", String.valueOf(e.getMessage()));
+        }
+
+        return Map.of("status", "ok", "message", "Index drop scheduled.");
     }
     
     @GetMapping("runcron")

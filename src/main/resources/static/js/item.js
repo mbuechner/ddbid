@@ -3,6 +3,7 @@ $(document).ready(function() {
 
     tableHelper.initEntityTable({
         entity: 'item',
+        order: [],
         providerTooltips: true,
         exactOnlyColumns: [0, 1, 2, 4, 7, 8],
         filterOptions: tableHelper.entityFilterOptions('item', [

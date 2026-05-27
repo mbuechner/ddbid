@@ -81,6 +81,31 @@
       "description": "Path to the lock file used while a dump is running."
     },
     {
+      "name": "ddbid.dump.entity-count",
+      "type": "java.lang.Integer",
+      "description": "Number of entities fetched per Solr request during a dump. Defaults to 50000."
+    },
+    {
+      "name": "ddbid.dump.months-to-keep",
+      "type": "java.lang.Integer",
+      "description": "Number of months to keep old dump files. Defaults to 1."
+    },
+    {
+      "name": "ddbid.datapath.item",
+      "type": "java.lang.Integer",
+      "description": "HTTP connect timeout in seconds for outgoing API requests. Defaults to 30 seconds."
+    },
+    {
+      "name": "ddbid.http.read-timeout-seconds",
+      "type": "java.lang.Integer",
+      "description": "HTTP read timeout in seconds for outgoing API requests. Defaults to 600 seconds (10 minutes) to handle large Solr response batches."
+    },
+    {
+      "name": "ddbid.http.connect-timeout-seconds",
+      "type": "java.lang.Integer",
+      "description": "HTTP connect timeout in seconds for outgoing API requests. Defaults to 30 seconds."
+    },
+    {
       "name": "ddbid.datapath.item",
       "type": "java.lang.String",
       "description": "Directory for item dump files."
