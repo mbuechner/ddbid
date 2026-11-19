@@ -21,29 +21,25 @@ import com.github.davidmoten.bigsorter.Serializer;
 import com.github.davidmoten.bigsorter.Util;
 import com.github.davidmoten.bigsorter.Writer;
 import de.ddb.labs.ddbid.model.Status;
+import de.ddb.labs.ddbid.model.Type;
 import de.ddb.labs.ddbid.model.item.ItemDoc;
 import de.ddb.labs.ddbid.model.organization.OrganizationDoc;
 import de.ddb.labs.ddbid.model.person.PersonDoc;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -82,15 +78,27 @@ public class Compare implements Runnable {
 
     @Override
     public void run() {
-        compareDumps(dataPathItem, ItemDoc.getStaticHeader());
-        compareDumps(dataPathPerson, PersonDoc.getStaticHeader());
-        compareDumps(dataPathOrganization, OrganizationDoc.getStaticHeader());
+        IllegalStateException failure = new IllegalStateException("Could not complete dump comparisons");
+        for (Type type : Type.values()) {
+            try {
+                switch (type) {
+                    case ITEM -> compareDumps(dataPathItem, ItemDoc.getStaticHeader());
+                    case PERSON -> compareDumps(dataPathPerson, PersonDoc.getStaticHeader());
+                    case ORGANIZATION -> compareDumps(dataPathOrganization, OrganizationDoc.getStaticHeader());
+                }
+            } catch (IOException | RuntimeException e) {
+                failure.addSuppressed(new IllegalStateException("Could not compare " + type, e));
+            }
+        }
+        if (failure.getSuppressed().length > 0) {
+            throw failure;
+        }
     }
 
-    private void compareDumps(String dataPath, List<String> header) {
-        // search for uncompared and creates them
+    private void compareDumps(String dataPath, List<String> header) throws IOException {
         final File[] dumpFiles = Helper.getOkDumpFiles(dataPath, Comparator.naturalOrder()).toArray(File[]::new);
         final Set<File> cmpFiles = Helper.getOkCmpFiles(dataPath, Comparator.naturalOrder());
+        Path directory = Path.of(dataPath);
 
         for (int i = 0; i < dumpFiles.length - 1; ++i) {
             final File fileA = dumpFiles[i];
@@ -98,133 +106,79 @@ public class Compare implements Runnable {
 
             final String fileABaseName = fileA.getName().substring(0, fileA.getName().indexOf('.'));
             final String fileBBaseName = fileB.getName().substring(0, fileB.getName().indexOf('.'));
-            final String outputBaseFileNameABMissing = dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.MISSING;
-            final File outputFileNameABMissing = new File(outputBaseFileNameABMissing + OUTPUT_FILENAME_EXT);
-            final String outputBaseFileNameBANew = dataPath + COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_" + Status.NEW;
-            final File outputFileNameBANew = new File(outputBaseFileNameBANew + OUTPUT_FILENAME_EXT);
-
-            // compare for MISSING
-            if (cmpFiles.contains(outputFileNameABMissing)) {
-                log.info("{} already exists. Skipping this one.", outputFileNameABMissing);
-            } else {
-                log.info("{} does not exist. Create compare file...", outputFileNameABMissing);
-                try {
-                    findDifferences(fileA, fileB, outputFileNameABMissing, header, Status.MISSING);
-                } catch (Exception e) {
-                    log.error("Error while comparing {} with {} to {}. {}", fileA, fileB, outputFileNameABMissing, e.getMessage());
-                    if (!outputFileNameABMissing.delete()) {
-                        outputFileNameABMissing.deleteOnExit();
-                    }
-                    continue;
-                }
-                // write OK file
-                try {
-                    Files.write(Path.of(outputBaseFileNameABMissing + OK_FILENAME_EXT), List.of(dtf.format(Instant.now())), StandardCharsets.UTF_8);
-                } catch (IOException ex) {
-                    log.error("Could not write OK file. {}", ex.getMessage());
-                }
-            }
-
-            // compare for NEW
-            if (cmpFiles.contains(outputFileNameBANew)) {
-                log.info("{} already exists. Skipping this one.", outputFileNameBANew);
-            } else {
-
-                log.info("{} does not exist. Create compare file...", outputFileNameBANew);
-                try {
-                    findDifferences(fileB,fileA,  outputFileNameBANew, header, Status.NEW);
-                } catch (Exception e) {
-                    log.error("Error while comparing {} with {} to {}. {}", fileB,fileA, outputFileNameBANew, e.getMessage());
-                    if (!outputFileNameBANew.delete()) {
-                        outputFileNameBANew.deleteOnExit();
-                    }
-                    continue;
-                }
-                // write OK file
-                try {
-                    Files.write(Path.of(outputBaseFileNameBANew + OK_FILENAME_EXT), List.of(dtf.format(Instant.now())), StandardCharsets.UTF_8);
-                } catch (IOException ex) {
-                    log.error("Could not write OK file. {}", ex.getMessage());
-                }
-            }
+            String prefix = COMPARE_OUTPUT_FILENAME_PREFIX + fileABaseName + "_" + fileBBaseName + "_";
+            compareIfNeeded(cmpFiles, fileA.toPath(), fileB.toPath(), directory.resolve(prefix + Status.MISSING + OUTPUT_FILENAME_EXT), header, Status.MISSING);
+            compareIfNeeded(cmpFiles, fileB.toPath(), fileA.toPath(), directory.resolve(prefix + Status.NEW + OUTPUT_FILENAME_EXT), header, Status.NEW);
         }
     }
 
-    /**
-     *
-     * @param fileA Older file
-     * @param fileB Newer File
-     * @param output
-     * @param status
-     * @return
-     * @throws FileNotFoundException
-     * @throws IOException
-     */
-    private static int findDifferences(File fileA, File fileB, File output, List<String> header, Status status) throws FileNotFoundException, IOException {
-
-        final File okFileA = new File(fileA.getAbsolutePath().replace(OUTPUT_FILENAME_EXT, OK_FILENAME_EXT));
-        final File okFileB = new File(fileB.getAbsolutePath().replace(OUTPUT_FILENAME_EXT, OK_FILENAME_EXT));
-        
-        final List<String> okFileALines = Files.readAllLines(okFileA.toPath(), StandardCharsets.UTF_8);
-        final List<String> okFileBLines = Files.readAllLines(okFileB.toPath(), StandardCharsets.UTF_8);
-        
-        final Instant okFileADate = dtf.parse(okFileALines.get(0), Instant::from);
-        final Instant okFileBDate = dtf.parse(okFileBLines.get(0), Instant::from);
-        Instant dateForCsv = okFileBDate;
-
-        if (okFileADate.compareTo(okFileBDate) > 0) {
-            dateForCsv = okFileADate;
+    private void compareIfNeeded(Set<File> completed, Path source, Path other, Path output, List<String> header, Status status) throws IOException {
+        if (completed.contains(output.toFile())) {
+            return;
         }
-
-        final File tmpFile = File.createTempFile("ddbid-", "csv.gz");
-        final Serializer<CSVRecord> csVSerializer = Serializer.csv(CSV_WITH_FIRST_RECORD_AS_HEADER, StandardCharsets.UTF_8);
-        final Comparator<CSVRecord> comparator = (x, y) -> {
-            final String a = x.get("id");
-            final String b = y.get("id");
-            return a.compareTo(b);
-        };
-        try (final InputStream fileStreamA = new FileInputStream(fileA); 
-                final GZIPInputStream gzipA = new GZIPInputStream(fileStreamA); 
-                final Reader<CSVRecord> readerA = csVSerializer.createReader(gzipA);
-                final InputStream fileStreamB = new FileInputStream(fileB); 
-                final GZIPInputStream gzipB = new GZIPInputStream(fileStreamB); 
-                final Reader<CSVRecord> readerB = csVSerializer.createReader(gzipB); 
-                final OutputStream fileOutputStream = new FileOutputStream(tmpFile, false); 
-                final GZIPOutputStream gzOutStream = new GZIPOutputStream(fileOutputStream); 
-                final Writer<CSVRecord> writerAb = csVSerializer.createWriter(gzOutStream)) {
-            Util.findComplement(readerA, readerB, comparator, writerAb);
+        Instant sourceDate = completedAt(source);
+        Instant otherDate = completedAt(other);
+        String timestamp = dtf.format(sourceDate.isAfter(otherDate) ? sourceDate : otherDate);
+        Path directory = Objects.requireNonNull(output.toAbsolutePath().getParent(), "Missing comparison directory");
+        Path temporary = Helper.createTemporaryFile(directory, ".ddbid-");
+        try {
+            writeDifferences(source, other, temporary, header, status, timestamp);
+            Helper.publish(temporary, output, dtf.format(Instant.now()), ".ddbid-");
+            log.info("Wrote {} differences between {} and {} to {}", status, source.getFileName(), other.getFileName(), output);
+        } finally {
+            Files.deleteIfExists(temporary);
         }
-        int lineCount = 0;
-        try (final InputStream fileStream = new FileInputStream(tmpFile); 
-                final InputStream gzipStream = new GZIPInputStream(fileStream); 
-                final InputStreamReader decoder = new InputStreamReader(gzipStream, StandardCharsets.UTF_8);
-                final OutputStream os = Files.newOutputStream(Path.of(output.getAbsolutePath()), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE); 
-                final OutputStreamWriter ow = new OutputStreamWriter(new GZIPOutputStream(os), StandardCharsets.UTF_8); 
-                final BufferedWriter bw = new BufferedWriter(ow);
-                final CSVPrinter csvPrinter = new CSVPrinter(bw, CSVFormat.DEFAULT)) {
-            if (header != null) {
-                csvPrinter.printRecord(header);
+    }
+
+    private static Instant completedAt(Path file) throws IOException {
+        try (var reader = Files.newBufferedReader(Helper.successMarker(file), StandardCharsets.UTF_8)) {
+            String timestamp = reader.readLine();
+            if (timestamp == null) {
+                throw new IOException("Empty dump completion marker for " + file);
             }
-            Iterable<CSVRecord> records = CSV_WITH_FIRST_RECORD_AS_HEADER.parse(decoder);
-            for (CSVRecord record : records) {
-                final Map<String, String> map = record.toMap();
-                map.put("timestamp", dtf.format(dateForCsv));
-                if (status != null) {
-                    map.put("status", status.toString());
-                }
-                csvPrinter.printRecord(map.values());
-                if (lineCount++ % 1000 == 0) {
-                    csvPrinter.flush();
-                }
-            }
-            records = null; // free memory
-            // System.gc();
+            return dtf.parse(timestamp, Instant::from);
         }
-        if (tmpFile.delete()) {
-            tmpFile.deleteOnExit();
+    }
+
+    private static void writeDifferences(Path source, Path other, Path output, List<String> header, Status status, String timestamp) throws IOException {
+        Serializer<CSVRecord> serializer = Serializer.csv(CSV_WITH_FIRST_RECORD_AS_HEADER, StandardCharsets.UTF_8);
+        Comparator<CSVRecord> byId = Comparator.comparing(record -> record.get("id"));
+        try (InputStream sourceStream = Files.newInputStream(source);
+                var sourceGzip = new GZIPInputStream(sourceStream);
+                Reader<CSVRecord> sourceRecords = serializer.createReader(sourceGzip);
+                InputStream otherStream = Files.newInputStream(other);
+                var otherGzip = new GZIPInputStream(otherStream);
+                Reader<CSVRecord> otherRecords = serializer.createReader(otherGzip);
+                OutputStream outputStream = Files.newOutputStream(output);
+                var gzip = new GZIPOutputStream(outputStream);
+                var writer = new OutputStreamWriter(gzip, StandardCharsets.UTF_8);
+                CSVPrinter printer = new CSVPrinter(writer, CSVFormat.DEFAULT)) {
+            printer.printRecord(header);
+            Util.findComplement(sourceRecords, otherRecords, byId, new Writer<CSVRecord>() {
+                @Override
+                public void write(CSVRecord record) throws IOException {
+                    List<String> values = new ArrayList<>(header.size());
+                    for (String column : header) {
+                        values.add(switch (column) {
+                            case "timestamp" -> timestamp;
+                            case "status" -> status.toString();
+                            default -> record.get(column);
+                        });
+                    }
+                    printer.printRecord(values);
+                }
+
+                @Override
+                public void flush() throws IOException {
+                    printer.flush();
+                }
+
+                @Override
+                public void close() throws IOException {
+                    printer.close();
+                }
+            });
         }
-        log.info("{} compared with {} has {} differences with status {}", fileA.getName(), fileB.getName(), lineCount, status);
-        return lineCount;
     }
 
 }

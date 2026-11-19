@@ -16,14 +16,24 @@
 package de.ddb.labs.ddbid.service;
 
 import java.sql.Timestamp;
-import java.time.Instant;
+import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
+import java.time.temporal.ChronoField;
 import java.util.function.Supplier;
 
 final class DataTableTimestampHelper {
+
+    private static final DateTimeFormatter SQL_TIMESTAMP = new DateTimeFormatterBuilder()
+            .appendPattern("uuuu-M-d H:m:s")
+            .appendFraction(ChronoField.NANO_OF_SECOND, 0, 9, true)
+            .toFormatter()
+            .withResolverStyle(ResolverStyle.STRICT);
 
     private DataTableTimestampHelper() {
     }
@@ -41,58 +51,36 @@ final class DataTableTimestampHelper {
             return TimestampFilter.inactive();
         }
 
-        if (isDateOnly(normalized)) {
-            LocalDate date = LocalDate.parse(normalized.substring(0, 10));
-            return TimestampFilter.range(
-                    Timestamp.valueOf(date.atStartOfDay()),
-                    Timestamp.valueOf(date.plusDays(1).atStartOfDay()));
-        }
-
-        Timestamp timestamp;
         try {
-            timestamp = parse(normalized);
-        } catch (IllegalArgumentException e) {
+            if (isDateOnly(normalized)) {
+                LocalDate date = LocalDate.parse(normalized.substring(0, 10));
+                return TimestampFilter.range(
+                        Timestamp.valueOf(date.atStartOfDay()),
+                        Timestamp.valueOf(date.plusDays(1).atStartOfDay()));
+            }
+            return TimestampFilter.exact(parse(normalized));
+        } catch (DateTimeException | IllegalArgumentException e) {
             return TimestampFilter.invalidFilter();
         }
-        return TimestampFilter.exact(timestamp);
     }
 
-    static Timestamp parse(String value) {
-        String normalized = normalize(value);
-        if (normalized == null || "-1".equals(normalized)) {
-            return null;
-        }
-
+    private static Timestamp parse(String value) {
         try {
-            return new Timestamp(Long.parseLong(normalized));
+            return new Timestamp(Long.parseLong(value));
         } catch (NumberFormatException e) {
-            // Fall through to ISO parsing. DataTables timestamp menus can receive ISO strings from Jackson.
+            // Try textual timestamps next.
         }
 
+        final String isoTimestamp = value.replace(' ', 'T').replaceFirst("([+-]\\d{2})(\\d{2})$", "$1:$2");
         try {
-            return Timestamp.valueOf(normalized);
-        } catch (IllegalArgumentException e) {
-            // Fall through to ISO-like local date-time parsing.
-        }
-
-        try {
-            String localTimestamp = normalized.replaceFirst("(Z|[+-]\\d{2}:?\\d{2})$", "");
-            return Timestamp.valueOf(LocalDateTime.parse(localTimestamp));
-        } catch (DateTimeParseException | IllegalArgumentException e) {
-            // Fall through to instant parsing.
-        }
-
-        try {
-            return Timestamp.from(Instant.parse(normalized));
+            return Timestamp.from(OffsetDateTime.parse(isoTimestamp).toInstant());
         } catch (DateTimeParseException e) {
-            // Fall through to offset / local timestamp parsing.
+            // An offset-free value represents local database time.
         }
 
-        try {
-            return Timestamp.from(OffsetDateTime.parse(normalized).toInstant());
-        } catch (DateTimeParseException e) {
-            throw new IllegalArgumentException("Unsupported timestamp value: " + normalized, e);
-        }
+        return Timestamp.valueOf(value.contains(" ")
+                ? LocalDateTime.parse(value, SQL_TIMESTAMP)
+                : LocalDateTime.parse(value));
     }
 
     private static String normalize(String value) {

@@ -1,7 +1,7 @@
 <!-- Navigation -->
 <div class="navbar navbar-expand-lg static-top navbar-dark bg-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="index.html">
+        <a class="navbar-brand" th:href="@{/index.html}">
             <i class="fas fa-1x fa-life-ring"></i> DDBid</a>
         <button aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation"
                 class="navbar-toggler"
@@ -11,22 +11,22 @@
         <div class="collapse navbar-collapse" id="navbarResponsive">
             <ul class="navbar-nav">
                 <li class="nav-item">
-                    <a class="nav-link" href="item.html">Item</a>
+                    <a class="nav-link" th:href="@{/item.html}">Item</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="person.html">Person</a>
+                    <a class="nav-link" th:href="@{/person.html}">Person</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="organization.html">Organization</a>
+                    <a class="nav-link" th:href="@{/organization.html}">Organization</a>
                 </li>
             </ul>
             <ul class="navbar-nav ms-md-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="statistics.html"><i
+                    <a class="nav-link" th:href="@{/statistics.html}"><i
                             class="fas fa-chart-line"></i> Statistics</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="download.html"><i
+                    <a class="nav-link" th:href="@{/download.html}"><i
                             class="fas fa-download"></i> Download</a>
                 </li>
                 <li class="nav-item">

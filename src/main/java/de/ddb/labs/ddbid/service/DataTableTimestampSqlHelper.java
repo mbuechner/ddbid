@@ -19,6 +19,7 @@ import de.ddb.labs.ddbid.database.Database;
 import java.sql.Timestamp;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -34,7 +35,7 @@ final class DataTableTimestampSqlHelper {
                 log,
                 database.getJdbcTemplate(),
                 label + ".selectedTimestamp",
-                "SELECT \"timestamp\" FROM \"" + tableName + "\" ORDER BY \"timestamp\" DESC LIMIT 1",
+                "SELECT MAX(\"timestamp\") FROM " + DataTableSqlHelper.quote(tableName),
                 Timestamp.class);
     }
 
@@ -50,6 +51,6 @@ final class DataTableTimestampSqlHelper {
             cal.setTime(t);
             result.put(dtf.format(t.toLocalDateTime()) + " (CW" + cal.get(Calendar.WEEK_OF_YEAR) + ")", t);
         }
-        return result;
+        return Collections.unmodifiableMap(result);
     }
 }

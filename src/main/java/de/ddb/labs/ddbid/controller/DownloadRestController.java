@@ -17,25 +17,28 @@ package de.ddb.labs.ddbid.controller;
 
 import de.ddb.labs.ddbid.service.DownloadCatalogService;
 import de.ddb.labs.ddbid.service.DownloadCatalogService.DownloadCatalog;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Collections;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import jakarta.servlet.http.HttpServletResponse;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import lombok.RequiredArgsConstructor;
+import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.util.StreamUtils;
 
 @RestController
 @RequestMapping("download")
@@ -60,62 +63,45 @@ public class DownloadRestController {
 
     @GetMapping("ddbid/{type:.+}/{filename:.+}")
     public void getDdbIdFile(@PathVariable("type") String type, @PathVariable("filename") String filename, HttpServletResponse response) throws IOException {
+        final String dataPath = switch (type) {
+            case "item" -> itemDataPath;
+            case "person" -> personDataPath;
+            case "organization" -> organizationDataPath;
+            default -> null;
+        };
+        if (dataPath == null || !filename.endsWith(".gz")) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
 
-        if (type.equals("item")) {
-            final Set<String> s = getDumpFileNames(itemDataPath);
-            if (s.contains(filename)) {
-                final File file = new File(itemDataPath, filename);
-                try (final InputStream is = new FileInputStream(file)) {
+        final Path directory;
+        final Path file;
+        try {
+            directory = Path.of(dataPath).toRealPath();
+            file = directory.resolve(filename);
+        } catch (InvalidPathException | NoSuchFileException e) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+        if (!directory.equals(file.getParent()) || !Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
 
-                    response.setContentLengthLong(file.length());
-                    response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
-                    response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
-
-                    StreamUtils.copy(is, response.getOutputStream());
-                }
-            }
-
-        } else if (type.equals("person")) {
-            final Set<String> s = getDumpFileNames(personDataPath);
-            if (s.contains(filename)) {
-                final File file = new File(personDataPath, filename);
-                try (final InputStream is = new FileInputStream(file)) {
-
-                    response.setContentLengthLong(file.length());
-                    response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
-                    response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
-
-                    StreamUtils.copy(is, response.getOutputStream());
-                }
-            }
-        } else if (type.equals("organization")) {
-            final Set<String> s = getDumpFileNames(organizationDataPath);
-            if (s.contains(filename)) {
-                final File file = new File(organizationDataPath, filename);
-                try (final InputStream is = new FileInputStream(file)) {
-
-                    response.setContentLengthLong(file.length());
-                    response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
-                    response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
-
-                    StreamUtils.copy(is, response.getOutputStream());
-                }
-            }
-        } else {
-
-            response.sendError(404);
+        try {
+            streamFile(file, filename, response);
+        } catch (NoSuchFileException e) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
     }
 
-    private Set<String> getDumpFileNames(String dataPath) {
-        final File[] files = new File(dataPath).listFiles();
-        if (files == null) {
-            return Collections.emptySet();
+    private static void streamFile(Path file, String filename, HttpServletResponse response) throws IOException {
+        try (FileChannel channel = FileChannel.open(file, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS)) {
+            response.setContentLengthLong(channel.size());
+            response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
+                    ContentDisposition.attachment().filename(filename, StandardCharsets.UTF_8).build().toString());
+            response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+            StreamUtils.copy(Channels.newInputStream(channel), response.getOutputStream());
         }
-        return Stream.of(files)
-                .filter(file -> !file.isDirectory())
-                .filter(file -> file.getName().endsWith(".gz"))
-                .map(File::getName)
-                .collect(Collectors.toSet());
     }
 }

@@ -117,14 +117,7 @@ final class DataTableFilterHelper {
         }
         return new FilterCondition(
                 expression + " ILIKE ? ESCAPE '\\'",
-                List.of("%" + escapeLike(trimmed) + "%"));
-    }
-
-    private static String escapeLike(String value) {
-        return value
-                .replace("\\", "\\\\")
-                .replace("%", "\\%")
-                .replace("_", "\\_");
+                List.of(DataTableSqlHelper.containsPattern(trimmed)));
     }
 
     private record FilterCondition(String sql, List<Object> values) {

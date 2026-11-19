@@ -22,12 +22,19 @@ import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Locale;
+import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Slf4j
 public class Database {
+
+    // Keep the established PostgreSQL lock key when coordinating imports with index changes.
+    public static final String POSTGRES_MAINTENANCE_LOCK_SQL =
+            "SELECT pg_advisory_xact_lock(hashtext('de.ddb.labs.ddbid.ensureDatabaseIndexes'))";
     
     private final String databaseType;
     private final String database;
@@ -35,9 +42,7 @@ public class Database {
     private final String databaseUser;
     private final String databasePassword;
     private final int queryTimeoutSeconds;
-    private HikariConfig config;
     private JdbcTemplate jdbcTemplate;
-    @Getter
     private HikariDataSource dataSource;
     
     public Database(String databaseType, String database, String databaseUrl, String databaseUser, String databasePassword, int queryTimeoutSeconds) {
@@ -52,8 +57,8 @@ public class Database {
     public synchronized void init() {
         if (dataSource == null || dataSource.isClosed()) {
             final DatabaseType type = DatabaseType.from(databaseType);
-            config = createConfig();
-            log.info("Initialize {} database at {}...", type.getType(), config.getJdbcUrl());
+            final HikariConfig config = createConfig(type);
+            log.info("Initializing {} database pool...", type.getType());
             dataSource = new HikariDataSource(config);
             jdbcTemplate = new JdbcTemplate(dataSource);
             if (queryTimeoutSeconds > 0) {
@@ -62,8 +67,7 @@ public class Database {
         }
     }
 
-    private HikariConfig createConfig() {
-        final DatabaseType type = DatabaseType.from(databaseType);
+    private HikariConfig createConfig(DatabaseType type) {
         final HikariConfig hikariConfig = new HikariConfig();
         configureDefaults(hikariConfig);
         switch (type) {
@@ -120,24 +124,43 @@ public class Database {
         }
     }
    
-    @SuppressFBWarnings(value = "EI_EXPOSE_REP", justification = "Like to expose intenal rep. Only one DB connection/ template available")
-    public JdbcTemplate getJdbcTemplate() {
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP", justification = "Callers share the JDBC template for the active connection pool")
+    public synchronized JdbcTemplate getJdbcTemplate() {
         init();
         return jdbcTemplate;
     }
 
+    public void executeInTransaction(Consumer<JdbcTemplate> operation) {
+        final JdbcTemplate template = getJdbcTemplate();
+        final TransactionTemplate transaction = new TransactionTemplate(new DataSourceTransactionManager(template.getDataSource()));
+        transaction.executeWithoutResult(status -> operation.accept(template));
+    }
+
     public Connection getConnection() throws SQLException {
+        final Connection connection = openDataSource().getConnection();
+        try {
+            connection.setAutoCommit(false);
+            return connection;
+        } catch (SQLException e) {
+            try {
+                connection.close();
+            } catch (SQLException closeError) {
+                e.addSuppressed(closeError);
+            }
+            throw e;
+        }
+    }
+
+    private synchronized HikariDataSource openDataSource() {
         init();
-        final Connection newConnection = dataSource.getConnection();
-        newConnection.setAutoCommit(false);
-        return newConnection;
+        return dataSource;
     }
 
     public boolean isPostgres() {
         return DatabaseType.from(databaseType) == DatabaseType.POSTGRES;
     }
     
-    public void close() {
+    public synchronized void close() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
             log.info("Database closed");
@@ -159,7 +182,7 @@ public class Database {
             if (value == null || value.isBlank()) {
                 return H2;
             }
-            final String normalized = value.trim().toLowerCase();
+            final String normalized = value.trim().toLowerCase(Locale.ROOT);
             if ("postgres".equals(normalized) || "postgresql".equals(normalized) || "pg".equals(normalized)) {
                 return POSTGRES;
             }

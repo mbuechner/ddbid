@@ -15,9 +15,6 @@
  */
 package de.ddb.labs.ddbid.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import de.ddb.labs.ddbid.Application;
 import de.ddb.labs.ddbid.database.Database;
 import java.io.IOException;
@@ -34,6 +31,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,11 +41,13 @@ import okhttp3.Response;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.support.TransactionTemplate;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Service
@@ -58,6 +58,7 @@ public class StatisticsService {
     private static final String DDB_SECTOR_FACET_URL = Application.API + "/search/index/search/select?q=*:*&rows=0&facet=on&facet.field=sector_fct";
 
     private final Object cacheLock = new Object();
+    private final AtomicLong cacheGeneration = new AtomicLong();
     private final Object indexLock = new Object();
     private final Calendar cal = Calendar.getInstance(Locale.GERMANY);
     private final DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE;
@@ -90,25 +91,26 @@ public class StatisticsService {
     public StatisticsData getStatisticsData(boolean refresh) {
         final Instant now = Instant.now();
         CacheEntry current = cacheEntry;
-        if (!refresh && current != null && current.isValid()) {
+        if (!refresh && current != null && current.isValid(cacheGeneration.get())) {
             return current.data();
         }
 
         synchronized (cacheLock) {
+            final long generation = cacheGeneration.get();
             current = cacheEntry;
-            if (!refresh && current != null && current.isValid()) {
+            if (!refresh && current != null && current.isValid(generation)) {
                 return current.data();
             }
 
             final StatisticsData data = loadStatisticsData();
             data.setGeneratedAt(now);
-            cacheEntry = new CacheEntry(LocalDate.now(), data);
+            cacheEntry = new CacheEntry(generation, LocalDate.now(), data);
             return data;
         }
     }
 
     public void clearCache() {
-        cacheEntry = null;
+        cacheGeneration.incrementAndGet();
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -197,7 +199,7 @@ public class StatisticsService {
         data.setMissingBySectorFctKeys(new ArrayList<>(missingBySector.keySet()));
         data.setMissingBySectorFctValues(new ArrayList<>(missingBySector.values()));
 
-        final Map<String, Long> totalBySector = queryTotalBySectorFromDdb();
+        final Map<String, Long> totalBySector = missingBySector.isEmpty() ? Map.of() : queryTotalBySectorFromDdb();
         final List<SectorLossRatio> missingBySectorLossRatios = new ArrayList<>();
         for (Map.Entry<String, Integer> entry : missingBySector.entrySet()) {
             final String sector = entry.getKey();
@@ -233,8 +235,8 @@ public class StatisticsService {
             }
 
             final JsonNode rootNode = objectMapper.readTree(response.body().byteStream());
-            final JsonNode facetArray = rootNode.at("/facet_counts/facet_fields/sector_fct");
-            if (!facetArray.isArray()) {
+            final JsonNode facetArray = rootNode == null ? null : rootNode.at("/facet_counts/facet_fields/sector_fct");
+            if (facetArray == null || !facetArray.isArray()) {
                 log.warn("DDB sector facet data has unexpected format.");
                 return Map.of();
             }
@@ -246,10 +248,13 @@ public class StatisticsService {
                 if (keyNode == null || keyNode.isNull() || countNode == null || countNode.isNull()) {
                     continue;
                 }
-                result.put(keyNode.asText(), countNode.asLong(0L));
+                final String sector = keyNode.asString("");
+                if (!sector.isBlank()) {
+                    result.put(sector, countNode.asLong(0L));
+                }
             }
             return result;
-        } catch (IOException e) {
+        } catch (IOException | JacksonException e) {
             log.warn("Could not load DDB sector facet data. {}", e.getMessage());
             return Map.of();
         }
@@ -259,7 +264,12 @@ public class StatisticsService {
         synchronized (indexLock) {
             try {
                 log.info("Dropping database indexes...");
-                database.getJdbcTemplate().execute(dropCurrentIndexesSql());
+                final String sql = dropCurrentIndexesSql() + dropLegacyIndexesSql();
+                if (database.isPostgres()) {
+                    changePostgresIndexesWithLock(sql);
+                } else {
+                    database.getJdbcTemplate().execute(sql);
+                }
                 log.info("Database indexes dropped.");
             } catch (RuntimeException e) {
                 log.warn("Could not drop database indexes. {}", e.getMessage());
@@ -272,7 +282,13 @@ public class StatisticsService {
             try {
                 log.info("Ensure database indexes...");
                 if (database.isPostgres()) {
-                    ensurePostgresIndexesWithLock();
+                    try {
+                        changePostgresIndexesWithLock(postgresIndexSql());
+                    } catch (DataAccessException e) {
+                        // The failed rebuild was rolled back. Ensure the B-tree indexes in a new transaction.
+                        log.warn("Could not rebuild PostgreSQL indexes. Ensuring B-tree indexes. {}", e.getMessage());
+                        changePostgresIndexesWithLock(commonIndexSql());
+                    }
                 } else {
                     database.getJdbcTemplate().execute(commonIndexSql());
                 }
@@ -283,11 +299,10 @@ public class StatisticsService {
         }
     }
 
-    private void ensurePostgresIndexesWithLock() {
-        final TransactionTemplate transactionTemplate = new TransactionTemplate(new DataSourceTransactionManager(database.getDataSource()));
-        transactionTemplate.executeWithoutResult(status -> {
-            database.getJdbcTemplate().execute("SELECT pg_advisory_xact_lock(hashtext('de.ddb.labs.ddbid.ensureDatabaseIndexes'))");
-            database.getJdbcTemplate().execute(postgresIndexSql());
+    private void changePostgresIndexesWithLock(String sql) {
+        database.executeInTransaction(template -> {
+            template.execute(Database.POSTGRES_MAINTENANCE_LOCK_SQL);
+            template.execute(sql);
         });
     }
 
@@ -352,10 +367,8 @@ public class StatisticsService {
     }
 
     private String postgresIndexSql() {
-        // Drops all known indexes unconditionally (via dropCurrentIndexesSql()) so
-        // that any definition drift (wrong column order, stale name, etc.) is fixed
-        // on every call to ensureDatabaseIndexes().  commonIndexSql() ran first as a
-        // safety net; this block enforces the canonical definitions for all indexes.
+        // Rebuild all known indexes to correct definition drift, such as stale names
+        // or the wrong column order.
         //
         // All B-tree indexes are plain — no INCLUDE clauses.  INCLUDE only enables an
         // index-only scan when ALL selected columns are covered; since "label" (item)
@@ -378,8 +391,25 @@ public class StatisticsService {
                 .replace("{{person}}", personTableName)
                 .replace("{{organization}}", organizationTableName);
 
-        // Names from older code versions that no longer exist in the canonical set.
-        final String legacyDrops = """
+        final String createGin = """
+                CREATE INDEX "item_trgm_label"              ON "{{item}}"         USING GIN ("label"            gin_trgm_ops);
+                CREATE INDEX "item_trgm_provider_item_id"   ON "{{item}}"         USING GIN ("provider_item_id" gin_trgm_ops);
+                CREATE INDEX "item_trgm_provider_id"        ON "{{item}}"         USING GIN ("provider_id"      gin_trgm_ops);
+                CREATE INDEX "person_trgm_variant_id"       ON "{{person}}"       USING GIN ("variant_id"       gin_trgm_ops);
+                CREATE INDEX "person_trgm_name"             ON "{{person}}"       USING GIN ("preferredName"    gin_trgm_ops);
+                CREATE INDEX "organization_trgm_variant_id" ON "{{organization}}" USING GIN ("variant_id"       gin_trgm_ops);
+                CREATE INDEX "organization_trgm_name"       ON "{{organization}}" USING GIN ("preferredName"    gin_trgm_ops);
+                """
+                .replace("{{item}}", itemTableName)
+                .replace("{{person}}", personTableName)
+                .replace("{{organization}}", organizationTableName);
+
+        return "CREATE EXTENSION IF NOT EXISTS pg_trgm;\n"
+                + analyze + dropLegacyIndexesSql() + dropCurrentIndexesSql() + createGin + commonIndexSql();
+    }
+
+    private static String dropLegacyIndexesSql() {
+        return """
                 DROP INDEX IF EXISTS "item_trgm_provider_item";
                 DROP INDEX IF EXISTS "item_trgm_dataset";
                 DROP INDEX IF EXISTS "item_trgm_provider";
@@ -395,48 +425,6 @@ public class StatisticsService {
                 DROP INDEX IF EXISTS "person_status";
                 DROP INDEX IF EXISTS "organization_status";
                 """;
-
-        final String createGin = """
-                CREATE EXTENSION IF NOT EXISTS pg_trgm;
-                CREATE INDEX "item_trgm_label"              ON "{{item}}"         USING GIN ("label"            gin_trgm_ops);
-                CREATE INDEX "item_trgm_provider_item_id"   ON "{{item}}"         USING GIN ("provider_item_id" gin_trgm_ops);
-                CREATE INDEX "item_trgm_provider_id"        ON "{{item}}"         USING GIN ("provider_id"      gin_trgm_ops);
-                CREATE INDEX "person_trgm_variant_id"       ON "{{person}}"       USING GIN ("variant_id"       gin_trgm_ops);
-                CREATE INDEX "person_trgm_name"             ON "{{person}}"       USING GIN ("preferredName"    gin_trgm_ops);
-                CREATE INDEX "organization_trgm_variant_id" ON "{{organization}}" USING GIN ("variant_id"       gin_trgm_ops);
-                CREATE INDEX "organization_trgm_name"       ON "{{organization}}" USING GIN ("preferredName"    gin_trgm_ops);
-                """
-                .replace("{{item}}", itemTableName)
-                .replace("{{person}}", personTableName)
-                .replace("{{organization}}", organizationTableName);
-
-        final String createBTree = """
-                CREATE INDEX "item_timestamp"        ON "{{item}}"("timestamp");
-                CREATE INDEX "item_status_timestamp" ON "{{item}}"("status", "timestamp");
-                CREATE INDEX "item_status_provider"  ON "{{item}}"("status", "provider_id");
-                CREATE INDEX "item_status_sector"    ON "{{item}}"("status", "sector_fct");
-                CREATE INDEX "item_filter_id"             ON "{{item}}"("status", "timestamp", "id");
-                CREATE INDEX "item_filter_provider_item"  ON "{{item}}"("status", "timestamp", "provider_item_id");
-                CREATE INDEX "item_filter_dataset"        ON "{{item}}"("status", "timestamp", "dataset_id");
-                CREATE INDEX "item_filter_provider"       ON "{{item}}"("status", "timestamp", "provider_id");
-                CREATE INDEX "item_filter_sector"         ON "{{item}}"("status", "timestamp", "sector_fct");
-                CREATE INDEX "item_filter_supplier"       ON "{{item}}"("status", "timestamp", "supplier_id");
-                CREATE INDEX "person_timestamp"        ON "{{person}}"("timestamp");
-                CREATE INDEX "person_status_timestamp" ON "{{person}}"("status", "timestamp");
-                CREATE INDEX "person_filter_id"      ON "{{person}}"("status", "timestamp", "id");
-                CREATE INDEX "person_filter_variant" ON "{{person}}"("status", "timestamp", "variant_id");
-                CREATE INDEX "person_filter_type"    ON "{{person}}"("status", "timestamp", "type");
-                CREATE INDEX "organization_timestamp"        ON "{{organization}}"("timestamp");
-                CREATE INDEX "organization_status_timestamp" ON "{{organization}}"("status", "timestamp");
-                CREATE INDEX "organization_filter_id"      ON "{{organization}}"("status", "timestamp", "id");
-                CREATE INDEX "organization_filter_variant" ON "{{organization}}"("status", "timestamp", "variant_id");
-                CREATE INDEX "organization_filter_type"    ON "{{organization}}"("status", "timestamp", "type");
-                """
-                .replace("{{item}}", itemTableName)
-                .replace("{{person}}", personTableName)
-                .replace("{{organization}}", organizationTableName);
-
-        return analyze + legacyDrops + dropCurrentIndexesSql() + createGin + createBTree;
     }
 
     private Map<String, Integer> queryStringIntegerMap(String label, String sql) {
@@ -512,10 +500,10 @@ public class StatisticsService {
         return result;
     }
 
-    private record CacheEntry(LocalDate createdAt, StatisticsData data) {
+    private record CacheEntry(long generation, LocalDate createdAt, StatisticsData data) {
 
-        private boolean isValid() {
-            return createdAt.equals(LocalDate.now());
+        private boolean isValid(long currentGeneration) {
+            return generation == currentGeneration && createdAt.equals(LocalDate.now());
         }
     }
 

@@ -23,8 +23,10 @@ import de.ddb.labs.ddbid.cronjob.objects.Import;
 import de.ddb.labs.ddbid.service.StatisticsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.time.Instant;
@@ -32,7 +34,7 @@ import java.util.Map;
 import org.springframework.scheduling.TaskScheduler;
 
 @RestController
-@RequestMapping("maintenance")
+@RequestMapping(value = "maintenance", headers = "X-DDBID-Maintenance=true")
 @Slf4j
 @RequiredArgsConstructor
 public class MaintenanceRestController {
@@ -45,94 +47,51 @@ public class MaintenanceRestController {
     private final Correct correct;
     private final StatisticsService statisticsService;
     
-    /**
-     * Dump data from API
-     *
-     * @return
-     */
-    @GetMapping("dump")
-    public Map<String, String> dump() {
-        try {
-            taskScheduler.schedule(dump, Instant.now());
-            log.info("Dump job successfully scheduled.");
-        } catch (Exception e) {
-            return Map.of("status", "error", "message", String.valueOf(e.getMessage()));
-        }
-
-        return Map.of("status", "ok");
+    @PostMapping("dump")
+    public ResponseEntity<Map<String, String>> dump() {
+        return enqueue(() -> objectsCronJob.runMaintenance(dump), "Dump scheduled.");
     }
 
-    @GetMapping("compare")
-    public Map<String, String> compare() {
-        try {
-            taskScheduler.schedule(compare, Instant.now());
-            log.info("Compare job successfully scheduled.");
-        } catch (Exception e) {
-            return Map.of("status", "error", "message", String.valueOf(e.getMessage()));
-        }
-
-        return Map.of("status", "ok");
+    @PostMapping("compare")
+    public ResponseEntity<Map<String, String>> compare() {
+        return enqueue(() -> objectsCronJob.runMaintenance(compare), "Comparison scheduled.");
     }
 
-    @GetMapping("import")
-    public Map<String, String> importer() {
-        try {
-            taskScheduler.schedule(importer, Instant.now());
-            log.info("Import job successfully scheduled.");
-        } catch (Exception e) {
-            return Map.of("status", "error", "message", String.valueOf(e.getMessage()));
-        }
-
-        return Map.of("status", "ok");
+    @PostMapping("import")
+    public ResponseEntity<Map<String, String>> importer() {
+        return enqueue(() -> objectsCronJob.runMaintenance(importer), "Import scheduled.");
     }
 
-    @GetMapping("correct")
-    public Map<String, String> correct() {
-        try {
-            taskScheduler.schedule(correct, Instant.now());
-            log.info("Correct job successfully scheduled.");
-        } catch (Exception e) {
-            return Map.of("status", "error", "message", String.valueOf(e.getMessage()));
-        }
-
-        return Map.of("status", "ok");
+    @PostMapping("correct")
+    public ResponseEntity<Map<String, String>> correct() {
+        return enqueue(() -> objectsCronJob.runMaintenance(correct), "Correction scheduled.");
     }
 
-    @GetMapping("indexes")
-    public Map<String, String> indexes() {
-        try {
-            taskScheduler.schedule(statisticsService::ensureDatabaseIndexes, Instant.now());
-            log.info("Index creation job successfully scheduled.");
-        } catch (Exception e) {
-            return Map.of("status", "error", "message", String.valueOf(e.getMessage()));
-        }
-
-        return Map.of("status", "ok", "message", "Index creation scheduled. H2 may lock tables while indexes are created.");
+    @PostMapping("indexes")
+    public ResponseEntity<Map<String, String>> indexes() {
+        return enqueue(() -> objectsCronJob.runMaintenance(statisticsService::ensureDatabaseIndexes),
+                "Index creation scheduled. H2 may lock tables while indexes are created.");
     }
 
     @DeleteMapping("indexes")
-    public Map<String, String> dropIndexes() {
-        try {
-            taskScheduler.schedule(statisticsService::dropDatabaseIndexes, Instant.now());
-            log.info("Index drop job successfully scheduled.");
-        } catch (Exception e) {
-            return Map.of("status", "error", "message", String.valueOf(e.getMessage()));
-        }
-
-        return Map.of("status", "ok", "message", "Index drop scheduled.");
+    public ResponseEntity<Map<String, String>> dropIndexes() {
+        return enqueue(() -> objectsCronJob.runMaintenance(statisticsService::dropDatabaseIndexes), "Index drop scheduled.");
     }
-    
-    @GetMapping("runcron")
-    public Map<String, String> runCrons() {
 
+    @PostMapping("runcron")
+    public ResponseEntity<Map<String, String>> runCrons() {
+        return enqueue(objectsCronJob::schedule, "Objects cron job scheduled.");
+    }
+
+    private ResponseEntity<Map<String, String>> enqueue(Runnable operation, String message) {
         try {
-
-            taskScheduler.schedule(objectsCronJob, Instant.now());
-            log.info("Objects Cron Job successfully scheduled.");
-        } catch (Exception e) {
-            return Map.of("status", "error", "message", String.valueOf(e.getMessage()));
+            taskScheduler.schedule(operation, Instant.now());
+            log.info(message);
+            return ResponseEntity.accepted().body(Map.of("status", "ok", "message", message));
+        } catch (RuntimeException e) {
+            log.error("Could not schedule maintenance", e);
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("status", "error", "message", "Could not schedule maintenance."));
         }
-
-        return Map.of("status", "ok");
     }
 }

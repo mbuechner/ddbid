@@ -32,4 +32,11 @@ final class DataTableSqlHelper {
     static String quote(String field) {
         return "\"" + field + "\"";
     }
+
+    static String containsPattern(String value) {
+        return "%" + value
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_") + "%";
+    }
 }

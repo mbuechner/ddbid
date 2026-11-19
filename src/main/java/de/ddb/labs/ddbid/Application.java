@@ -15,9 +15,7 @@
  */
 package de.ddb.labs.ddbid;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import de.ddb.labs.ddbid.cronjob.ObjectsCronJob;
-import de.ddb.labs.ddbid.cronjob.helper.Helper;
 import de.ddb.labs.ddbid.cronjob.objects.Compare;
 import de.ddb.labs.ddbid.cronjob.objects.Correct;
 import de.ddb.labs.ddbid.cronjob.objects.Dump;
@@ -26,7 +24,6 @@ import de.ddb.labs.ddbid.database.Database;
 import de.ddb.labs.ddbid.service.JdbcQueryTimer;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
@@ -73,9 +70,6 @@ public class Application {
     @Value("${ddbid.database.query-timeout-seconds:300}")
     private int databaseQueryTimeoutSeconds;
 
-    @Value("${ddbid.dump.lockfile}")
-    private String lockfile;
-
     @Value("${ddbid.http.connect-timeout-seconds:30}")
     private int httpConnectTimeoutSeconds;
 
@@ -91,10 +85,6 @@ public class Application {
     private Database database; // for write access
 
     private OkHttpClient httpClient; // http client
-
-    private ObjectMapper objectMapper; // http client
-
-    private ObjectsCronJob objectsCronJob;
 
     private final TaskScheduler taskScheduler;
 
@@ -113,7 +103,7 @@ public class Application {
     }
 
     @EventListener(ApplicationReadyEvent.class)
-    private void afterStartup() throws IOException {
+    private void afterStartup(ApplicationReadyEvent event) {
         log.info("Creating data directories");
         try {
             if (!Files.exists(Path.of(dataPathItem))) {
@@ -136,37 +126,33 @@ public class Application {
         } catch (IOException e) {
             log.error("Error creating directory for ORAGNIZATION. {}", e.getMessage());
         }
-        log.info("Check for dump lockfile...");
-        if (Files.exists(Path.of(lockfile), LinkOption.NOFOLLOW_LINKS)) {
-            log.info("There was a cancled dump run. Delete it...");
-            Files.deleteIfExists(Path.of(lockfile));
-            Helper.deleteInvalidDumps(dataPathItem);
-            Helper.deleteInvalidDumps(dataPathPerson);
-            Helper.deleteInvalidDumps(dataPathOrganization);
-            if (schedulerEnabled) {
-                log.info("Re-run Objects Cron Job...");
-                taskScheduler.schedule(objectsCronJob, Instant.now());
-            } else {
-                log.info("Scheduler is disabled. Skip automatic Objects Cron Job restart.");
+        try {
+            Dump dump = event.getApplicationContext().getBean(Dump.class);
+            if (dump.recoverInterruptedRun()) {
+                log.info("Recovered an interrupted dump run");
+                if (schedulerEnabled) {
+                    ObjectsCronJob job = event.getApplicationContext().getBean(ObjectsCronJob.class);
+                    taskScheduler.schedule(job::schedule, Instant.now());
+                }
             }
+        } catch (IOException e) {
+            log.warn("Could not recover interrupted dump run", e);
         }
     }
 
     @PreDestroy
     private void destroy() {
-        log.info("Destroy callback triggered: Closing database...");
-        try {
-            database.close();
+        if (httpClient != null) {
             httpClient.dispatcher().cancelAll();
-        } catch (Exception e) {
-            log.error("Could not close connection to database. {}", e.getMessage());
+        }
+        if (database != null) {
+            database.close();
         }
     }
     
     @Bean
     protected ObjectsCronJob objectsCronJob(Dump dump, Compare compare, Import importer, Correct correct) {
-        objectsCronJob = new ObjectsCronJob(cronPatternObjects, dump, compare, importer, correct);
-        return objectsCronJob;
+        return new ObjectsCronJob(cronPatternObjects, dump, compare, importer, correct);
     }
 
     @Bean
@@ -195,12 +181,4 @@ public class Application {
         return httpClient;
     }
 
-    @Bean
-    protected ObjectMapper objectMapper() {
-        if (objectMapper != null) {
-            return objectMapper;
-        }
-        objectMapper = new ObjectMapper();
-        return objectMapper;
-    }
 }

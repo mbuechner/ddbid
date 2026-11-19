@@ -23,10 +23,13 @@ import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
 
 public final class JdbcQueryTimer {
-    private static volatile double slowQueryWarnMillis = 2_000.0;
+    private static final double DEFAULT_SLOW_QUERY_WARN_MILLIS = 2_000.0;
+    private static volatile double slowQueryWarnMillis = DEFAULT_SLOW_QUERY_WARN_MILLIS;
 
     public static void configure(int queryTimeoutSeconds) {
-        slowQueryWarnMillis = queryTimeoutSeconds * 500.0; // 50 % of timeout
+        slowQueryWarnMillis = queryTimeoutSeconds > 0
+                ? queryTimeoutSeconds * 500.0
+                : DEFAULT_SLOW_QUERY_WARN_MILLIS;
     }
 
     private JdbcQueryTimer() {
@@ -75,7 +78,7 @@ public final class JdbcQueryTimer {
     private static void logQuery(Logger log, String label, String sql, Object[] args, long start) {
         final double elapsedMs = (System.nanoTime() - start) / 1_000_000.0;
         if (elapsedMs >= slowQueryWarnMillis) {
-            log.warn("Slow SQL {} [{}] params={} took {} ms", label, sql, Arrays.toString(args == null ? new Object[0] : args), String.format("%.2f", elapsedMs));
+            log.warn("Slow SQL {} [{}] took {} ms", label, sql, String.format("%.2f", elapsedMs));
         }
 
         if (!log.isDebugEnabled()) {

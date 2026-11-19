@@ -31,6 +31,9 @@ import org.springframework.jdbc.core.BeanPropertyRowMapper;
 
 final class DataTablePageQueryHelper {
 
+    private static final int DEFAULT_PAGE_SIZE = 100;
+    private static final int MAX_PAGE_SIZE = 5000;
+
     private DataTablePageQueryHelper() {
     }
 
@@ -99,7 +102,7 @@ final class DataTablePageQueryHelper {
         final List<Object> values = new ArrayList<>(whereValues);
         appendLimitAndOffset(query, values, pagingRequest);
 
-        List<T> rows = JdbcQueryTimer.query(
+        final List<T> rows = JdbcQueryTimer.query(
                 log,
                 database.getJdbcTemplate(),
                 label + ".page",
@@ -108,7 +111,6 @@ final class DataTablePageQueryHelper {
                 values.toArray());
 
         final Page<T> page = new Page<>(rows);
-        rows = null; // allow large result pages to be reclaimed early
         page.setRecordsFiltered(filteredCount);
         page.setRecordsTotal(totalCount);
         page.setDraw(pagingRequest.getDraw());
@@ -160,11 +162,12 @@ final class DataTablePageQueryHelper {
             return;
         }
 
+        final String pattern = DataTableSqlHelper.containsPattern(searchValue);
         where.append("(");
         for (String field : fields) {
             if (!"status".equals(field) && !"timestamp".equals(field)) {
-                where.append(DataTableSqlHelper.quote(field)).append(" ILIKE ? OR ");
-                values.add("%" + searchValue + "%");
+                where.append(DataTableSqlHelper.quote(field)).append(" ILIKE ? ESCAPE '\\' OR ");
+                values.add(pattern);
             }
         }
         where.setLength(where.length() - 3);
@@ -172,26 +175,26 @@ final class DataTablePageQueryHelper {
     }
 
     private static void appendOrderBy(StringBuilder query, PagingRequest pagingRequest, Set<String> allowedFields) {
-        if (pagingRequest.getOrder() == null || pagingRequest.getOrder().isEmpty()) {
+        final List<Column> columns = pagingRequest.getColumns();
+        if (columns == null || pagingRequest.getOrder() == null) {
             return;
         }
 
         final StringBuilder order = new StringBuilder();
         for (Order o : pagingRequest.getOrder()) {
-            if (o.getColumn() == null
+            if (o == null
+                    || o.getColumn() == null
                     || o.getDir() == null
-                    || pagingRequest.getColumns() == null
                     || o.getColumn() < 0
-                    || o.getColumn() >= pagingRequest.getColumns().size()) {
+                    || o.getColumn() >= columns.size()) {
                 continue;
             }
 
-            final List<Column> columns = pagingRequest.getColumns();
-            final String columnName = columns.get(o.getColumn()).getData();
-            if (!allowedFields.contains(columnName)) {
+            final Column column = columns.get(o.getColumn());
+            if (column == null || !allowedFields.contains(column.getData())) {
                 continue;
             }
-            order.append(DataTableSqlHelper.quote(columnName))
+            order.append(DataTableSqlHelper.quote(column.getData()))
                     .append(" ")
                     .append(o.getDir())
                     .append(", ");
@@ -204,11 +207,11 @@ final class DataTablePageQueryHelper {
     }
 
     private static void appendLimitAndOffset(StringBuilder query, List<Object> values, PagingRequest pagingRequest) {
-        if (pagingRequest.getLength() > 0) {
-            query.append("LIMIT ? OFFSET ?");
-            values.add(pagingRequest.getLength());
-            values.add(pagingRequest.getStart());
-        }
+        final int requestedLength = pagingRequest.getLength();
+        final int length = requestedLength == -1 ? MAX_PAGE_SIZE : Math.min(requestedLength, MAX_PAGE_SIZE);
+        query.append("LIMIT ? OFFSET ?");
+        values.add(length > 0 ? length : DEFAULT_PAGE_SIZE);
+        values.add(Math.max(0, pagingRequest.getStart()));
     }
 
     private static String normalizedWhere(StringBuilder where) {

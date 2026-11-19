@@ -19,6 +19,8 @@ import de.ddb.labs.ddbid.cronjob.objects.Compare;
 import de.ddb.labs.ddbid.cronjob.objects.Correct;
 import de.ddb.labs.ddbid.cronjob.objects.Dump;
 import de.ddb.labs.ddbid.cronjob.objects.Import;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
@@ -32,7 +34,9 @@ public class ObjectsCronJob implements CronJobInterface {
     private final Compare compare;
     private final Import importer;
     private final Correct correct;
+    private final ReentrantLock maintenanceLock = new ReentrantLock(true);
 
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "Spring maintenance services are intentionally shared")
     public ObjectsCronJob(
             @Value(value = "${ddbid.cron.objects}") String scheduledPattern,
             Dump dump,
@@ -49,25 +53,30 @@ public class ObjectsCronJob implements CronJobInterface {
     @Override
     @Scheduled(cron = "${ddbid.cron.objects}")
     @Retryable(retryFor = {Exception.class}, maxAttemptsExpression = "${ddbid.cron.retry.max-attempts}", backoff = @Backoff(delayExpression = "${ddbid.cron.retry.delay}"))
-    public void schedule() throws Exception {
-        log.info("Start to create dumps, comare them, import data and correct database items...");
-        log.info("Create new dump...");
-        dump.run();
-        log.info("Compare dump files...");
-        compare.run();
-        log.info("Import data to new database...");
-        importer.run();
-        log.info("Correct imported data...");
-        correct.run();
-        log.info("Done");
+    public void schedule() {
+        runMaintenance(() -> {
+            log.info("Create new dumps");
+            dump.run();
+            log.info("Compare dump files");
+            compare.run();
+            log.info("Import comparisons");
+            importer.run();
+            log.info("Check for reappearing IDs");
+            correct.run();
+        });
+    }
+
+    public void runMaintenance(Runnable operation) {
+        maintenanceLock.lock();
+        try {
+            operation.run();
+        } finally {
+            maintenanceLock.unlock();
+        }
     }
     
     @Override
     public void run() {
-        try {
-            schedule();
-        } catch (Exception e) {
-            log.error("{}", e.getMessage());
-        }
+        schedule();
     } 
 }

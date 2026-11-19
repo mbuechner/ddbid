@@ -128,7 +128,7 @@
     {
       "name": "ddbid.security.password",
       "type": "java.lang.String",
-      "description": "HTTP basic authentication password."
+      "description": "HTTP basic authentication password for Actuator and maintenance. A blank value generates a private password at startup."
     },
     {
       "name": "ddbid.git.url",

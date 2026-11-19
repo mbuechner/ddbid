@@ -25,23 +25,19 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.slf4j.Logger;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.scheduling.annotation.Scheduled;
 
 abstract class AbstractDataTableEntityService<T> {
 
-    // 25 hours – caches survive between daily refreshes and are never stale for more than one day
+    // Keep cached results available between daily refreshes.
     private static final long CACHE_TTL_MILLIS = 90_000_000;
 
     private final Calendar calendar = Calendar.getInstance(Locale.GERMANY);
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ISO_DATE;
 
-    private volatile Timestamp latestTimestampCache;
-    private volatile long latestTimestampCacheUntil;
-    private volatile Map<String, Timestamp> timestampsCache;
-    private volatile long timestampsCacheUntil;
-    private volatile Map<String, List<String>> filterOptionsCache;
-    private volatile long filterOptionsCacheUntil;
+    private volatile CacheEntry<Timestamp> latestTimestampCache;
+    private volatile CacheEntry<Map<String, Timestamp>> timestampsCache;
+    private volatile CacheEntry<Map<String, List<String>>> filterOptionsCache;
 
     public final Page<T> getDdbIds(PagingRequest pagingRequest) {
         return DataTablePageQueryHelper.page(
@@ -56,11 +52,24 @@ abstract class AbstractDataTableEntityService<T> {
     }
 
     public final Map<String, Timestamp> getTimestamps() {
-        try {
-            return timestamps();
-        } catch (EmptyResultDataAccessException e) {
-            logger().debug("No record found in database for timestamp", e);
-            return null;
+        CacheEntry<Map<String, Timestamp>> cached = timestampsCache;
+        if (cached != null && cached.isValid()) {
+            return cached.value();
+        }
+        synchronized (this) {
+            cached = timestampsCache;
+            if (cached != null && cached.isValid()) {
+                return cached.value();
+            }
+            final Map<String, Timestamp> timestamps = DataTableTimestampSqlHelper.timestamps(
+                    logger(),
+                    database(),
+                    entityLabel(),
+                    tableName(),
+                    calendar,
+                    dateTimeFormatter);
+            timestampsCache = new CacheEntry<>(timestamps);
+            return timestamps;
         }
     }
 
@@ -88,31 +97,25 @@ abstract class AbstractDataTableEntityService<T> {
         }
     }
 
-    public final void clearTimestampCache() {
+    public final synchronized void clearTimestampCache() {
         latestTimestampCache = null;
-        latestTimestampCacheUntil = 0;
         timestampsCache = null;
-        timestampsCacheUntil = 0;
         filterOptionsCache = null;
-        filterOptionsCacheUntil = 0;
     }
 
     public final Map<String, List<String>> getFilterOptions() {
-        long now = System.currentTimeMillis();
-        Map<String, List<String>> cached = filterOptionsCache;
-        if (cached != null && now < filterOptionsCacheUntil) {
-            return DataTableFilterOptionsHelper.copyOptions(cached);
+        CacheEntry<Map<String, List<String>>> cached = filterOptionsCache;
+        if (cached != null && cached.isValid()) {
+            return cached.value();
         }
         synchronized (this) {
-            now = System.currentTimeMillis();
             cached = filterOptionsCache;
-            if (cached != null && now < filterOptionsCacheUntil) {
-                return DataTableFilterOptionsHelper.copyOptions(cached);
+            if (cached != null && cached.isValid()) {
+                return cached.value();
             }
-            cached = loadFilterOptions(latestTimestamp());
-            filterOptionsCache = DataTableFilterOptionsHelper.copyOptions(cached);
-            filterOptionsCacheUntil = now + CACHE_TTL_MILLIS;
-            return DataTableFilterOptionsHelper.copyOptions(filterOptionsCache);
+            final Map<String, List<String>> options = DataTableFilterOptionsHelper.copyOptions(loadFilterOptions(latestTimestamp()));
+            filterOptionsCache = new CacheEntry<>(options);
+            return options;
         }
     }
 
@@ -131,46 +134,31 @@ abstract class AbstractDataTableEntityService<T> {
     protected abstract Map<String, List<String>> loadFilterOptions(Timestamp latestTimestamp);
 
     private Timestamp latestTimestamp() {
-        long now = System.currentTimeMillis();
-        Timestamp cached = latestTimestampCache;
-        if (cached != null && now < latestTimestampCacheUntil) {
-            return cached;
+        CacheEntry<Timestamp> cached = latestTimestampCache;
+        if (cached != null && cached.isValid()) {
+            return cached.value();
         }
         synchronized (this) {
-            now = System.currentTimeMillis();
             cached = latestTimestampCache;
-            if (cached != null && now < latestTimestampCacheUntil) {
-                return cached;
+            if (cached != null && cached.isValid()) {
+                return cached.value();
             }
-            cached = DataTableTimestampSqlHelper.latestTimestamp(logger(), database(), entityLabel(), tableName());
-            latestTimestampCache = cached;
-            latestTimestampCacheUntil = now + CACHE_TTL_MILLIS;
-            return cached;
+            final Timestamp timestamp = DataTableTimestampSqlHelper.latestTimestamp(logger(), database(), entityLabel(), tableName());
+            if (timestamp != null) {
+                latestTimestampCache = new CacheEntry<>(timestamp);
+            }
+            return timestamp;
         }
     }
 
-    private Map<String, Timestamp> timestamps() {
-        long now = System.currentTimeMillis();
-        Map<String, Timestamp> cached = timestampsCache;
-        if (cached != null && now < timestampsCacheUntil) {
-            return cached;
+    private record CacheEntry<T>(T value, long expiresAt) {
+
+        CacheEntry(T value) {
+            this(value, System.currentTimeMillis() + CACHE_TTL_MILLIS);
         }
-        synchronized (this) {
-            now = System.currentTimeMillis();
-            cached = timestampsCache;
-            if (cached != null && now < timestampsCacheUntil) {
-                return cached;
-            }
-            cached = DataTableTimestampSqlHelper.timestamps(
-                    logger(),
-                    database(),
-                    entityLabel(),
-                    tableName(),
-                    calendar,
-                    dateTimeFormatter);
-            timestampsCache = cached;
-            timestampsCacheUntil = now + CACHE_TTL_MILLIS;
-            return cached;
+
+        boolean isValid() {
+            return System.currentTimeMillis() < expiresAt;
         }
     }
 }

@@ -10,7 +10,7 @@ DDBid ist ein kleines Spring-Boot-Tool fuer DDB-IDs: Dumps ziehen, alte und neue
 - Die Daten landen in einer lokalen H2-Datei.
 - Die UI zeigt Tabellen, Downloads und Statistiken.
 - Die Statistikseite cached aggregierte Werte; Cache-Refresh alle 4 Stunden.
-- Bestehende Daten werden beim normalen Start nicht geloescht. Achtung: Der Import/Cron baut Tabellen neu auf; fuer reine Bestandsdaten also `SCHEDULER_ENABLED=false` setzen.
+- Der Import ersetzt Daten nur mit erfolgreich eingelesenen Vergleichen. Fuer reine Bestandsdaten `SCHEDULER_ENABLED=false` setzen.
 
 ## Lokal starten
 
@@ -55,7 +55,7 @@ Minimal nuetzliche `.env`:
 DDBID_DATABASE_TYPE=h2
 DDBID_DATABASE_FILE=data/ddbid_h2_DO_NOT_DELETE_ITS_IMPORTANT.db
 DDBID_SECURITY_USER=user
-DDBID_SECURITY_PASSWORD=password
+DDBID_SECURITY_PASSWORD=
 SCHEDULER_ENABLED=true
 ```
 
@@ -108,13 +108,17 @@ Bei einem bestehenden GHCR-Paket dem Repo unter **Manage Actions access** Schrei
 
 ## Bestehende Daten
 
+Eine neue Datenbank erhält ihre Tabellen beim ersten Import.
+
 Beim Start werden keine Tabellen geloescht und fehlende Statistik-Indizes nicht automatisch angelegt. Das ist bewusst langweilig und genau deshalb gut: keine Tabellen-Drops, keine Datenmigration mit Seiteneffekten, kein "ich hab nur mal kurz optimiert" mit Rauch aus dem Serverraum.
 
-Fehlende Indizes koennen gezielt per Maintenance-Endpunkt erstellt werden:
+Maintenance-Aufrufe verwenden Basic Auth und den Header `X-DDBID-Maintenance: true`. Fehlende Indizes lassen sich so erstellen:
 
-```text
-GET /maintenance/indexes
+```bash
+curl -u user -X POST -H 'X-DDBID-Maintenance: true' http://localhost:8080/maintenance/indexes
 ```
+
+Zum Entfernen der Indizes `DELETE` verwenden. Die übrigen Maintenance-Jobs starten per `POST`.
 
 Bei H2 auf grossen Datenbanken sollte das in einem Wartungsfenster passieren, weil H2 Tabellen waehrend der Index-Erstellung sperren kann.
 
@@ -135,7 +139,7 @@ Die Anwendung liest Konfiguration aus `application.properties`, echten Umgebungs
 | `DDBID_DATABASE_URL` | leer | JDBC-URL fuer Postgres, z.B. `jdbc:postgresql://localhost:5432/ddbid`. Hat Vorrang vor `DDBID_DATABASE_FILE`. |
 | `DDBID_DATABASE_USER` | leer | Datenbankbenutzer fuer Postgres. |
 | `DDBID_DATABASE_PASSWORD` | leer | Datenbankpasswort fuer Postgres. |
-| `DDBID_DATABASE_INDEXES_AUTO` | `false` | Erstellt fehlende Performance-Indizes beim Start. Bei grossen H2-Dateien besser gezielt ueber `/maintenance/indexes` ausfuehren. |
+| `DDBID_DATABASE_INDEXES_AUTO` | `false` | Erstellt fehlende Performance-Indizes beim Start. Bei grossen H2-Dateien gezielt per `POST /maintenance/indexes` ausfuehren. |
 | `DDBID_DATABASE_QUERY_TIMEOUT_SECONDS` | `300` | Maximale Laufzeit einer einzelnen Datenbankabfrage in Sekunden. |
 | `DDBID_CACHE_REFRESH_CRON` | `0 0 */4 * * *` | Cron-Ausdruck fuer den regelmaessigen Entity-Cache-Refresh (Items, Personen, Organisationen). |
 | `DDBID_STATISTICS_CACHE_REFRESH_CRON` | `0 0 */4 * * *` | Cron-Ausdruck fuer den regelmaessigen Statistik-Cache-Refresh. |
@@ -144,8 +148,8 @@ Die Anwendung liest Konfiguration aus `application.properties`, echten Umgebungs
 | `DDBID_DATAPATH_ITEM` | `data/dumps/item/` | Verzeichnis fuer Item-Dumps. |
 | `DDBID_DATAPATH_PERSON` | `data/dumps/person/` | Verzeichnis fuer Person-Dumps. |
 | `DDBID_DATAPATH_ORGANIZATION` | `data/dumps/organization/` | Verzeichnis fuer Organization-Dumps. |
-| `DDBID_SECURITY_USER` | `user` | Benutzername fuer die Web-Oberflaeche. |
-| `DDBID_SECURITY_PASSWORD` | `password` | Passwort fuer die Web-Oberflaeche. |
+| `DDBID_SECURITY_USER` | `user` | Benutzername fuer Actuator und Maintenance. |
+| `DDBID_SECURITY_PASSWORD` | zufaellig | Eigenes Passwort fuer Actuator und Maintenance setzen. Bei leerem Wert wird ein internes Passwort pro Start erzeugt. |
 
 Beispiel fuer H2:
 

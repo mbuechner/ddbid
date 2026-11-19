@@ -35,6 +35,7 @@ public class DownloadCatalogService {
 
     private static final Duration CACHE_DURATION = Duration.ofMinutes(5);
     private static final ThreadLocal<DecimalFormat> FORMATTER = ThreadLocal.withInitial(() -> new DecimalFormat("#,##0.#"));
+    private static final String[] SIZE_UNITS = {"byte", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"};
 
     private final Object cacheLock = new Object();
 
@@ -101,9 +102,9 @@ public class DownloadCatalogService {
         if (size <= 0) {
             return "0 byte";
         }
-        final String[] units = new String[]{"byte", "KiB", "MiB", "GiB", "TiB"};
-        final int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
-        return FORMATTER.get().format(size / Math.pow(1024, digitGroups)) + " " + units[digitGroups];
+        final int unit = (Long.SIZE - 1 - Long.numberOfLeadingZeros(size)) / 10;
+        final long divisor = 1L << (10 * unit);
+        return FORMATTER.get().format((double) size / divisor) + " " + SIZE_UNITS[unit];
     }
 
     public record DownloadCatalog(Instant generatedAt, List<DownloadGroup> groups) {

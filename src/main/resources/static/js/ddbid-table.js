@@ -133,8 +133,6 @@ window.DDBID.table = (function() {
         input.val(value);
         input.prop('readonly', !!readOnly);
         if (triggerSearch) {
-            input.trigger('input');
-            input.trigger('change');
             requestTableDraw();
         }
     }
@@ -190,7 +188,7 @@ window.DDBID.table = (function() {
             restrictFilterModeOptions(columnIndex);
 
             if (config.mode) {
-                setColumnFilterMode(columnIndex, config.mode, false);
+                setColumnFilterMode(columnIndex, config.mode);
             }
 
             if (config.value !== undefined) {
@@ -372,38 +370,7 @@ window.DDBID.table = (function() {
         return details;
     }
 
-    function applyColumnControlPayload(d) {
-        if (!d || !Array.isArray(d.columns)) {
-            return;
-        }
-
-        d.columns.forEach(function(column, columnIndex) {
-            if (!column) {
-                return;
-            }
-
-            rememberColumnFilterState(columnIndex, false);
-
-            const state = filterState(columnIndex);
-            const value = ((columnFilterValue(columnIndex) || state.value || '') + '').trim();
-            const logic = normalizeFilterMode(columnFilterMode(columnIndex) || state.mode);
-
-            if (!value) {
-                delete column.columnControl;
-                return;
-            }
-
-            column.columnControl = {
-                search: {
-                    value: value,
-                    logic: logic,
-                    type: 'text'
-                }
-            };
-        });
-    }
-
-    function setColumnFilterMode(columnIndex, mode, triggerSearch) {
+    function setColumnFilterMode(columnIndex, mode) {
         const input = columnFilterModeInput(columnIndex);
         if (!input.length) {
             return;
@@ -420,11 +387,7 @@ window.DDBID.table = (function() {
         }
 
         input.val(normalizedMode);
-        input.trigger('input');
-        if (triggerSearch) {
-            input.trigger('change');
-            requestTableDraw();
-        }
+        updateColumnFilterModeIcon(columnIndex);
     }
 
     function restrictFilterModeOptions(columnIndex) {
@@ -768,16 +731,12 @@ window.DDBID.table = (function() {
             }];
     }
 
-    function ajaxData() {
-        return function(d) {
-            applyColumnControlPayload(d);
-            const timestampValue = columnFilterValue(0);
-            d.status = columnFilterValue(2) || 'MISSING';
-            if (timestampValue) {
-                d.timestamp = isTimestampRequestValue(timestampValue) ? timestampValue : '__invalid__';
-            }
-            return JSON.stringify(d);
-        };
+    function ajaxData(d) {
+        const timestampValue = columnFilterValue(0);
+        d.status = columnFilterValue(2) || 'MISSING';
+        if (timestampValue) {
+            d.timestamp = isTimestampRequestValue(timestampValue) ? timestampValue : '__invalid__';
+        }
     }
 
     function loadTimestamps(endpoint, datalistId) {
@@ -839,7 +798,8 @@ window.DDBID.table = (function() {
                 "type": "POST",
                 "dataType": "json",
                 "contentType": "application/json",
-                "data": ajaxData()
+                "submitAs": "json",
+                "data": ajaxData
             },
             "fixedHeader": true,
             "columnControl": [
@@ -861,6 +821,7 @@ window.DDBID.table = (function() {
                 'copy',
                 'excel'
             ],
+            "columnDefs": [{ "targets": "_all", "render": renderText }],
             "columns": columns,
             "createdRow": function(row, data) {
                 if (data.status === 'NEW') {
@@ -928,7 +889,7 @@ window.DDBID.table = (function() {
                 "className": "text-wrap",
                 "render": function(data, type) {
                     if (type === 'display' && data) {
-                        return data.replace(/([A-Z0-9]{32})/g, function(match, providerId) {
+                        return escapeHtml(data).replace(/([A-Z0-9]{32})/g, function(match, providerId) {
                             return ddbProviderLink(providerId);
                         });
                     }
@@ -1028,21 +989,21 @@ window.DDBID.table = (function() {
 
     function ddbItemLink(id) {
         const safeId = escapeHtml(id);
-        return '<a href="https://www.deutsche-digitale-bibliothek.de/item/' + safeId + '" target="_blank">' + safeId + '</a>';
+        return '<a href="https://www.deutsche-digitale-bibliothek.de/item/' + encodeURIComponent(id) + '" target="_blank">' + safeId + '</a>';
     }
 
     function ddbPersonLink(id) {
         const gndId = String(id).substring(String(id).lastIndexOf('/') + 1);
-        return '<a href="https://www.deutsche-digitale-bibliothek.de/person/gnd/' + escapeHtml(gndId) + '" target="_blank">' + escapeHtml(id) + '</a>';
+        return '<a href="https://www.deutsche-digitale-bibliothek.de/person/gnd/' + encodeURIComponent(gndId) + '" target="_blank">' + escapeHtml(id) + '</a>';
     }
 
     function ddbOrganizationLink(id) {
         const safeId = escapeHtml(id);
-        if (String(id).startsWith('http://d-nb.info/gnd/')) {
+        if (/^https?:\/\/d-nb\.info\/gnd\//.test(id)) {
             const gndId = String(id).substring(String(id).lastIndexOf('/') + 1);
-            return '<a href="https://www.deutsche-digitale-bibliothek.de/organization/gnd/' + escapeHtml(gndId) + '" target="_blank">' + safeId + '</a>';
+            return '<a href="https://www.deutsche-digitale-bibliothek.de/organization/gnd/' + encodeURIComponent(gndId) + '" target="_blank">' + safeId + '</a>';
         }
-        return '<a href="https://www.deutsche-digitale-bibliothek.de/organization/' + safeId + '" target="_blank">' + safeId + '</a>';
+        return '<a href="https://www.deutsche-digitale-bibliothek.de/organization/' + encodeURIComponent(id) + '" target="_blank">' + safeId + '</a>';
     }
 
     function ddbProviderLink(providerId) {
@@ -1054,7 +1015,11 @@ window.DDBID.table = (function() {
         if (type === 'display' && data && SECTOR_LABELS[data]) {
             return '<span title="' + escapeHtml(SECTOR_LABELS[data]) + '">' + escapeHtml(data) + '</span>';
         }
-        return data;
+        return renderText(data, type);
+    }
+
+    function renderText(data, type) {
+        return type === 'display' && data != null ? escapeHtml(data) : data;
     }
 
     return {

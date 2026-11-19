@@ -12,6 +12,10 @@ updates:
       maven-minor-patch:
         patterns: ['*']
         update-types: [minor, patch]
+    ignore:
+      # Crash recovery can lose committed data in these H2 releases.
+      - dependency-name: 'com.h2database:h2'
+        versions: ['2.5.250', '2.5.252']
 
   - package-ecosystem: github-actions
     directories: ['/', '/.github/actions/check-container']
