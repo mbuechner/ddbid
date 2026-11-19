@@ -14,6 +14,8 @@ DDBid ist ein kleines Spring-Boot-Tool fuer DDB-IDs: Dumps ziehen, alte und neue
 
 ## Lokal starten
 
+Der Build benötigt Java 25 LTS und Maven. Die CI verwendet Amazon Corretto 25.
+
 Entwicklungsmodus mit Spring Boot Maven Plugin:
 
 ```bash
@@ -94,6 +96,15 @@ SCHEDULER_ENABLED=false
 ```
 
 Im PostgreSQL-Modus bleibt `DDBID_DATABASE_FILE` ungenutzt, solange `DDBID_DATABASE_URL` gesetzt ist.
+
+### Container-Releases
+
+- Ein **stabiles GitHub-Release** wie `v1.2.3` startet CI auf `main`. Quellcode und Dockerfile kommen vom Tag, dessen Commit den Release-Trigger enthalten muss.
+- **Täglich um 08:17 (Europe/Berlin)** prüft CI das neueste stabile Release, optional fixiert per `CONTAINER_RELEASE_TAG`. Neuer Commit, neue `linux/amd64`-Basis-Digests oder fehlender Image-Tag → Build. Gleiche Eingaben → CVE-Scan des vorhandenen Digests.
+- HTTP-Test, CVE-Scan von Image und vorhandener SBOM, dann Cosign und Push zu `ghcr.io/mbuechner/ddbid:<release_tag>`. Das gepflegte Release erhält auch `latest` und `tagged`. Behebbare High/Critical-CVEs blockieren die Freigabe.
+- **Manuell** über **Actions → Docker → Run workflow** auf `main`, optional mit `release_tag`.
+
+Bei einem bestehenden GHCR-Paket dem Repo unter **Manage Actions access** Schreibzugriff geben.
 
 ## Bestehende Daten
 

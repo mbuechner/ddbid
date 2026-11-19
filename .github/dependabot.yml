@@ -1,0 +1,39 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: '/'
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 1
+    allow:
+      - dependency-name: '*'
+        update-types: [version-update:semver-minor, version-update:semver-patch]
+    groups:
+      maven-minor-patch:
+        patterns: ['*']
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directories: ['/', '/.github/actions/check-container']
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 1
+    groups:
+      actions-minor-patch:
+        patterns: ['*']
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: '/'
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 1
+    groups:
+      docker-minor-patch:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: amazoncorretto
+        versions: ['>= 26']
+      # The release workflow refreshes this Maven 3 / Corretto 25 tag by digest.
+      - dependency-name: maven
