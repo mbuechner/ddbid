@@ -43,6 +43,8 @@ public class WebSecurityConfig {
     protected SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(HttpMethod.GET, "/actuator/health/liveness", "/actuator/health/readiness")
+                        .permitAll()
                         .requestMatchers(HttpMethod.POST, "/actuator/shutdown")
                         .access(AuthorizationManagers.allOf(
                                 AuthenticatedAuthorizationManager.authenticated(),
