@@ -61,6 +61,8 @@ SCHEDULER_ENABLED=true
 
 `SCHEDULER_ENABLED` steuert die automatischen `@Scheduled`-Jobs. Default ist `true`. Mit `false` startet die Anwendung normal, Cron-Jobs laufen aber nicht automatisch; manuelle Maintenance-Endpunkte bleiben nutzbar.
 
+Das Start-Warmup läuft im Hintergrund. Pro Instanz laufen Warmups, Cache-Refreshs und Wartungsjobs nacheinander in derselben Queue. PostgreSQL koordiniert Importe und Indexwartung zwischen Instanzen über einen Advisory Lock.
+
 ## Docker
 
 ```bash

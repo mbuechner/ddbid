@@ -26,9 +26,9 @@ public class TaskSchedulerConfiguration {
     @Bean
     public TaskScheduler taskScheduler() {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-        scheduler.setPoolSize(2);
+        scheduler.setPoolSize(1);
         scheduler.setThreadNamePrefix("ddbid-task-");
-        scheduler.setWaitForTasksToCompleteOnShutdown(true);
+        scheduler.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
         scheduler.setAwaitTerminationSeconds(30);
         return scheduler;
     }

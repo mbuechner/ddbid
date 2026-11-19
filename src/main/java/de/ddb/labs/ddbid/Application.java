@@ -22,6 +22,7 @@ import de.ddb.labs.ddbid.cronjob.objects.Dump;
 import de.ddb.labs.ddbid.cronjob.objects.Import;
 import de.ddb.labs.ddbid.database.Database;
 import de.ddb.labs.ddbid.service.JdbcQueryTimer;
+import de.ddb.labs.ddbid.service.StatisticsService;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -138,6 +139,8 @@ public class Application {
         } catch (IOException e) {
             log.warn("Could not recover interrupted dump run", e);
         }
+        StatisticsService statisticsService = event.getApplicationContext().getBean(StatisticsService.class);
+        taskScheduler.schedule(statisticsService::warmStartupCaches, Instant.now());
     }
 
     @PreDestroy
